@@ -4,12 +4,14 @@ import PackageDescription
 import Foundation
 
 let binaryPath = "Artifacts/LorepiaCore.xcframework"
-let hasGeneratedCore = FileManager.default.fileExists(
-    atPath: URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent()
-        .appendingPathComponent(binaryPath)
-        .path
-)
+let hasGeneratedCore =
+    ProcessInfo.processInfo.environment["LOREPIA_SKIP_GENERATED"] != "1"
+        && FileManager.default.fileExists(
+            atPath: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .appendingPathComponent(binaryPath)
+                .path
+        )
 
 let lorepiaKitTarget: Target = if hasGeneratedCore {
     .target(

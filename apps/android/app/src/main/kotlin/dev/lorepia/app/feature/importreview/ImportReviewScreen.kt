@@ -50,7 +50,9 @@ fun ImportReviewScreen(
     modifier: Modifier = Modifier,
 ) {
     val isBusy = uiState is ImportReviewUiState.Loading ||
-        (uiState as? ImportReviewUiState.Ready)?.isCommitting == true
+        (uiState as? ImportReviewUiState.Ready)?.let {
+            it.isCommitting || it.isDiscarding
+        } == true
     Scaffold(
         modifier = modifier,
         topBar = {
@@ -149,6 +151,21 @@ private fun ReviewContent(
                 formatBytes = { bytes -> Formatter.formatShortFileSize(context, bytes) },
             )
         }
+        if (inspection.unsupportedOptionalFields.isNotEmpty()) {
+            item {
+                Text(
+                    text = stringResource(R.string.unsupported_optional_fields),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.semantics { heading() },
+                )
+            }
+            items(inspection.unsupportedOptionalFields) { field ->
+                Text(
+                    text = field,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         item {
             Text(
                 text = stringResource(R.string.warnings_title),
@@ -167,7 +184,14 @@ private fun ReviewContent(
             items(
                 items = inspection.warnings,
             ) { warning ->
-                WarningCard(message = warning, blocksImport = false)
+                WarningCard(
+                    message = stringResource(
+                        R.string.warning_with_code,
+                        warning.code,
+                        warning.message,
+                    ),
+                    blocksImport = false,
+                )
             }
             items(
                 items = inspection.blockedReasons,
@@ -257,8 +281,27 @@ private fun InspectionMetadata(
                 value = formatBytes(if (sourceSize > 0) sourceSize else stagedFileSize),
             )
             MetadataRow(
+                label = stringResource(R.string.estimated_stored_size),
+                value = formatBytes(
+                    inspection.estimatedStoredSize
+                        .coerceAtMost(Long.MAX_VALUE.toULong())
+                        .toLong(),
+                ),
+            )
+            MetadataRow(
                 label = stringResource(R.string.asset_count),
                 value = inspection.assetCount.toString(),
+            )
+            MetadataRow(
+                label = stringResource(R.string.representative_image),
+                value = inspection.representativeImage?.let { image ->
+                    stringResource(
+                        R.string.representative_image_metadata,
+                        image.logicalAssetId,
+                        image.mediaType,
+                        formatBytes(image.sizeBytes.coerceAtMost(Long.MAX_VALUE.toULong()).toLong()),
+                    )
+                } ?: stringResource(R.string.none),
             )
             MetadataRow(
                 label = stringResource(R.string.source_hash),

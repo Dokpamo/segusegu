@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+android_sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+if [[ -z "$android_sdk" || ! -d "$android_sdk" ]]; then
+  echo "Android SDK not found. Set ANDROID_HOME." >&2
+  exit 1
+fi
+
+sdkmanager="$android_sdk/cmdline-tools/latest/bin/sdkmanager"
+avdmanager="$android_sdk/cmdline-tools/latest/bin/avdmanager"
+emulator="$android_sdk/emulator/emulator"
+if [[ ! -x "$sdkmanager" || ! -x "$avdmanager" ]]; then
+  echo "Android command-line tools are unavailable." >&2
+  exit 1
+fi
+
+system_image="system-images;android-35;google_apis;x86_64"
+"$sdkmanager" "platform-tools" "emulator" "$system_image"
+
+export ANDROID_AVD_HOME
+ANDROID_AVD_HOME="$(mktemp -d)"
+echo "no" | "$avdmanager" create avd \
+  --force \
+  --name lorepia-ci \
+  --package "$system_image" \
+  --device pixel_6
+
+log_path="$repo_root/android-emulator.log"
+"$emulator" \
+  -avd lorepia-ci \
+  -no-window \
+  -no-audio \
+  -no-boot-anim \
+  -gpu swiftshader_indirect \
+  -camera-back none \
+  -camera-front none \
+  -wipe-data \
+  >"$log_path" 2>&1 &
+emulator_pid=$!
+trap 'kill "$emulator_pid" 2>/dev/null || true; wait "$emulator_pid" 2>/dev/null || true' EXIT
+
+"$android_sdk/platform-tools/adb" wait-for-device
+booted=""
+for _attempt in $(seq 1 120); do
+  booted="$("$android_sdk/platform-tools/adb" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+  if [[ "$booted" == "1" ]]; then
+    break
+  fi
+  sleep 2
+done
+if [[ "$booted" != "1" ]]; then
+  echo "Android emulator did not finish booting." >&2
+  exit 1
+fi
+
+"$android_sdk/platform-tools/adb" shell settings put global window_animation_scale 0
+"$android_sdk/platform-tools/adb" shell settings put global transition_animation_scale 0
+"$android_sdk/platform-tools/adb" shell settings put global animator_duration_scale 0
+
+cd "$repo_root/apps/android"
+./gradlew connectedDebugAndroidTest

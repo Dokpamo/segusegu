@@ -2,4 +2,4 @@
 
 mod database;
 
-pub use database::{DatabaseStats, Storage};
+pub use database::{DatabaseStats, StagedAssetImport, Storage};

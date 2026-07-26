@@ -3,7 +3,11 @@ name: repository
 on:
   push:
     branches: [main]
+    paths:
+      - "**"
   pull_request:
+    paths:
+      - "**"
   workflow_dispatch:
 
 permissions:
@@ -14,8 +18,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  integrity:
+  repository:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,17 +28,35 @@ jobs:
       - uses: dtolnay/rust-toolchain@1.96.0
       - uses: Swatinem/rust-cache@v2
       - name: Repository policy
-        run: cargo xtask check repository
+        run: |
+          set -o pipefail
+          cargo xtask check repository 2>&1 | tee repository-check.log
+      - name: CI path filter contract
+        run: ./scripts/ci-path-filter.sh --self-test
       - name: Regenerate synthetic fixtures
         run: |
           cargo xtask testdata regenerate
-          git diff --exit-code -- testdata
+          ./scripts/check-generated-tree.sh testdata
       - name: Markdown
-        run: npx --yes markdownlint-cli2@0.18.1 "**/*.md" "#target"
+        run: git ls-files -z -- "*.md" | xargs -0 npx --yes markdownlint-cli2@0.18.1
       - name: Spelling
         uses: crate-ci/typos@v1.48.0
       - name: No private guide or license
         run: |
           test ! -e LorePia_new_multiplatform_repository_private_guide.md
-          test ! -e LICENSE
-          test ! -e LICENSE.md
+          if find . -maxdepth 1 -type f \( \
+            -iname 'license' -o -iname 'license.*' -o \
+            -iname 'licence' -o -iname 'licence.*' -o \
+            -iname 'copying' -o -iname 'copying.*' \
+          \) -print -quit | grep -q .; then
+            echo "This repository must not contain a license file." >&2
+            exit 1
+          fi
+      - name: Upload repository failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: repository-check.log
+          if-no-files-found: ignore
+          retention-days: 7

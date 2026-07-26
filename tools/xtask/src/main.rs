@@ -8,7 +8,6 @@ use std::{
 
 use anyhow::{Context, Result, anyhow, bail};
 use clap::{Parser, Subcommand, ValueEnum};
-use walkdir::WalkDir;
 use zip::{ZipWriter, write::SimpleFileOptions};
 
 #[derive(Parser)]
@@ -135,9 +134,6 @@ fn run_platform_build(root: &Path, platform: Platform) -> Result<()> {
 }
 
 fn check_repository(root: &Path) -> Result<()> {
-    if root.join("LICENSE").exists() || root.join("LICENSE.md").exists() {
-        bail!("this private-code repository must not contain a license file");
-    }
     let output = Command::new("git")
         .args(["ls-files", "-z"])
         .current_dir(root)
@@ -146,62 +142,202 @@ fn check_repository(root: &Path) -> Result<()> {
     if !output.status.success() {
         bail!("git ls-files failed");
     }
-    let forbidden_names = [
-        "LorePia_new_multiplatform_repository_private_guide.md",
-        ".env",
-        ".DS_Store",
-    ];
-    let forbidden_extensions = [
-        "apk",
-        "aab",
-        "dll",
-        "dylib",
-        "so",
-        "pdb",
-        "xcframework",
-        "appx",
-        "msix",
-    ];
-    for bytes in output
+    let tracked_files = output
         .stdout
         .split(|byte| *byte == 0)
         .filter(|p| !p.is_empty())
-    {
-        let relative = String::from_utf8_lossy(bytes);
-        let path = root.join(relative.as_ref());
-        if forbidden_names
-            .iter()
-            .any(|name| relative == *name || relative.ends_with(&format!("/{name}")))
-        {
+        .map(|bytes| String::from_utf8_lossy(bytes).into_owned())
+        .collect::<Vec<_>>();
+    let mut testdata_total_bytes = 0_u64;
+    for relative in &tracked_files {
+        let path = root.join(relative);
+        if is_license_file(relative) {
+            bail!("this private-code repository must not track a license file: {relative}");
+        }
+        if is_forbidden_tracked_name(relative) {
             bail!("forbidden tracked file: {relative}");
         }
-        if path
-            .extension()
-            .and_then(|value| value.to_str())
-            .is_some_and(|extension| forbidden_extensions.contains(&extension))
-        {
-            bail!("forbidden generated binary: {relative}");
+        if has_forbidden_tracked_extension(&path) {
+            bail!("forbidden binary, credential, or diagnostic file: {relative}");
         }
+        if contains_generated_bundle_component(relative) {
+            bail!("forbidden generated bundle: {relative}");
+        }
+        let file_size = path.metadata()?.len();
         if is_source_file(&path) && path.metadata()?.len() == 0 {
             bail!("empty source file: {relative}");
         }
-        if relative.starts_with("testdata/") && path.metadata()?.len() > 2 * 1024 * 1024 {
+        if relative.starts_with("testdata/") && file_size > 2 * 1024 * 1024 {
             bail!("testdata file exceeds 2 MiB: {relative}");
         }
-    }
-
-    for entry in WalkDir::new(root.join("docs"))
-        .into_iter()
-        .filter_map(Result::ok)
-    {
-        if entry.file_type().is_file() && entry.path().extension().is_some_and(|ext| ext == "md") {
-            let text = fs::read_to_string(entry.path())?;
-            if text.trim().is_empty() {
-                bail!("empty documentation file: {}", entry.path().display());
-            }
+        if relative.starts_with("testdata/") {
+            testdata_total_bytes = testdata_total_bytes.saturating_add(file_size);
+        }
+        if file_size > 5 * 1024 * 1024 {
+            bail!("tracked file exceeds 5 MiB: {relative}");
         }
     }
+    if testdata_total_bytes > 16 * 1024 * 1024 {
+        bail!("tracked testdata exceeds 16 MiB in total");
+    }
+
+    for relative in tracked_files.iter().filter(|relative| {
+        Path::new(relative)
+            .extension()
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("md"))
+    }) {
+        let path = root.join(relative);
+        let text = fs::read_to_string(&path)?;
+        if text.trim().is_empty() {
+            bail!("empty documentation file: {}", path.display());
+        }
+        check_markdown_links(root, &path, &text)?;
+    }
+    check_generated_source_headers(root)?;
     println!("repository checks passed");
+    Ok(())
+}
+
+fn is_license_file(relative: &str) -> bool {
+    let Some(name) = Path::new(relative)
+        .file_name()
+        .and_then(|name| name.to_str())
+    else {
+        return false;
+    };
+    let normalized = name.to_ascii_uppercase();
+    ["LICENSE", "LICENCE", "COPYING"].iter().any(|stem| {
+        normalized == *stem
+            || normalized
+                .strip_prefix(stem)
+                .is_some_and(|suffix| suffix.starts_with('.'))
+    })
+}
+
+fn is_forbidden_tracked_name(relative: &str) -> bool {
+    let Some(name) = Path::new(relative)
+        .file_name()
+        .and_then(|name| name.to_str())
+    else {
+        return false;
+    };
+    let normalized = name.to_ascii_lowercase();
+    normalized == "lorepia_new_multiplatform_repository_private_guide.md"
+        || normalized == ".ds_store"
+        || normalized == ".env"
+        || (normalized.starts_with(".env.") && normalized != ".env.example")
+        || [
+            "keystore.properties",
+            "secrets.properties",
+            "local.properties",
+        ]
+        .contains(&normalized.as_str())
+}
+
+fn has_forbidden_tracked_extension(path: &Path) -> bool {
+    let Some(extension) = path.extension().and_then(|value| value.to_str()) else {
+        return false;
+    };
+    let normalized = extension.to_ascii_lowercase();
+    [
+        "a",
+        "aab",
+        "apk",
+        "app",
+        "appx",
+        "dll",
+        "dylib",
+        "exe",
+        "framework",
+        "ipa",
+        "jks",
+        "key",
+        "keystore",
+        "lib",
+        "log",
+        "mobileprovision",
+        "msix",
+        "p12",
+        "p8",
+        "pdb",
+        "pem",
+        "so",
+        "xcframework",
+    ]
+    .contains(&normalized.as_str())
+}
+
+fn contains_generated_bundle_component(relative: &str) -> bool {
+    Path::new(relative).components().any(|component| {
+        let normalized = component.as_os_str().to_string_lossy().to_ascii_lowercase();
+        if normalized == "lorepia.app"
+            && (relative == "apps/windows/Lorepia.App"
+                || relative.starts_with("apps/windows/Lorepia.App/"))
+        {
+            return false;
+        }
+        [".app", ".framework", ".xcarchive", ".xcframework"]
+            .iter()
+            .any(|suffix| normalized.ends_with(suffix))
+    })
+}
+
+fn check_markdown_links(root: &Path, document: &Path, text: &str) -> Result<()> {
+    let mut remaining = text;
+    while let Some(label_end) = remaining.find("](") {
+        remaining = &remaining[label_end + 2..];
+        let Some(target_end) = remaining.find(')') else {
+            break;
+        };
+        let target = remaining[..target_end].trim().trim_matches(['<', '>']);
+        remaining = &remaining[target_end + 1..];
+        if target.is_empty()
+            || target.starts_with('#')
+            || target.contains("://")
+            || target.starts_with("mailto:")
+        {
+            continue;
+        }
+        let path_part = target.split(['#', '?']).next().unwrap_or(target);
+        if path_part.is_empty() {
+            continue;
+        }
+        let resolved = document
+            .parent()
+            .unwrap_or(root)
+            .join(path_part.replace("%20", " "));
+        if !resolved.exists() {
+            let relative_document = document.strip_prefix(root).unwrap_or(document);
+            bail!(
+                "broken documentation link in {}: {target}",
+                relative_document.display()
+            );
+        }
+    }
+    Ok(())
+}
+
+fn check_generated_source_headers(root: &Path) -> Result<()> {
+    for relative in [
+        "apps/android/app/src/main/generated/dev/lorepia/core/lorepia_uniffi.kt",
+        "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/Generated/LorepiaCore.swift",
+    ] {
+        let path = root.join(relative);
+        let text = fs::read_to_string(&path)
+            .with_context(|| format!("read generated source header: {relative}"))?;
+        if !text
+            .lines()
+            .take(4)
+            .any(|line| line.contains("autogenerated"))
+        {
+            bail!("generated source is missing its provenance header: {relative}");
+        }
+    }
+    let canonical_header = fs::read(root.join("bindings/c-api/include/lorepia.h"))?;
+    let windows_header = fs::read(root.join("apps/windows/include/lorepia.h"))?;
+    if canonical_header != windows_header {
+        bail!("Windows C header mirror differs from bindings/c-api/include/lorepia.h");
+    }
     Ok(())
 }
 
@@ -210,7 +346,26 @@ fn is_source_file(path: &Path) -> bool {
         .and_then(|value| value.to_str())
         .is_some_and(|extension| {
             [
-                "rs", "kt", "kts", "swift", "cs", "xaml", "toml", "yml", "yaml", "md",
+                "rs",
+                "kt",
+                "kts",
+                "swift",
+                "cs",
+                "xaml",
+                "c",
+                "h",
+                "cpp",
+                "hpp",
+                "sh",
+                "ps1",
+                "sql",
+                "xml",
+                "properties",
+                "json",
+                "toml",
+                "yml",
+                "yaml",
+                "md",
             ]
             .contains(&extension)
         })
@@ -240,6 +395,16 @@ fn regenerate_testdata(root: &Path) -> Result<()> {
             "card.json",
             br#"{"spec":"chara_card_v3","data":{"name":"Synthetic CHARX","description":"Test package"}}"#,
         )],
+    )?;
+    write_zip(
+        &testdata.join("packages/with-avatar.charx"),
+        &[
+            (
+                "card.json",
+                br#"{"spec":"chara_card_v3","data":{"name":"Synthetic Avatar","description":"Asset persistence fixture"}}"#,
+            ),
+            ("assets/avatar.png", TINY_PNG),
+        ],
     )?;
     write_zip(
         &testdata.join("archives/traversal.zip"),
@@ -276,6 +441,14 @@ fn regenerate_testdata(root: &Path) -> Result<()> {
     Ok(())
 }
 
+const TINY_PNG: &[u8] = &[
+    0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, b'I', b'H', b'D', b'R',
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+    0x89, 0x00, 0x00, 0x00, 0x0d, b'I', b'D', b'A', b'T', 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0xf0,
+    0x1f, 0x00, 0x05, 0x00, 0x01, 0xff, 0x89, 0x99, 0x3d, 0x1d, 0x00, 0x00, 0x00, 0x00, b'I', b'E',
+    b'N', b'D', 0xae, 0x42, 0x60, 0x82,
+];
+
 fn write_zip(path: &Path, entries: &[(&str, &[u8])]) -> Result<()> {
     let file = File::create(path)?;
     let mut archive = ZipWriter::new(file);
@@ -303,4 +476,95 @@ fn run(root: &Path, program: &str, arguments: impl IntoIterator<Item = OsString>
         bail!("{program} failed with {status}");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        contains_generated_bundle_component, has_forbidden_tracked_extension,
+        is_forbidden_tracked_name, is_license_file, is_source_file,
+    };
+    use std::path::Path;
+
+    #[test]
+    fn recognizes_license_name_variants() {
+        assert!(is_license_file("LICENSE"));
+        assert!(is_license_file("docs/LICENSE.txt"));
+        assert!(is_license_file("LICENCE.md"));
+        assert!(is_license_file("COPYING"));
+        assert!(!is_license_file("docs/licensing-policy.md"));
+    }
+
+    #[test]
+    fn recognizes_files_inside_generated_bundles() {
+        assert!(contains_generated_bundle_component(
+            "Artifacts/Core.xcframework/Info.plist"
+        ));
+        assert!(contains_generated_bundle_component(
+            "Build/LorePia.framework/Headers/LorePia.h"
+        ));
+        assert!(contains_generated_bundle_component(
+            "Build/LorePia.app/Contents/MacOS/LorePia"
+        ));
+        assert!(contains_generated_bundle_component(
+            "Build/LorePia.xcarchive/Info.plist"
+        ));
+        assert!(!contains_generated_bundle_component(
+            "apps/windows/Lorepia.App/App.xaml"
+        ));
+        assert!(!contains_generated_bundle_component(
+            "apps/apple/project.yml"
+        ));
+    }
+
+    #[test]
+    fn recognizes_credentials_logs_and_native_outputs_case_insensitively() {
+        for path in [
+            "signing.JKS",
+            "developer.keystore",
+            "auth.PEM",
+            "private.KEY",
+            "apple/AuthKey.P8",
+            "build/diagnostic.LOG",
+            "output/LorePia.EXE",
+        ] {
+            assert!(
+                has_forbidden_tracked_extension(Path::new(path)),
+                "missed {path}"
+            );
+        }
+        assert!(!has_forbidden_tracked_extension(Path::new(
+            "docs/signing.md"
+        )));
+    }
+
+    #[test]
+    fn recognizes_sensitive_names_but_allows_environment_template() {
+        for path in [
+            ".env",
+            "config/.env.production",
+            "android/keystore.properties",
+            "android/secrets.properties",
+            "android/local.properties",
+            "LorePia_new_multiplatform_repository_private_guide.md",
+        ] {
+            assert!(is_forbidden_tracked_name(path), "missed {path}");
+        }
+        assert!(!is_forbidden_tracked_name(".env.example"));
+    }
+
+    #[test]
+    fn source_file_guard_covers_build_and_contract_sources() {
+        for path in [
+            "script.sh",
+            "script.ps1",
+            "migration.sql",
+            "header.h",
+            "manifest.xml",
+            "gradle.properties",
+            "fixture.json",
+        ] {
+            assert!(is_source_file(Path::new(path)), "missed {path}");
+        }
+    }
 }

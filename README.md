@@ -10,16 +10,17 @@ and owns its operating-system integration.
 
 ## Status
 
-LorePia is in early development. The Rust vertical slices are implemented and
-covered by automated tests; native application frames and their bindings are
-validated independently on the matching CI hosts.
+LorePia is in early development. The local import, Library, conversation,
+provider, and streaming-chat vertical slices are implemented in the shared
+core and connected to each native application. Platform builds and launch
+smokes run independently on matching CI hosts.
 
 | Platform | UI | Current status |
 |---|---|---|
-| Android | Kotlin + Jetpack Compose | Application frame and UniFFI integration |
-| iOS | Swift + SwiftUI | Application frame and shared Swift package |
-| macOS | Swift + SwiftUI | Application frame and shared Swift package |
-| Windows | C# + WinUI 3 | Application frame and C ABI/P/Invoke integration |
+| Android | Kotlin + Jetpack Compose | Import, Library, chat, settings, UniFFI, and Keystore credentials |
+| iOS | Swift + SwiftUI | Import, Library, chat, settings, UniFFI, and Keychain credentials |
+| macOS | Swift + SwiftUI | Import, Library, chat, settings, UniFFI, and Keychain credentials |
+| Windows | C# + WinUI 3 | Import, Library, chat, settings, C ABI, and PasswordVault credentials |
 
 ## Architecture
 
@@ -42,8 +43,10 @@ See [the architecture overview](docs/architecture/overview.md).
 - inspect CCv3 JSON and CHARX ZIP input behind explicit size and archive limits;
 - reject traversal, absolute paths, symbolic links, normalized path collisions,
   and high compression ratios;
-- verify SHA-256 again between review and commit;
-- persist immutable sources, characters, conversations, messages, and settings;
+- snapshot picker input before review and verify every source and asset CAS
+  write by SHA-256;
+- persist immutable sources, CHARX assets, characters, conversations, messages,
+  provider profiles, and settings;
 - restore local state after process restart;
 - connect directly to HTTPS or loopback OpenAI-compatible endpoints;
 - stream versioned, ordered generation events and propagate cancellation;
@@ -74,6 +77,9 @@ Platform instructions:
 - [Android](apps/android/README.md)
 - [iOS and macOS](apps/apple/README.md)
 - [Windows](apps/windows/README.md)
+
+Cross-platform test layers, fixture rules, and repeatable performance scenarios
+are documented in [the testing guide](docs/development/testing.md).
 
 The current product has no account system, operated backend, cloud sync,
 billing, marketplace, or web frontend. Model requests go only to an endpoint

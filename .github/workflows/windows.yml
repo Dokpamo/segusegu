@@ -14,8 +14,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      required: ${{ steps.filter.outputs.required }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        name: Filter Windows paths
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          required="$(./scripts/ci-path-filter.sh windows "$BASE_SHA" "$HEAD_SHA")"
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+
+  windows_build:
+    name: windows-build
+    needs: changes
+    if: needs.changes.outputs.required == 'true'
     runs-on: windows-2022
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -28,4 +50,35 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build Rust DLL, tests, and WinUI application
         shell: pwsh
-        run: ./scripts/build-windows.ps1
+        run: |
+          ./scripts/build-windows.ps1 *>&1 | Tee-Object -FilePath windows-build.log
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+      - name: Upload Windows reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            windows-build.log
+            apps/windows/**/TestResults/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  windows:
+    needs: [changes, windows_build]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require relevant Windows build
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          BUILD_REQUIRED: ${{ needs.changes.outputs.required }}
+          BUILD_RESULT: ${{ needs.windows_build.result }}
+        run: |
+          test "$CHANGES_RESULT" = "success"
+          if [ "$BUILD_REQUIRED" = "true" ]; then
+            test "$BUILD_RESULT" = "success"
+          fi

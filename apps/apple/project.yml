@@ -51,6 +51,18 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: LorePia
         CODE_SIGN_ENTITLEMENTS: Apps/macOS/LorepiaMac.entitlements
         ENABLE_HARDENED_RUNTIME: true
+  LorepiaIOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: Tests/iOSUITests
+    dependencies:
+      - target: LorepiaIOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.lorepia.ios-ui-tests
+        GENERATE_INFOPLIST_FILE: true
+        TEST_TARGET_NAME: LorepiaIOS
 schemes:
   LorepiaIOS:
     build:
@@ -60,11 +72,11 @@ schemes:
       config: Debug
     test:
       config: Debug
+      targets:
+        - LorepiaIOSUITests
   LorepiaMac:
     build:
       targets:
         LorepiaMac: all
     run:
-      config: Debug
-    test:
       config: Debug

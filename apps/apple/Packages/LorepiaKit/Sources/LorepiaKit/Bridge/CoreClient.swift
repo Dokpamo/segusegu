@@ -38,22 +38,48 @@ public struct HealthStatus: Equatable, Sendable {
 public enum CoreClientFailure: Error, Equatable, Sendable {
     case bindingsUnavailable
     case startupFailed(String)
+    case invalidResponse(String)
 }
 
 extension CoreClientFailure: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .bindingsUnavailable:
-            "생성된 UniFFI 바인딩을 찾을 수 없습니다."
+            "이 빌드에 Rust UniFFI 바인딩이 포함되지 않았습니다."
         case let .startupFailed(message):
             "Rust 코어를 열지 못했습니다: \(message)"
+        case let .invalidResponse(message):
+            "Rust 코어 응답을 해석할 수 없습니다: \(message)"
         }
     }
 }
 
 public protocol CoreClient: Sendable {
     func version() async throws -> String
+    func apiVersions() async throws -> CoreVersionInfo
     func health() async throws -> HealthStatus
+    func listCharacters() async throws -> [CoreCharacter]
+    func getCharacter(id: String) async throws -> CoreCharacter
+    func inspectImport(stagedURL: URL) async throws -> ImportInspection
+    func discardImport(inspectionID: String) async throws
+    func commitImport(inspectionID: String) async throws -> CoreCharacter
+    func listConversations() async throws -> [CoreConversation]
+    func openConversation(characterID: String) async throws -> CoreConversation
+    func listMessages(conversationID: String) async throws -> [ChatMessage]
+    func sendMessage(
+        conversationID: String,
+        text: String,
+        providerProfileID: String,
+        credential: String?
+    ) async throws -> String
+    func cancelGeneration(generationID: String) async throws
+    func pollEvents(maxEvents: UInt32) async throws -> ChatEventBatch
+    func listProviderProfiles() async throws -> [ProviderProfile]
+    func upsertProviderProfile(_ profile: ProviderProfile) async throws -> ProviderProfile
+    func deleteProviderProfile(id: String) async throws
+    func getSettings() async throws -> CoreAppSettings
+    func updateSettings(_ settings: CoreAppSettings) async throws -> CoreAppSettings
+    func databaseStats() async throws -> DatabaseStats
 }
 
 public enum CoreRuntimeMode: Equatable, Sendable {

@@ -13,6 +13,8 @@ use url::Url;
 
 use crate::{Provider, ProviderEvent, ProviderEventSender};
 
+const MAX_SSE_BUFFER_BYTES: usize = 1024 * 1024;
+
 pub struct OpenAiCompatibleProvider {
     endpoint: Url,
     client: Client,
@@ -32,6 +34,8 @@ impl OpenAiCompatibleProvider {
         })?;
         let client = Client::builder()
             .timeout(timeout)
+            .connect_timeout(timeout.min(Duration::from_secs(30)))
+            .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|error| {
                 CoreError::new(
@@ -61,6 +65,9 @@ impl Provider for OpenAiCompatibleProvider {
         sink: ProviderEventSender,
         mut cancelled: watch::Receiver<bool>,
     ) -> CoreResult<GenerationUsage> {
+        if *cancelled.borrow() {
+            return Err(cancelled_error());
+        }
         let payload = RequestPayload {
             model: request.model,
             messages: request
@@ -82,7 +89,24 @@ impl Provider for OpenAiCompatibleProvider {
         if let Some(credential) = credential.filter(|value| !value.is_empty()) {
             builder = builder.bearer_auth(credential);
         }
-        let response = builder.send().await.map_err(network_error)?;
+        let response = builder.send();
+        tokio::pin!(response);
+        let mut cancellation_open = true;
+        let response = loop {
+            tokio::select! {
+                change = cancelled.changed(), if cancellation_open => {
+                    if change.is_ok() && *cancelled.borrow() {
+                        return Err(cancelled_error());
+                    }
+                    if change.is_err() {
+                        cancellation_open = false;
+                    }
+                }
+                result = &mut response => {
+                    break result.map_err(network_error)?;
+                }
+            }
+        };
         if !response.status().is_success() {
             return Err(status_error(response.status()));
         }
@@ -92,18 +116,24 @@ impl Provider for OpenAiCompatibleProvider {
         let mut usage = GenerationUsage::default();
         loop {
             tokio::select! {
-                change = cancelled.changed() => {
+                change = cancelled.changed(), if cancellation_open => {
                     if change.is_ok() && *cancelled.borrow() {
-                        return Err(CoreError::new(
-                            CoreErrorCode::Cancelled,
-                            "generation was cancelled",
-                            true,
-                        ));
+                        return Err(cancelled_error());
+                    }
+                    if change.is_err() {
+                        cancellation_open = false;
                     }
                 }
                 chunk = bytes.next() => {
                     let Some(chunk) = chunk else { break };
                     pending.extend_from_slice(&chunk.map_err(network_error)?);
+                    if pending.len() > MAX_SSE_BUFFER_BYTES {
+                        return Err(CoreError::new(
+                            CoreErrorCode::ProviderUnavailable,
+                            "provider streaming event exceeded 1 MiB",
+                            true,
+                        ));
+                    }
                     while let Some(boundary) = find_event_boundary(&pending) {
                         let event = pending.drain(..boundary).collect::<Vec<_>>();
                         pending.drain(..event_separator_len(&pending));
@@ -117,6 +147,10 @@ impl Provider for OpenAiCompatibleProvider {
         }
         Ok(usage)
     }
+}
+
+fn cancelled_error() -> CoreError {
+    CoreError::new(CoreErrorCode::Cancelled, "generation was cancelled", true)
 }
 
 #[derive(Serialize)]
@@ -278,6 +312,15 @@ fn status_error(status: StatusCode) -> CoreError {
 
 #[cfg(test)]
 mod tests {
+    use std::{
+        io::{Read, Write},
+        net::TcpListener,
+        thread,
+    };
+
+    use lorepia_domain::{ConversationId, GenerationId, GenerationRequest};
+    use tokio::sync::{mpsc, watch};
+
     use super::*;
 
     #[test]
@@ -296,5 +339,81 @@ mod tests {
             OpenAiCompatibleProvider::new("http://127.0.0.1:11434/v1", Duration::from_secs(1))
                 .is_ok()
         );
+    }
+
+    fn request() -> GenerationRequest {
+        GenerationRequest {
+            generation_id: GenerationId::new(),
+            conversation_id: ConversationId::new(),
+            model: "fixture".to_owned(),
+            messages: Vec::new(),
+            temperature: 1.0,
+            max_output_tokens: None,
+        }
+    }
+
+    fn status_server(status: &str, extra_headers: &str) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind status server");
+        let address = listener.local_addr().expect("status server address");
+        let status = status.to_owned();
+        let extra_headers = extra_headers.to_owned();
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().expect("accept request");
+            let mut request = [0_u8; 4096];
+            let _ = stream.read(&mut request);
+            write!(
+                stream,
+                "HTTP/1.1 {status}\r\nContent-Length: 0\r\nConnection: close\r\n{extra_headers}\r\n"
+            )
+            .expect("write status");
+        });
+        format!("http://{address}/v1")
+    }
+
+    async fn status_error_from(status: &str, extra_headers: &str) -> CoreError {
+        let provider = OpenAiCompatibleProvider::new(
+            &status_server(status, extra_headers),
+            Duration::from_secs(2),
+        )
+        .expect("provider");
+        let (sink, _events) = mpsc::channel(4);
+        let (_cancel, cancelled) = watch::channel(false);
+        provider
+            .generate(request(), None, sink, cancelled)
+            .await
+            .expect_err("status must fail")
+    }
+
+    #[tokio::test]
+    async fn maps_auth_rate_limit_and_redirect_without_following() {
+        let auth = status_error_from("401 Unauthorized", "").await;
+        assert_eq!(auth.code, CoreErrorCode::ProviderAuthFailed);
+        assert!(!auth.recoverable);
+
+        let rate_limit = status_error_from("429 Too Many Requests", "").await;
+        assert_eq!(rate_limit.code, CoreErrorCode::ProviderRateLimited);
+        assert!(rate_limit.recoverable);
+
+        let redirect = status_error_from(
+            "302 Found",
+            "Location: https://example.invalid/redirect\r\n",
+        )
+        .await;
+        assert_eq!(redirect.code, CoreErrorCode::ProviderUnavailable);
+    }
+
+    #[tokio::test]
+    async fn cancellation_is_observed_before_connecting() {
+        let provider =
+            OpenAiCompatibleProvider::new("http://127.0.0.1:9/v1", Duration::from_secs(2))
+                .expect("provider");
+        let (sink, _events) = mpsc::channel(4);
+        let (cancel, cancelled) = watch::channel(false);
+        cancel.send(true).expect("cancel");
+        let error = provider
+            .generate(request(), None, sink, cancelled)
+            .await
+            .expect_err("cancelled request");
+        assert_eq!(error.code, CoreErrorCode::Cancelled);
     }
 }

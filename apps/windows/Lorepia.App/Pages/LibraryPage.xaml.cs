@@ -6,10 +6,11 @@ namespace Lorepia.App.Pages;
 
 public sealed partial class LibraryPage : Page
 {
-    public LibraryViewModel ViewModel { get; } = new();
+    public LibraryViewModel ViewModel { get; }
 
     public LibraryPage()
     {
+        ViewModel = new LibraryViewModel(App.Services.Core);
         InitializeComponent();
     }
 
@@ -20,6 +21,22 @@ public sealed partial class LibraryPage : Page
 
     private void ReviewImport_Click(object sender, RoutedEventArgs e)
     {
-        Frame.Navigate(typeof(ImportReviewPage));
+        if (App.MainWindow is MainWindow window)
+        {
+            window.OpenImportReview();
+        }
+    }
+
+    private void Character_ItemClick(
+        object sender,
+        ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is Lorepia.Native.CharacterSummary character)
+        {
+            if (App.MainWindow is MainWindow window)
+            {
+                window.OpenChat(character.Id);
+            }
+        }
     }
 }

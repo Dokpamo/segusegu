@@ -15,6 +15,7 @@ path = "src/bin/uniffi-bindgen.rs"
 [dependencies]
 lorepia-core = { path = "../../crates/core" }
 thiserror.workspace = true
+tokio.workspace = true
 uniffi.workspace = true
 
 [dev-dependencies]

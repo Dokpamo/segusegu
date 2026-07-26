@@ -13,6 +13,26 @@ Synthetic hostile archives live in `testdata/`. Regenerate them with
 `cargo xtask testdata regenerate`. A test must never require user data or a live
 model credential.
 
-Performance scenarios are recorded before setting pass/fail budgets: 1,000
-characters, 100,000 message metadata rows, large imports, long streams, rapid
-cancellation, and restart recovery.
+Performance measurements intentionally have no pass/fail duration threshold.
+Run the ignored suite explicitly and retain its printed timings when comparing
+revisions:
+
+```bash
+cargo test -p lorepia-core --test performance_scenarios -- --ignored --nocapture
+```
+
+Every scenario uses temporary, project-owned synthetic data. It requires no
+external network, credential, user content, or repository fixture:
+
+- reopen and list a 1,000-character library;
+- persist and load 100,000 message metadata rows;
+- inspect a CHARX package with a 32 MiB asset;
+- inspect and enumerate a CHARX package containing 2,000 assets;
+- process 4,096 ordered streaming chunks;
+- run 100 consecutive cancellation and regeneration cycles;
+- reopen persisted library and conversation data while recovering abandoned
+  staging work.
+
+The suite prints elapsed times and workload counts but makes only functional
+assertions. Establish a regression threshold only after comparable measurements
+show a stable baseline.

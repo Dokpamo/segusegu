@@ -39,6 +39,17 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "F2961F198CC0B2A12B5B62BD"
+               BuildableName = "LorepiaIOSUITests.xctest"
+               BlueprintName = "LorepiaIOSUITests"
+               ReferencedContainer = "container:Lorepia.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
       <CommandLineArguments>
       </CommandLineArguments>

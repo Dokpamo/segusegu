@@ -8,11 +8,25 @@ document picking, bounded staging copies, accessibility, and lifecycle. Rust
 owns content inspection, persistence, chat behavior, and provider orchestration.
 
 The app opens one `LorepiaCore` per process and exposes the real core version,
-structured health report, character library, and import workflow. Character
-files selected through Android's document picker are copied to an app-only
-staging directory with a 50 MiB limit. Rust inspects the package and returns the
-Import Review DTO; only explicit user approval calls `commitImport`. Leaving
-before approval deletes the staged copy.
+structured health report, character library, import workflow, persisted
+conversations, chat events, provider profiles, and application settings.
+Character files selected through Android's document picker are copied to an
+app-only staging directory with a 50 MiB limit. Rust takes its own verified
+inspection snapshot and returns structured warnings, blocked reasons, and an
+estimated stored size. Only explicit user approval calls `commitImport`;
+leaving before approval calls `discardImport` and removes Android's staged
+copy.
+
+Selecting a character opens its existing conversations or creates the first
+one. The Chat screen restores persisted messages, submits through the selected
+provider profile, polls bounded event batches, rejects stale generation or
+sequence events, streams text, and exposes cancellation. Because the binding
+event queue is process-wide, Chat also reconciles persisted messages after
+dropped events, repeated empty batches, and route resume; a generation is
+cleared when its pending persisted row is gone. Provider credentials are never
+placed in Rust storage or ordinary preferences: Android encrypts them with a
+non-exportable Android Keystore AES-GCM key and stores ciphertext in the app's
+no-backup directory.
 
 ## Prerequisites
 
@@ -63,8 +77,14 @@ With an emulator or device whose ABI has a Rust library:
 ```
 
 The instrumentation suite includes navigation, Import Review accessibility,
-real UniFFI `coreVersion()` and `healthCheck()` smoke tests, and a synthetic
-package inspect/commit/library round trip.
+chat send/cancel UI, an Android Keystore encrypted-storage round trip, real
+`MainActivity`/`Application` startup and Settings health, UniFFI lifecycle
+checks (including rejection after `close()`), and a synthetic package
+inspect/commit/library round trip.
+
+Import Review shows Rust-provided representative-image metadata and unsupported
+optional CCv3 field names. Android does not open the archive to derive either
+value and never receives a Rust staging path or raw preview bytes.
 
 ## Build the app
 
@@ -95,7 +115,7 @@ app/src/main/kotlin/dev/lorepia/app/
 ├── app/            App bootstrap and process-wide core lifecycle
 ├── bridge/         Kotlin CoreClient and the UniFFI adapter
 ├── feature/        Library, Import Review, Chat, and Settings UI state
-├── platform/       Android document staging and app directories
+├── platform/       Keystore credentials, document staging, and app directories
 └── ui/             Navigation and Compose theme
 ```
 
@@ -111,5 +131,6 @@ the generated binding. Generated Kotlin is consumed from
 - Missing `dev.lorepia.core` symbols: run the Kotlin binding generation script.
 - `UnsatisfiedLinkError`: build the Rust libraries and verify that the device
   ABI matches a directory under `app/src/main/jniLibs`.
-- A selected document disappears after closing Import Review: uncommitted
-  staging files are intentionally removed.
+- A selected document disappears after inspection or closing Import Review:
+  Android's source staging copy is intentionally removed after Rust has taken
+  its verified private snapshot.

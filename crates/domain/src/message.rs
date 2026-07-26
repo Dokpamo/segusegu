@@ -76,4 +76,21 @@ impl Message {
             created_at: Utc::now(),
         }
     }
+
+    pub fn pending_assistant(
+        conversation_id: ConversationId,
+        parent_id: MessageId,
+        generation_id: GenerationId,
+    ) -> Self {
+        Self {
+            id: MessageId::new(),
+            conversation_id,
+            parent_id: Some(parent_id),
+            role: MessageRole::Assistant,
+            content: String::new(),
+            status: MessageStatus::Pending,
+            generation_id: Some(generation_id),
+            created_at: Utc::now(),
+        }
+    }
 }

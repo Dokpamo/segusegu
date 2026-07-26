@@ -23,58 +23,63 @@ struct LorepiaMacCommands: Commands {
     }
 }
 
-struct MacRootView: View {
-    private enum Destination: String, CaseIterable, Identifiable {
-        case library
-        case chat
-        case importReview
-        case settings
-
-        var id: Self {
-            self
-        }
-
-        var title: String {
-            switch self {
-            case .library:
-                "서재"
-            case .chat:
-                "채팅"
-            case .importReview:
-                "가져오기 검토"
-            case .settings:
-                "설정"
-            }
-        }
-
-        var symbol: String {
-            switch self {
-            case .library:
-                "books.vertical"
-            case .chat:
-                "bubble.left.and.bubble.right"
-            case .importReview:
-                "doc.badge.plus"
-            case .settings:
-                "gearshape"
-            }
+private extension MacRootNavigationModel.Destination {
+    var title: String {
+        switch self {
+        case .library:
+            "서재"
+        case .chat:
+            "채팅"
+        case .importReview:
+            "가져오기 검토"
+        case .settings:
+            "설정"
         }
     }
 
+    var symbol: String {
+        switch self {
+        case .library:
+            "books.vertical"
+        case .chat:
+            "bubble.left.and.bubble.right"
+        case .importReview:
+            "doc.badge.plus"
+        case .settings:
+            "gearshape"
+        }
+    }
+}
+
+struct MacRootView: View {
     let environment: AppEnvironment
 
+    @ObservedObject private var navigationModel: MacRootNavigationModel
     @ObservedObject private var settingsViewModel: SettingsViewModel
-    @State private var destination: Destination? = .library
     @State private var showsFileImporter = false
 
-    init(environment: AppEnvironment) {
+    init(
+        environment: AppEnvironment,
+        navigationModel: MacRootNavigationModel
+    ) {
         self.environment = environment
+        self.navigationModel = navigationModel
         settingsViewModel = environment.settingsViewModel
     }
 
     var body: some View {
         NavigationSplitView {
-            List(Destination.allCases, selection: $destination) { item in
+            List(
+                MacRootNavigationModel.Destination.allCases,
+                selection: Binding<MacRootNavigationModel.Destination?>(
+                    get: { navigationModel.destination },
+                    set: { destination in
+                        if let destination {
+                            navigationModel.navigate(to: destination)
+                        }
+                    }
+                )
+            ) { item in
                 Label(item.title, systemImage: item.symbol)
                     .tag(item)
             }
@@ -95,7 +100,7 @@ struct MacRootView: View {
                     .frame(minWidth: 250, idealWidth: 280, maxWidth: 320)
                 }
             }
-            .navigationTitle(destination?.title ?? "LorePia")
+            .navigationTitle(navigationModel.destination.title)
         }
         .fileImporter(
             isPresented: $showsFileImporter,
@@ -123,7 +128,7 @@ struct MacRootView: View {
 
     @ViewBuilder
     private var detail: some View {
-        switch destination ?? .library {
+        switch navigationModel.destination {
         case .library:
             LibraryView(
                 viewModel: environment.libraryViewModel,
@@ -131,26 +136,45 @@ struct MacRootView: View {
                     showsFileImporter = true
                 },
                 onOpenChat: { character in
-                    environment.selectCharacter(character)
-                    destination = .chat
+                    navigationModel.navigate(to: .chat)
+                    Task {
+                        await environment.selectCharacter(character)
+                    }
                 }
             )
+            .onAppear {
+                navigationModel.acknowledgeRendered(.library)
+            }
         case .chat:
             ChatView(viewModel: environment.chatViewModel)
+                .onAppear {
+                    navigationModel.acknowledgeRendered(.chat)
+                }
         case .importReview:
             ImportReviewView(
                 viewModel: environment.importReviewViewModel,
                 onPickFile: {
                     showsFileImporter = true
+                },
+                onFinished: {
+                    navigationModel.navigate(to: .library)
                 }
             )
+            .onAppear {
+                navigationModel.acknowledgeRendered(.importReview)
+            }
         case .settings:
             SettingsView(viewModel: settingsViewModel)
+                .onAppear {
+                    navigationModel.acknowledgeRendered(.settings)
+                }
         }
     }
 
     private func prepareImport(_ url: URL) {
-        environment.prepareImport(from: url)
-        destination = .importReview
+        navigationModel.navigate(to: .importReview)
+        Task {
+            await environment.prepareImport(from: url)
+        }
     }
 }

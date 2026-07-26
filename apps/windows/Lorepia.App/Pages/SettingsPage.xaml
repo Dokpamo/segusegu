@@ -8,20 +8,101 @@
             MaxWidth="760"
             Padding="32"
             Spacing="20">
-            <StackPanel Spacing="6">
-                <TextBlock
-                    FontSize="28"
-                    FontWeight="SemiBold"
-                    Text="Settings" />
-                <TextBlock
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Text="Native core diagnostics"
-                    TextWrapping="Wrap" />
+            <TextBlock
+                FontSize="28"
+                FontWeight="SemiBold"
+                Text="Settings" />
+
+            <TextBlock
+                FontSize="20"
+                FontWeight="SemiBold"
+                Text="Provider profiles" />
+            <ComboBox
+                DisplayMemberPath="DisplayName"
+                Header="Edit profile"
+                ItemsSource="{x:Bind ViewModel.Profiles}"
+                SelectedItem="{x:Bind ViewModel.SelectedProfile, Mode=TwoWay}" />
+            <Grid ColumnSpacing="12" RowSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBox
+                    Header="Profile ID"
+                    PlaceholderText="openai"
+                    Text="{x:Bind ViewModel.ProfileId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox
+                    Grid.Column="1"
+                    Header="Display name"
+                    PlaceholderText="OpenAI"
+                    Text="{x:Bind ViewModel.ProfileDisplayName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox
+                    Grid.Row="1"
+                    Grid.ColumnSpan="2"
+                    Header="Base URL"
+                    PlaceholderText="https://api.openai.com/v1"
+                    Text="{x:Bind ViewModel.ProfileBaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox
+                    Grid.Row="2"
+                    Header="Model"
+                    PlaceholderText="model name"
+                    Text="{x:Bind ViewModel.ProfileModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox
+                    Grid.Row="2"
+                    Grid.Column="1"
+                    Header="Timeout seconds"
+                    InputScope="Number"
+                    Text="{x:Bind ViewModel.ProfileTimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+            <PasswordBox
+                x:Name="CredentialBox"
+                Header="API credential"
+                PasswordChar="●"
+                PlaceholderText="Leave blank to keep the saved credential" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Click="NewProfile_Click" Content="New" />
+                <Button
+                    Click="SaveProfile_Click"
+                    Content="Save profile"
+                    Style="{StaticResource AccentButtonStyle}" />
+                <Button Click="DeleteProfile_Click" Content="Delete profile" />
+                <Button Click="RemoveCredential_Click" Content="Remove credential" />
             </StackPanel>
 
-            <Grid
-                ColumnSpacing="24"
-                RowSpacing="14">
+            <TextBlock
+                FontSize="20"
+                FontWeight="SemiBold"
+                Text="Chat behavior" />
+            <ComboBox
+                DisplayMemberPath="DisplayName"
+                Header="Default provider"
+                ItemsSource="{x:Bind ViewModel.Profiles}"
+                PlaceholderText="No default provider"
+                SelectedItem="{x:Bind ViewModel.SelectedDefaultProfile, Mode=TwoWay}" />
+            <CheckBox
+                Content="Keep a partial assistant response when generation fails or is cancelled"
+                IsChecked="{x:Bind ViewModel.PreservePartialGenerations, Mode=TwoWay}" />
+            <Button
+                Click="SaveSettings_Click"
+                Content="Save chat settings"
+                HorizontalAlignment="Left" />
+            <InfoBar
+                IsClosable="False"
+                IsOpen="True"
+                Message="{x:Bind ViewModel.ProviderStatus, Mode=OneWay}"
+                Severity="Informational"
+                Title="Local provider configuration" />
+
+            <TextBlock
+                FontSize="20"
+                FontWeight="SemiBold"
+                Text="Native core diagnostics" />
+            <Grid ColumnSpacing="24" RowSpacing="14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="180" />
                     <ColumnDefinition Width="*" />
@@ -34,57 +115,32 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-
                 <TextBlock Text="C ABI version" />
-                <TextBlock
-                    Grid.Column="1"
-                    Text="{x:Bind ViewModel.AbiVersion, Mode=OneWay}" />
-
+                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AbiVersion, Mode=OneWay}" />
                 <TextBlock Grid.Row="1" Text="Core version" />
-                <TextBlock
-                    Grid.Row="1"
-                    Grid.Column="1"
-                    Text="{x:Bind ViewModel.CoreVersion, Mode=OneWay}" />
-
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.CoreVersion, Mode=OneWay}" />
                 <TextBlock Grid.Row="2" Text="Database" />
-                <TextBlock
-                    Grid.Row="2"
-                    Grid.Column="1"
-                    Text="{x:Bind ViewModel.Database, Mode=OneWay}" />
-
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.Database, Mode=OneWay}" />
                 <TextBlock Grid.Row="3" Text="Data root" />
-                <TextBlock
-                    Grid.Row="3"
-                    Grid.Column="1"
-                    Text="{x:Bind ViewModel.DataRoot, Mode=OneWay}" />
-
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind ViewModel.DataRoot, Mode=OneWay}" />
                 <TextBlock Grid.Row="4" Text="Staging" />
-                <TextBlock
-                    Grid.Row="4"
-                    Grid.Column="1"
-                    Text="{x:Bind ViewModel.Staging, Mode=OneWay}" />
-
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Bind ViewModel.Staging, Mode=OneWay}" />
                 <TextBlock Grid.Row="5" Text="Recovery" />
-                <TextBlock
-                    Grid.Row="5"
-                    Grid.Column="1"
-                    Text="{x:Bind ViewModel.Recovery, Mode=OneWay}" />
+                <TextBlock Grid.Row="5" Grid.Column="1" Text="{x:Bind ViewModel.Recovery, Mode=OneWay}" />
             </Grid>
-
             <InfoBar
                 IsClosable="False"
                 IsOpen="True"
                 Message="{x:Bind ViewModel.Status, Mode=OneWay}"
                 Severity="Informational"
                 Title="Core health" />
-
-            <Button
-                Click="Refresh_Click"
-                Content="Refresh health check"
-                HorizontalAlignment="Left" />
-            <ProgressRing
-                HorizontalAlignment="Left"
-                IsActive="{x:Bind ViewModel.IsRefreshing, Mode=OneWay}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button
+                    Click="Refresh_Click"
+                    Content="Refresh all settings" />
+                <ProgressRing
+                    IsActive="{x:Bind ViewModel.IsRefreshing, Mode=OneWay}" />
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </Page>

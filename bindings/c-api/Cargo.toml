@@ -14,6 +14,7 @@ doc = false
 lorepia-engine = { package = "lorepia-core", path = "../../crates/core" }
 serde.workspace = true
 serde_json.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

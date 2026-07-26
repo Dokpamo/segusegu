@@ -50,10 +50,26 @@ class ImportReviewViewModel(
         }
     }
 
-    fun discard() {
-        val isCommitting = (_uiState.value as? ImportReviewUiState.Ready)?.isCommitting == true
-        if (!isCommitting) {
+    fun discard(onFinished: () -> Unit = {}) {
+        val ready = _uiState.value as? ImportReviewUiState.Ready
+        if (ready == null) {
             deleteStagedDocument()
+            onFinished()
+            return
+        }
+        if (ready.isCommitting || ready.isDiscarding) return
+        _uiState.value = ready.copy(isDiscarding = true)
+        viewModelScope.launch {
+            try {
+                coreClient.discardImport(ready.inspection.id)
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Throwable) {
+                // The Rust core also clears abandoned snapshots during recovery.
+            } finally {
+                deleteStagedDocument()
+                onFinished()
+            }
         }
     }
 
@@ -65,6 +81,7 @@ class ImportReviewViewModel(
                 }
                 require(document.sizeBytes >= 0) { "The staged document size is invalid." }
                 val inspection = coreClient.inspectImport(document.path)
+                deleteStagedDocument()
                 _uiState.value = ImportReviewUiState.Ready(
                     document = document,
                     inspection = inspection,
@@ -89,11 +106,6 @@ class ImportReviewViewModel(
         val root = stagingDirectory.canonicalFile
         val candidate = File(path).canonicalFile
         return candidate.parentFile == root
-    }
-
-    override fun onCleared() {
-        discard()
-        super.onCleared()
     }
 
     companion object {

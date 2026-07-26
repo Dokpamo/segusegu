@@ -64,16 +64,50 @@
                 <Button
                     Click="ChooseFile_Click"
                     Content="Choose file"
+                    IsEnabled="{x:Bind ViewModel.CanChooseFile, Mode=OneWay}"
                     Style="{StaticResource AccentButtonStyle}" />
                 <Button
                     Click="Cancel_Click"
-                    Content="Clear staged file"
-                    IsEnabled="{x:Bind ViewModel.HasSelection, Mode=OneWay}" />
+                    Content="Discard review" />
                 <Button
+                    Click="Approve_Click"
                     Content="Approve import"
-                    IsEnabled="False"
-                    ToolTipService.ToolTip="The frame ABI does not expose commit_import." />
+                    IsEnabled="{x:Bind ViewModel.CanApprove, Mode=OneWay}"
+                    Style="{StaticResource AccentButtonStyle}" />
             </StackPanel>
+
+            <Grid ColumnSpacing="24" RowSpacing="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="180" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Text="Name" />
+                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.DisplayName, Mode=OneWay}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="1" Text="Description" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.Description, Mode=OneWay}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="2" Text="Content kind" />
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.ContentKind, Mode=OneWay}" />
+                <TextBlock Grid.Row="3" Text="Stored size estimate" />
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind ViewModel.StorageEstimate, Mode=OneWay}" />
+                <TextBlock Grid.Row="4" Text="Warnings" />
+                <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Bind ViewModel.Warnings, Mode=OneWay}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="5" Text="Blocked reasons" />
+                <TextBlock Grid.Row="5" Grid.Column="1" Text="{x:Bind ViewModel.BlockedReasons, Mode=OneWay}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="6" Text="Representative image" />
+                <TextBlock Grid.Row="6" Grid.Column="1" Text="{x:Bind ViewModel.RepresentativeImage, Mode=OneWay}" TextWrapping="Wrap" />
+                <TextBlock Grid.Row="7" Text="Unsupported optional fields" />
+                <TextBlock Grid.Row="7" Grid.Column="1" Text="{x:Bind ViewModel.UnsupportedOptionalFields, Mode=OneWay}" TextWrapping="Wrap" />
+            </Grid>
         </StackPanel>
     </ScrollViewer>
 </Page>

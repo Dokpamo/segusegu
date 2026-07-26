@@ -1,28 +1,49 @@
 use std::{
     collections::HashMap,
-    fs::{self, OpenOptions},
+    fs::{self, File, OpenOptions},
+    future::Future,
+    io::{BufReader, Read, Write},
     path::{Path, PathBuf},
-    sync::{Arc, Mutex, RwLock},
-    time::Duration,
+    sync::{Arc, Condvar, Mutex, RwLock},
+    time::{Duration, Instant},
 };
 
-use chrono::Utc;
-use lorepia_chat::{ChatEvent, PromptPlanner, run_generation};
-use lorepia_content::{inspect_file, sha256_file};
+use lorepia_chat::{
+    ChatEvent, ChatEventKind, GenerationFailure, GenerationOutcome, MAX_HISTORY_MESSAGE_BYTES,
+    MAX_HISTORY_MESSAGE_CHARS, MAX_PROMPT_MESSAGES, PromptPlanner, run_generation,
+};
+use lorepia_content::{StagedAsset, prepare_import};
 use lorepia_domain::{
     AppSettings, Character, Conversation, ConversationId, CoreError, CoreErrorCode, CoreResult,
-    GenerationId, HealthReport, ImportInspection, ImportLimits, InspectionId, Message, MessageId,
-    MessageRole, MessageStatus, ProviderProfile,
+    GenerationId, GenerationRequest, HealthReport, ImportInspection, ImportLimits, InspectionId,
+    Message, MessageStatus, ProviderProfile,
 };
 use lorepia_providers::{OpenAiCompatibleProvider, Provider};
-use lorepia_storage::{DatabaseStats, Storage};
+use lorepia_storage::{DatabaseStats, StagedAssetImport, Storage};
 use tokio::{
-    runtime::{Builder, Runtime},
+    runtime::{Builder, Handle},
     sync::{broadcast, mpsc, watch},
+    time::{self, MissedTickBehavior},
 };
 use uuid::Uuid;
 
 use crate::{CoreConfig, core_version};
+
+const CORE_MAX_OUTPUT_TOKENS: u32 = 4_096;
+const GENERATION_SHUTDOWN_GRACE: Duration = Duration::from_millis(750);
+const RUNTIME_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(1);
+const PARTIAL_CHECKPOINT_INTERVAL: Duration = Duration::from_millis(500);
+const PARTIAL_CHECKPOINT_BYTES: usize = 64 * 1024;
+const MAX_USER_MESSAGE_BYTES: usize = 64 * 1024;
+const MAX_USER_MESSAGE_CHARS: usize = 16 * 1024;
+const MAX_PROVIDER_ID_BYTES: usize = 256;
+const MAX_PROVIDER_ID_CHARS: usize = 64;
+const MAX_PROVIDER_DISPLAY_NAME_BYTES: usize = 512;
+const MAX_PROVIDER_DISPLAY_NAME_CHARS: usize = 128;
+const MAX_PROVIDER_BASE_URL_BYTES: usize = 4 * 1024;
+const MAX_PROVIDER_BASE_URL_CHARS: usize = 1_024;
+const MAX_PROVIDER_MODEL_BYTES: usize = 1_024;
+const MAX_PROVIDER_MODEL_CHARS: usize = 256;
 
 #[derive(Clone)]
 pub struct Core {
@@ -31,36 +52,190 @@ pub struct Core {
 
 struct CoreInner {
     storage: Arc<Storage>,
-    runtime: Runtime,
+    runtime: RuntimeControl,
     pending_imports: RwLock<HashMap<InspectionId, PendingImport>>,
-    active_generations: Mutex<HashMap<GenerationId, watch::Sender<bool>>>,
+    active_generations: Arc<GenerationRegistry>,
     event_bus: broadcast::Sender<ChatEvent>,
+}
+
+struct RuntimeControl {
+    handle: Handle,
+    shutdown_sender: Option<tokio::sync::oneshot::Sender<()>>,
+    owner_thread: Option<std::thread::JoinHandle<()>>,
+}
+
+#[derive(Default)]
+struct GenerationRegistry {
+    active: Mutex<HashMap<GenerationId, watch::Sender<bool>>>,
+    drained: Condvar,
 }
 
 #[derive(Clone)]
 struct PendingImport {
     path: PathBuf,
     inspection: ImportInspection,
+    staged_assets: Vec<StagedAsset>,
+}
+
+struct GenerationTask {
+    storage: Arc<Storage>,
+    active_generations: Arc<GenerationRegistry>,
+    event_bus: broadcast::Sender<ChatEvent>,
+    request: GenerationRequest,
+    assistant: Message,
+    provider: Arc<dyn Provider>,
+    credential: Option<String>,
+    cancel_receiver: watch::Receiver<bool>,
+    preserve_partial: bool,
+}
+
+impl RuntimeControl {
+    fn start() -> CoreResult<Self> {
+        let (ready_sender, ready_receiver) =
+            std::sync::mpsc::sync_channel::<Result<Handle, String>>(1);
+        let (shutdown_sender, shutdown_receiver) = tokio::sync::oneshot::channel();
+        let owner_thread = std::thread::Builder::new()
+            .name("lorepia-core-owner".to_owned())
+            .spawn(move || {
+                let runtime = match Builder::new_multi_thread()
+                    .worker_threads(2)
+                    .enable_all()
+                    .thread_name("lorepia-core-worker")
+                    .build()
+                {
+                    Ok(runtime) => runtime,
+                    Err(error) => {
+                        let _ = ready_sender
+                            .send(Err(format!("cannot create core async runtime: {error}")));
+                        return;
+                    }
+                };
+                if ready_sender.send(Ok(runtime.handle().clone())).is_err() {
+                    runtime.shutdown_timeout(RUNTIME_SHUTDOWN_TIMEOUT);
+                    return;
+                }
+                let _ = runtime.block_on(shutdown_receiver);
+                runtime.shutdown_timeout(RUNTIME_SHUTDOWN_TIMEOUT);
+            })
+            .map_err(|error| {
+                CoreError::internal(format!("cannot start core runtime owner: {error}"))
+            })?;
+
+        match ready_receiver.recv() {
+            Ok(Ok(handle)) => Ok(Self {
+                handle,
+                shutdown_sender: Some(shutdown_sender),
+                owner_thread: Some(owner_thread),
+            }),
+            Ok(Err(message)) => {
+                let _ = owner_thread.join();
+                Err(CoreError::internal(message))
+            }
+            Err(error) => {
+                let _ = owner_thread.join();
+                Err(CoreError::internal(format!(
+                    "core runtime owner stopped during startup: {error}"
+                )))
+            }
+        }
+    }
+
+    fn spawn(&self, future: impl Future<Output = ()> + Send + 'static) {
+        std::mem::drop(self.handle.spawn(future));
+    }
+
+    fn shutdown(&mut self) {
+        if let Some(sender) = self.shutdown_sender.take() {
+            let _ = sender.send(());
+        }
+        if let Some(owner_thread) = self.owner_thread.take() {
+            let _ = owner_thread.join();
+        }
+    }
+}
+
+impl GenerationRegistry {
+    fn register(&self, generation_id: GenerationId, sender: watch::Sender<bool>) -> CoreResult<()> {
+        self.active
+            .lock()
+            .map_err(|_| CoreError::internal("generation registry lock was poisoned"))?
+            .insert(generation_id, sender);
+        Ok(())
+    }
+
+    fn cancel(&self, generation_id: &GenerationId) -> CoreResult<()> {
+        let sender = self
+            .active
+            .lock()
+            .map_err(|_| CoreError::internal("generation registry lock was poisoned"))?
+            .get(generation_id)
+            .cloned()
+            .ok_or_else(|| {
+                CoreError::new(CoreErrorCode::NotFound, "generation was not found", false)
+            })?;
+        sender.send(true).map_err(|_| {
+            CoreError::new(CoreErrorCode::Cancelled, "generation already stopped", true)
+        })
+    }
+
+    fn remove(&self, generation_id: &GenerationId) {
+        if let Ok(mut active) = self.active.lock() {
+            active.remove(generation_id);
+            if active.is_empty() {
+                self.drained.notify_all();
+            }
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.active.lock().map_or(0, |active| active.len())
+    }
+
+    fn cancel_all_and_wait(&self, timeout: Duration) {
+        let Ok(mut active) = self.active.lock() else {
+            return;
+        };
+        for sender in active.values() {
+            let _ = sender.send(true);
+        }
+        let deadline = Instant::now() + timeout;
+        while !active.is_empty() {
+            let remaining = deadline.saturating_duration_since(Instant::now());
+            if remaining.is_zero() {
+                break;
+            }
+            match self.drained.wait_timeout(active, remaining) {
+                Ok((next, result)) => {
+                    active = next;
+                    if result.timed_out() {
+                        break;
+                    }
+                }
+                Err(_) => break,
+            }
+        }
+    }
+}
+
+impl Drop for CoreInner {
+    fn drop(&mut self) {
+        self.active_generations
+            .cancel_all_and_wait(GENERATION_SHUTDOWN_GRACE);
+        self.runtime.shutdown();
+    }
 }
 
 impl Core {
     pub fn open(config: CoreConfig) -> CoreResult<Self> {
         let storage = Arc::new(Storage::open(config.data_root)?);
-        let runtime = Builder::new_multi_thread()
-            .worker_threads(2)
-            .enable_all()
-            .thread_name("lorepia-core")
-            .build()
-            .map_err(|error| {
-                CoreError::internal(format!("cannot create core async runtime: {error}"))
-            })?;
+        let runtime = RuntimeControl::start()?;
         let (event_bus, _) = broadcast::channel(256);
         Ok(Self {
             inner: Arc::new(CoreInner {
                 storage,
                 runtime,
                 pending_imports: RwLock::new(HashMap::new()),
-                active_generations: Mutex::new(HashMap::new()),
+                active_generations: Arc::new(GenerationRegistry::default()),
                 event_bus,
             }),
         })
@@ -79,8 +254,20 @@ impl Core {
     }
 
     pub fn inspect_import(&self, staged_path: impl AsRef<Path>) -> CoreResult<ImportInspection> {
-        let staged_path = staged_path.as_ref();
-        let inspection = inspect_file(staged_path, ImportLimits::default())?;
+        let limits = ImportLimits::default();
+        let snapshot = snapshot_import_source(
+            staged_path.as_ref(),
+            &self.inner.storage.staging_dir(),
+            limits.max_source_bytes,
+        )?;
+        let prepared = match prepare_import(&snapshot, limits, &self.inner.storage.staging_dir()) {
+            Ok(prepared) => prepared,
+            Err(error) => {
+                let _ = fs::remove_file(&snapshot);
+                return Err(error);
+            }
+        };
+        let inspection = prepared.inspection;
         self.inner
             .pending_imports
             .write()
@@ -88,8 +275,9 @@ impl Core {
             .insert(
                 inspection.id.clone(),
                 PendingImport {
-                    path: staged_path.to_path_buf(),
+                    path: snapshot,
                     inspection: inspection.clone(),
+                    staged_assets: prepared.staged_assets,
                 },
             );
         Ok(inspection)
@@ -99,46 +287,78 @@ impl Core {
         let pending = self
             .inner
             .pending_imports
-            .read()
+            .write()
             .map_err(|_| CoreError::internal("pending import lock was poisoned"))?
-            .get(inspection_id)
-            .cloned()
+            .remove(inspection_id)
             .ok_or_else(|| {
                 CoreError::new(CoreErrorCode::NotFound, "inspection was not found", false)
             })?;
         if !pending.inspection.is_allowed() {
-            return Err(CoreError::new(
+            let error = CoreError::new(
                 CoreErrorCode::UnsafeArchive,
                 "blocked import cannot be committed",
                 false,
-            ));
+            );
+            self.restore_pending_import(inspection_id.clone(), pending)?;
+            return Err(error);
         }
-        let current_hash = sha256_file(&pending.path)?;
-        if current_hash != pending.inspection.source_sha256 {
-            return Err(CoreError::new(
-                CoreErrorCode::UnsafeArchive,
-                "staging file changed after inspection",
-                false,
-            ));
-        }
-
-        let character = Character::new(
+        let mut character = Character::new(
             &pending.inspection.display_name,
             &pending.inspection.description,
             &pending.inspection.source_sha256,
         );
-        self.inner.storage.commit_character_import(
+        character.avatar_asset_hash = pending
+            .staged_assets
+            .iter()
+            .find(|asset| asset.signature_valid && asset.media_type.starts_with("image/"))
+            .map(|asset| asset.sha256.clone());
+        let staged_assets = pending
+            .staged_assets
+            .iter()
+            .map(|asset| StagedAssetImport {
+                staged_path: asset.staged_path.clone(),
+                sha256: asset.sha256.clone(),
+                media_type: asset.media_type.clone(),
+                size_bytes: asset.size_bytes,
+            })
+            .collect::<Vec<_>>();
+        let commit = self.inner.storage.commit_character_import(
             &pending.path,
             &character,
             pending.inspection.source_size,
             &inspection_id.0,
-        )?;
-        self.inner
+            &staged_assets,
+        );
+        match commit {
+            Ok(()) => {
+                let _ = cleanup_pending_import(&pending, &self.inner.storage.staging_dir());
+                Ok(character)
+            }
+            Err(error) => match self.inner.storage.get_character(&character.id) {
+                Ok(committed) => {
+                    let _ = cleanup_pending_import(&pending, &self.inner.storage.staging_dir());
+                    Ok(committed)
+                }
+                Err(lookup) if lookup.code == CoreErrorCode::NotFound => {
+                    self.restore_pending_import(inspection_id.clone(), pending)?;
+                    Err(error)
+                }
+                Err(_) => Err(error),
+            },
+        }
+    }
+
+    pub fn discard_import(&self, inspection_id: &InspectionId) -> CoreResult<()> {
+        let pending = self
+            .inner
             .pending_imports
             .write()
             .map_err(|_| CoreError::internal("pending import lock was poisoned"))?
-            .remove(inspection_id);
-        Ok(character)
+            .remove(inspection_id)
+            .ok_or_else(|| {
+                CoreError::new(CoreErrorCode::NotFound, "inspection was not found", false)
+            })?;
+        cleanup_pending_import(&pending, &self.inner.storage.staging_dir())
     }
 
     pub fn list_characters(&self) -> CoreResult<Vec<Character>> {
@@ -168,9 +388,13 @@ impl Core {
         &self,
         conversation_id: &ConversationId,
         text: &str,
-        profile: ProviderProfile,
+        provider_profile_id: &str,
         credential: Option<String>,
     ) -> CoreResult<GenerationId> {
+        let profile = self
+            .inner
+            .storage
+            .get_provider_profile(provider_profile_id)?;
         let provider = Arc::new(OpenAiCompatibleProvider::new(
             &profile.base_url,
             Duration::from_secs(u64::from(profile.timeout_seconds.max(1))),
@@ -179,19 +403,7 @@ impl Core {
     }
 
     pub fn cancel_generation(&self, generation_id: &GenerationId) -> CoreResult<()> {
-        let sender = self
-            .inner
-            .active_generations
-            .lock()
-            .map_err(|_| CoreError::internal("generation registry lock was poisoned"))?
-            .get(generation_id)
-            .cloned()
-            .ok_or_else(|| {
-                CoreError::new(CoreErrorCode::NotFound, "generation was not found", false)
-            })?;
-        sender.send(true).map_err(|_| {
-            CoreError::new(CoreErrorCode::Cancelled, "generation already stopped", true)
-        })
+        self.inner.active_generations.cancel(generation_id)
     }
 
     pub fn subscribe_events(&self) -> broadcast::Receiver<ChatEvent> {
@@ -203,11 +415,88 @@ impl Core {
     }
 
     pub fn update_settings(&self, settings: &AppSettings) -> CoreResult<()> {
+        if let Some(profile_id) = settings.selected_provider_profile_id.as_deref() {
+            self.inner.storage.get_provider_profile(profile_id)?;
+        }
         self.inner.storage.save_settings(settings)
+    }
+
+    pub fn list_provider_profiles(&self) -> CoreResult<Vec<ProviderProfile>> {
+        self.inner.storage.list_provider_profiles()
+    }
+
+    pub fn upsert_provider_profile(
+        &self,
+        mut profile: ProviderProfile,
+    ) -> CoreResult<ProviderProfile> {
+        profile.id = normalize_bounded_text(
+            "provider profile id",
+            std::mem::take(&mut profile.id),
+            MAX_PROVIDER_ID_BYTES,
+            MAX_PROVIDER_ID_CHARS,
+        )?;
+        profile.display_name = normalize_bounded_text(
+            "provider display name",
+            std::mem::take(&mut profile.display_name),
+            MAX_PROVIDER_DISPLAY_NAME_BYTES,
+            MAX_PROVIDER_DISPLAY_NAME_CHARS,
+        )?;
+        profile.base_url = normalize_bounded_text(
+            "provider base URL",
+            std::mem::take(&mut profile.base_url),
+            MAX_PROVIDER_BASE_URL_BYTES,
+            MAX_PROVIDER_BASE_URL_CHARS,
+        )?;
+        profile.model = normalize_bounded_text(
+            "provider model",
+            std::mem::take(&mut profile.model),
+            MAX_PROVIDER_MODEL_BYTES,
+            MAX_PROVIDER_MODEL_CHARS,
+        )?;
+        if profile.timeout_seconds == 0 || profile.timeout_seconds > 600 {
+            return Err(CoreError::invalid(
+                "provider profile requires an id, display name, model, and a timeout from 1 to 600 seconds",
+            ));
+        }
+        OpenAiCompatibleProvider::new(
+            &profile.base_url,
+            Duration::from_secs(u64::from(profile.timeout_seconds)),
+        )?;
+        self.inner.storage.save_provider_profile(&profile)?;
+        Ok(profile)
+    }
+
+    pub fn delete_provider_profile(&self, id: &str) -> CoreResult<()> {
+        let mut settings = self.get_settings()?;
+        if settings.selected_provider_profile_id.as_deref() == Some(id) {
+            settings.selected_provider_profile_id = None;
+            self.inner.storage.save_settings(&settings)?;
+        }
+        self.inner.storage.delete_provider_profile(id)
     }
 
     pub fn database_stats(&self) -> CoreResult<DatabaseStats> {
         self.inner.storage.stats()
+    }
+
+    fn restore_pending_import(
+        &self,
+        inspection_id: InspectionId,
+        pending: PendingImport,
+    ) -> CoreResult<()> {
+        let mut imports = self
+            .inner
+            .pending_imports
+            .write()
+            .map_err(|_| CoreError::internal("pending import lock was poisoned"))?;
+        if let std::collections::hash_map::Entry::Vacant(entry) = imports.entry(inspection_id) {
+            entry.insert(pending);
+            Ok(())
+        } else {
+            Err(CoreError::internal(
+                "inspection claim collided while restoring a retryable import",
+            ))
+        }
     }
 
     fn send_message_with_provider(
@@ -218,79 +507,294 @@ impl Core {
         credential: Option<String>,
         provider: Arc<dyn Provider>,
     ) -> CoreResult<GenerationId> {
-        if text.trim().is_empty() {
+        let text = text.trim();
+        if text.is_empty() {
             return Err(CoreError::invalid("message text cannot be empty"));
         }
+        validate_bounded_text(
+            "message text",
+            text,
+            MAX_USER_MESSAGE_BYTES,
+            MAX_USER_MESSAGE_CHARS,
+        )?;
         let conversation = self.inner.storage.get_conversation(conversation_id)?;
         let character = self
             .inner
             .storage
             .get_character(&conversation.character_id)?;
-        let user_message = Message::user(conversation_id.clone(), text.trim());
-        self.inner.storage.save_message(&user_message)?;
-        let history = self.inner.storage.list_messages(conversation_id)?;
+        let user_message = Message::user(conversation_id.clone(), text);
+        let mut history = self.inner.storage.list_recent_messages_for_prompt(
+            conversation_id,
+            MAX_PROMPT_MESSAGES.saturating_sub(2),
+            MAX_HISTORY_MESSAGE_BYTES,
+            MAX_HISTORY_MESSAGE_CHARS,
+        )?;
+        history.push(user_message.clone());
         let request = PromptPlanner::plan(
             &character,
             conversation_id.clone(),
             &history,
             model,
             1.0,
-            None,
-        );
+            Some(CORE_MAX_OUTPUT_TOKENS),
+        )?;
+        self.inner.storage.save_message(&user_message)?;
         let generation_id = request.generation_id.clone();
+        let assistant_message = Message::pending_assistant(
+            conversation_id.clone(),
+            user_message.id.clone(),
+            generation_id.clone(),
+        );
+        self.inner.storage.save_message(&assistant_message)?;
+        let preserve_partial_generations = self
+            .inner
+            .storage
+            .load_settings()?
+            .preserve_partial_generations;
         let (cancel_sender, cancel_receiver) = watch::channel(false);
         self.inner
             .active_generations
-            .lock()
-            .map_err(|_| CoreError::internal("generation registry lock was poisoned"))?
-            .insert(generation_id.clone(), cancel_sender);
+            .register(generation_id.clone(), cancel_sender)?;
 
-        let inner = Arc::clone(&self.inner);
-        let generation_id_for_task = generation_id.clone();
-        let conversation_id_for_task = conversation_id.clone();
-        self.inner.runtime.spawn(async move {
-            let (event_sender, mut event_receiver) = mpsc::channel(128);
-            let event_bus = inner.event_bus.clone();
-            let forward_events = tokio::spawn(async move {
-                while let Some(event) = event_receiver.recv().await {
-                    let _ = event_bus.send(event);
-                }
-            });
-            let result = run_generation(
-                provider.as_ref(),
-                request,
-                credential.as_deref(),
-                event_sender,
-                cancel_receiver,
-            )
-            .await;
-            if let Ok(outcome) = result {
-                let assistant = Message {
-                    id: MessageId::new(),
-                    conversation_id: conversation_id_for_task,
-                    parent_id: Some(user_message.id),
-                    role: MessageRole::Assistant,
-                    content: outcome.text,
-                    status: MessageStatus::Complete,
-                    generation_id: Some(generation_id_for_task.clone()),
-                    created_at: Utc::now(),
-                };
-                let _ = inner.storage.save_message(&assistant);
-            }
-            let _ = forward_events.await;
-            if let Ok(mut registry) = inner.active_generations.lock() {
-                registry.remove(&generation_id_for_task);
-            }
-        });
+        let task = GenerationTask {
+            storage: Arc::clone(&self.inner.storage),
+            active_generations: Arc::clone(&self.inner.active_generations),
+            event_bus: self.inner.event_bus.clone(),
+            request,
+            assistant: assistant_message,
+            provider,
+            credential,
+            cancel_receiver,
+            preserve_partial: preserve_partial_generations,
+        };
+        self.inner.runtime.spawn(execute_generation_task(task));
         Ok(generation_id)
     }
 
     fn active_generation_count(&self) -> usize {
-        self.inner
-            .active_generations
-            .lock()
-            .map_or(0, |registry| registry.len())
+        self.inner.active_generations.len()
     }
+}
+
+async fn execute_generation_task(task: GenerationTask) {
+    let GenerationTask {
+        storage,
+        active_generations,
+        event_bus,
+        request,
+        mut assistant,
+        provider,
+        credential,
+        cancel_receiver,
+        preserve_partial,
+    } = task;
+    let generation_id = request.generation_id.clone();
+    let conversation_id = request.conversation_id.clone();
+    let (event_sender, event_receiver) = mpsc::channel(128);
+    let checkpoint_storage = Arc::clone(&storage);
+    let checkpoint_assistant = assistant.clone();
+    let forwarding_event_bus = event_bus.clone();
+    let forward_events = tokio::spawn(forward_generation_events(
+        event_receiver,
+        forwarding_event_bus,
+        checkpoint_storage,
+        checkpoint_assistant,
+        preserve_partial,
+    ));
+    let generation_result = run_generation(
+        provider.as_ref(),
+        request,
+        credential.as_deref(),
+        event_sender,
+        cancel_receiver,
+    )
+    .await;
+    drop(credential);
+    drop(provider);
+    let forwarding_result = forward_events
+        .await
+        .map_err(|error| {
+            CoreError::internal(format!(
+                "generation event forwarder stopped unexpectedly: {error}"
+            ))
+        })
+        .and_then(std::convert::identity);
+    let result = merge_generation_and_forwarding_results(generation_result, forwarding_result);
+
+    let (mut sequence, mut terminal_kind, should_commit) =
+        apply_generation_result(&mut assistant, result, preserve_partial);
+    let persistence = if should_commit {
+        storage.save_message(&assistant)
+    } else {
+        storage.delete_message(&assistant.id)
+    };
+    match persistence {
+        Ok(()) if should_commit => {
+            let _ = event_bus.send(ChatEvent::new(
+                generation_id.clone(),
+                conversation_id.clone(),
+                sequence,
+                ChatEventKind::MessageCommitted {
+                    message_id: assistant.id,
+                    status: assistant.status,
+                },
+            ));
+            sequence = sequence.saturating_add(1);
+        }
+        Ok(()) => {}
+        Err(error) => {
+            terminal_kind = ChatEventKind::GenerationFailed {
+                code: error.code.as_str().to_owned(),
+                message: error.message,
+            };
+        }
+    }
+    let _ = event_bus.send(ChatEvent::new(
+        generation_id.clone(),
+        conversation_id,
+        sequence,
+        terminal_kind,
+    ));
+    active_generations.remove(&generation_id);
+}
+
+async fn forward_generation_events(
+    mut event_receiver: mpsc::Receiver<ChatEvent>,
+    event_bus: broadcast::Sender<ChatEvent>,
+    storage: Arc<Storage>,
+    mut checkpoint: Message,
+    preserve_partial: bool,
+) -> CoreResult<()> {
+    let start = time::Instant::now() + PARTIAL_CHECKPOINT_INTERVAL;
+    let mut interval = time::interval_at(start, PARTIAL_CHECKPOINT_INTERVAL);
+    interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
+    let mut last_checkpoint_bytes = 0;
+    let mut dirty = false;
+
+    loop {
+        tokio::select! {
+            event = event_receiver.recv() => {
+                let Some(event) = event else {
+                    if preserve_partial && dirty {
+                        storage.checkpoint_pending_assistant(&checkpoint)?;
+                    }
+                    return Ok(());
+                };
+                if preserve_partial
+                    && let ChatEventKind::TextDelta(delta) = &event.kind
+                {
+                    checkpoint.content.push_str(delta);
+                    dirty = true;
+                }
+                let _ = event_bus.send(event);
+                if preserve_partial
+                    && dirty
+                    && partial_checkpoint_due(checkpoint.content.len(), last_checkpoint_bytes)
+                {
+                    storage.checkpoint_pending_assistant(&checkpoint)?;
+                    last_checkpoint_bytes = checkpoint.content.len();
+                    dirty = false;
+                }
+            }
+            _ = interval.tick(), if preserve_partial => {
+                if dirty {
+                    storage.checkpoint_pending_assistant(&checkpoint)?;
+                    last_checkpoint_bytes = checkpoint.content.len();
+                    dirty = false;
+                }
+            }
+        }
+    }
+}
+
+fn partial_checkpoint_due(current_bytes: usize, last_checkpoint_bytes: usize) -> bool {
+    current_bytes.saturating_sub(last_checkpoint_bytes) >= PARTIAL_CHECKPOINT_BYTES
+}
+
+fn merge_generation_and_forwarding_results(
+    generation: Result<GenerationOutcome, GenerationFailure>,
+    forwarding: CoreResult<()>,
+) -> Result<GenerationOutcome, GenerationFailure> {
+    match (generation, forwarding) {
+        (result, Ok(())) => result,
+        (Ok(outcome), Err(error)) => Err(GenerationFailure {
+            error,
+            partial_text: outcome.text,
+            last_sequence: outcome.last_sequence,
+        }),
+        (Err(mut failure), Err(error)) => {
+            failure.error = error;
+            Err(failure)
+        }
+    }
+}
+
+fn apply_generation_result(
+    assistant: &mut Message,
+    result: Result<GenerationOutcome, GenerationFailure>,
+    preserve_partial: bool,
+) -> (u64, ChatEventKind, bool) {
+    match result {
+        Ok(outcome) => {
+            assistant.content = outcome.text;
+            assistant.status = MessageStatus::Complete;
+            (
+                outcome.last_sequence.saturating_add(1),
+                ChatEventKind::GenerationFinished,
+                true,
+            )
+        }
+        Err(failure) => {
+            let cancelled = failure.error.code == CoreErrorCode::Cancelled;
+            assistant.content = failure.partial_text;
+            assistant.status = if cancelled {
+                MessageStatus::Cancelled
+            } else {
+                MessageStatus::Failed
+            };
+            let terminal = if cancelled {
+                ChatEventKind::GenerationCancelled
+            } else {
+                ChatEventKind::GenerationFailed {
+                    code: failure.error.code.as_str().to_owned(),
+                    message: failure.error.message,
+                }
+            };
+            (
+                failure.last_sequence.saturating_add(1),
+                terminal,
+                preserve_partial && !assistant.content.is_empty(),
+            )
+        }
+    }
+}
+
+fn normalize_bounded_text(
+    field: &str,
+    value: String,
+    max_bytes: usize,
+    max_chars: usize,
+) -> CoreResult<String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(CoreError::invalid(format!("{field} cannot be empty")));
+    }
+    validate_bounded_text(field, trimmed, max_bytes, max_chars)?;
+    Ok(trimmed.to_owned())
+}
+
+fn validate_bounded_text(
+    field: &str,
+    value: &str,
+    max_bytes: usize,
+    max_chars: usize,
+) -> CoreResult<()> {
+    if value.len() > max_bytes || value.chars().count() > max_chars {
+        return Err(CoreError::invalid(format!(
+            "{field} exceeds the {max_bytes}-byte or {max_chars}-character limit"
+        )));
+    }
+    Ok(())
 }
 
 fn directory_is_writable(path: &Path) -> bool {
@@ -308,18 +812,187 @@ fn directory_is_writable(path: &Path) -> bool {
     created
 }
 
+fn snapshot_import_source(
+    source_path: &Path,
+    staging_dir: &Path,
+    max_source_bytes: u64,
+) -> CoreResult<PathBuf> {
+    let source_metadata = fs::symlink_metadata(source_path).map_err(import_io_error)?;
+    if !source_metadata.file_type().is_file() {
+        return Err(CoreError::invalid(
+            "the import source must be a regular file and cannot be a symbolic link",
+        ));
+    }
+    if source_metadata.len() > max_source_bytes {
+        return Err(CoreError::new(
+            CoreErrorCode::UnsupportedContent,
+            format!(
+                "source is {} bytes; maximum is {} bytes",
+                source_metadata.len(),
+                max_source_bytes
+            ),
+            false,
+        ));
+    }
+
+    fs::create_dir_all(staging_dir).map_err(import_io_error)?;
+    let extension = source_path
+        .extension()
+        .and_then(|value| value.to_str())
+        .filter(|value| {
+            !value.is_empty()
+                && value.len() <= 16
+                && value
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        })
+        .map(|value| format!(".{}", value.to_ascii_lowercase()))
+        .unwrap_or_default();
+    let snapshot = staging_dir.join(format!("inspection-{}{extension}", Uuid::new_v4()));
+    let result = (|| {
+        let source = File::open(source_path).map_err(import_io_error)?;
+        let opened_metadata = source.metadata().map_err(import_io_error)?;
+        if !opened_metadata.is_file() {
+            return Err(CoreError::invalid(
+                "the import source is not a regular file",
+            ));
+        }
+        let mut reader = BufReader::new(source);
+        let mut destination = OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&snapshot)
+            .map_err(import_io_error)?;
+        let mut copied = 0_u64;
+        let mut buffer = vec![0_u8; 64 * 1024];
+        loop {
+            let read = reader.read(&mut buffer).map_err(import_io_error)?;
+            if read == 0 {
+                break;
+            }
+            copied = copied
+                .checked_add(
+                    u64::try_from(read)
+                        .map_err(|_| CoreError::internal("import byte count overflow"))?,
+                )
+                .ok_or_else(|| CoreError::internal("import size overflow"))?;
+            if copied > max_source_bytes {
+                return Err(CoreError::new(
+                    CoreErrorCode::UnsupportedContent,
+                    format!("source exceeds the {max_source_bytes} byte import limit"),
+                    false,
+                ));
+            }
+            destination
+                .write_all(&buffer[..read])
+                .map_err(import_io_error)?;
+        }
+        destination.flush().map_err(import_io_error)?;
+        destination.sync_all().map_err(import_io_error)?;
+        Ok(())
+    })();
+    if let Err(error) = result {
+        let _ = fs::remove_file(&snapshot);
+        return Err(error);
+    }
+    Ok(snapshot)
+}
+
+fn remove_snapshot(snapshot: &Path, staging_dir: &Path) -> CoreResult<()> {
+    if snapshot.parent() != Some(staging_dir) || snapshot.file_name().is_none() {
+        return Err(CoreError::new(
+            CoreErrorCode::StorageCorrupted,
+            "pending import snapshot is outside the owned staging directory",
+            false,
+        ));
+    }
+    match fs::remove_file(snapshot) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(import_io_error(error)),
+    }
+}
+
+fn cleanup_pending_import(pending: &PendingImport, staging_dir: &Path) -> CoreResult<()> {
+    let mut first_error = remove_snapshot(&pending.path, staging_dir).err();
+    for asset in &pending.staged_assets {
+        if let Err(error) = remove_snapshot(&asset.staged_path, staging_dir)
+            && first_error.is_none()
+        {
+            first_error = Some(error);
+        }
+    }
+    first_error.map_or(Ok(()), Err)
+}
+
+fn import_io_error(error: std::io::Error) -> CoreError {
+    CoreError::new(
+        CoreErrorCode::StorageUnavailable,
+        format!("cannot stage import source: {error}"),
+        true,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
         io::Write,
+        sync::{Arc, Barrier, mpsc as std_mpsc},
         thread,
         time::{Duration, Instant},
     };
 
-    use lorepia_providers::StaticProvider;
+    use async_trait::async_trait;
+    use lorepia_domain::{GenerationUsage, ProviderCapabilities};
+    use lorepia_providers::{ProviderEvent, ProviderEventSender, StaticProvider};
     use tempfile::{NamedTempFile, tempdir};
 
     use super::*;
+
+    struct StallingProvider {
+        partial: String,
+        started: Mutex<Option<std_mpsc::Sender<()>>>,
+    }
+
+    impl StallingProvider {
+        fn new(partial: impl Into<String>) -> (Arc<Self>, std_mpsc::Receiver<()>) {
+            let (started_sender, started_receiver) = std_mpsc::channel();
+            (
+                Arc::new(Self {
+                    partial: partial.into(),
+                    started: Mutex::new(Some(started_sender)),
+                }),
+                started_receiver,
+            )
+        }
+    }
+
+    #[async_trait]
+    impl Provider for StallingProvider {
+        fn capabilities(&self) -> ProviderCapabilities {
+            ProviderCapabilities {
+                streaming: true,
+                reasoning: false,
+                max_context_tokens: None,
+            }
+        }
+
+        async fn generate(
+            &self,
+            _request: GenerationRequest,
+            _credential: Option<&str>,
+            sink: ProviderEventSender,
+            _cancelled: watch::Receiver<bool>,
+        ) -> CoreResult<GenerationUsage> {
+            sink.send(ProviderEvent::TextDelta(self.partial.clone()))
+                .await
+                .map_err(|_| CoreError::internal("provider event receiver closed"))?;
+            if let Some(sender) = self.started.lock().expect("started lock").take() {
+                let _ = sender.send(());
+            }
+            std::future::pending().await
+        }
+    }
 
     fn imported_core() -> (tempfile::TempDir, Core, Character) {
         let root = tempdir().expect("temp root");
@@ -335,6 +1008,23 @@ mod tests {
         (root, core, character)
     }
 
+    fn wait_for_partial(core: &Core, conversation_id: &ConversationId, expected: &str) -> Message {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            let messages = core.list_messages(conversation_id).expect("messages");
+            if let Some(message) = messages.get(1)
+                && message.content == expected
+            {
+                return message.clone();
+            }
+            assert!(
+                Instant::now() < deadline,
+                "partial checkpoint was not persisted"
+            );
+            thread::sleep(Duration::from_millis(10));
+        }
+    }
+
     #[test]
     fn health_reports_storage_state() {
         let root = tempdir().expect("temp root");
@@ -342,7 +1032,130 @@ mod tests {
         let health = core.health_check().expect("health");
         assert!(health.database_open);
         assert!(health.data_root_writable);
-        assert_eq!(health.schema_version, 1);
+        assert_eq!(health.schema_version, 2);
+    }
+
+    #[test]
+    fn dropping_last_core_from_a_runtime_worker_bounds_shutdown_and_releases_provider() {
+        let (_root, core, character) = imported_core();
+        let conversation = core.open_conversation(&character.id).expect("conversation");
+        let (provider, provider_started) = StallingProvider::new("partial before shutdown");
+        let provider_weak = Arc::downgrade(&provider);
+        core.send_message_with_provider(
+            &conversation.id,
+            "start",
+            "stalling".to_owned(),
+            Some("ephemeral-credential".to_owned()),
+            provider,
+        )
+        .expect("start generation");
+        provider_started
+            .recv_timeout(Duration::from_secs(2))
+            .expect("provider started");
+
+        let runtime_handle = core.inner.runtime.handle.clone();
+        let (dropped_sender, dropped_receiver) = std_mpsc::channel();
+        std::mem::drop(runtime_handle.spawn(async move {
+            let started = Instant::now();
+            drop(core);
+            let _ = dropped_sender.send(started.elapsed());
+        }));
+
+        let elapsed = dropped_receiver
+            .recv_timeout(Duration::from_secs(4))
+            .expect("core drop must not panic or deadlock on its runtime worker");
+        assert!(
+            elapsed < Duration::from_secs(3),
+            "shutdown exceeded its cancellation and runtime bounds: {elapsed:?}"
+        );
+        assert!(
+            provider_weak.upgrade().is_none(),
+            "runtime shutdown must release the stalling provider and its captured state"
+        );
+    }
+
+    #[test]
+    fn timed_partial_checkpoint_survives_restart_when_preservation_is_enabled() {
+        let (root, core, character) = imported_core();
+        core.update_settings(&AppSettings {
+            preserve_partial_generations: true,
+            selected_provider_profile_id: None,
+        })
+        .expect("enable partial preservation");
+        let conversation = core.open_conversation(&character.id).expect("conversation");
+        let partial = "latest timer checkpoint";
+        let (provider, provider_started) = StallingProvider::new(partial);
+        core.send_message_with_provider(
+            &conversation.id,
+            "start",
+            "stalling".to_owned(),
+            None,
+            provider,
+        )
+        .expect("start generation");
+        provider_started
+            .recv_timeout(Duration::from_secs(2))
+            .expect("provider started");
+
+        let checkpoint = wait_for_partial(&core, &conversation.id, partial);
+        assert_eq!(checkpoint.status, MessageStatus::Pending);
+        drop(core);
+
+        let reopened = Core::open(CoreConfig::new(root.path())).expect("reopen");
+        let messages = reopened
+            .list_messages(&conversation.id)
+            .expect("restored messages");
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[1].content, partial);
+        assert_eq!(messages[1].status, MessageStatus::Cancelled);
+    }
+
+    #[test]
+    fn partial_checkpoint_is_never_written_when_preservation_is_disabled() {
+        let (root, core, character) = imported_core();
+        core.update_settings(&AppSettings {
+            preserve_partial_generations: false,
+            selected_provider_profile_id: None,
+        })
+        .expect("disable partial preservation");
+        let conversation = core.open_conversation(&character.id).expect("conversation");
+        let partial = "must not persist";
+        let (provider, provider_started) = StallingProvider::new(partial);
+        core.send_message_with_provider(
+            &conversation.id,
+            "start",
+            "stalling".to_owned(),
+            None,
+            provider,
+        )
+        .expect("start generation");
+        provider_started
+            .recv_timeout(Duration::from_secs(2))
+            .expect("provider started");
+        thread::sleep(PARTIAL_CHECKPOINT_INTERVAL + Duration::from_millis(150));
+
+        let messages = core.list_messages(&conversation.id).expect("messages");
+        assert_eq!(messages.len(), 2);
+        assert_eq!(messages[1].status, MessageStatus::Pending);
+        assert!(messages[1].content.is_empty());
+        drop(core);
+
+        let reopened = Core::open(CoreConfig::new(root.path())).expect("reopen");
+        let restored = reopened
+            .list_messages(&conversation.id)
+            .expect("restored messages");
+        assert_eq!(restored.len(), 1);
+        assert_eq!(restored[0].content, "start");
+    }
+
+    #[test]
+    fn partial_checkpoint_byte_threshold_is_inclusive() {
+        assert!(!partial_checkpoint_due(PARTIAL_CHECKPOINT_BYTES - 1, 0));
+        assert!(partial_checkpoint_due(PARTIAL_CHECKPOINT_BYTES, 0));
+        assert!(partial_checkpoint_due(
+            PARTIAL_CHECKPOINT_BYTES * 2,
+            PARTIAL_CHECKPOINT_BYTES
+        ));
     }
 
     #[test]
@@ -354,9 +1167,356 @@ mod tests {
     }
 
     #[test]
-    fn static_provider_persists_assistant_message() {
+    fn import_uses_an_owned_snapshot_and_cleans_it_after_commit() {
+        let root = tempdir().expect("temp root");
+        let core = Core::open(CoreConfig::new(root.path())).expect("open core");
+        let mut card = NamedTempFile::new_in(root.path()).expect("card");
+        write!(
+            card,
+            r#"{{"spec":"chara_card_v3","data":{{"name":"Snapshot","description":"Safe"}}}}"#
+        )
+        .expect("write card");
+
+        let inspection = core.inspect_import(card.path()).expect("inspect");
+        fs::write(card.path(), b"changed after inspection").expect("mutate original");
+        let character = core.commit_import(&inspection.id).expect("commit snapshot");
+
+        assert_eq!(character.name, "Snapshot");
+        assert!(
+            fs::read_dir(core.inner.storage.staging_dir())
+                .expect("staging directory")
+                .next()
+                .is_none(),
+            "committed snapshots must be removed"
+        );
+    }
+
+    #[test]
+    fn discard_and_restart_cleanup_owned_staging_files() {
+        let root = tempdir().expect("temp root");
+        let core = Core::open(CoreConfig::new(root.path())).expect("open core");
+        let mut card = NamedTempFile::new_in(root.path()).expect("card");
+        write!(
+            card,
+            r#"{{"spec":"chara_card_v3","data":{{"name":"Discard","description":"Safe"}}}}"#
+        )
+        .expect("write card");
+        let inspection = core.inspect_import(card.path()).expect("inspect");
+        core.discard_import(&inspection.id).expect("discard");
+        assert!(
+            fs::read_dir(core.inner.storage.staging_dir())
+                .expect("staging directory")
+                .next()
+                .is_none()
+        );
+
+        let abandoned = core
+            .inner
+            .storage
+            .staging_dir()
+            .join("inspection-abandoned.json");
+        fs::write(&abandoned, b"abandoned").expect("abandoned staging file");
+        drop(core);
+        let _reopened = Core::open(CoreConfig::new(root.path())).expect("reopen");
+        assert!(
+            !abandoned.exists(),
+            "restart must clean abandoned snapshots"
+        );
+    }
+
+    #[test]
+    fn concurrent_commits_atomically_claim_one_inspection() {
+        let root = tempdir().expect("temp root");
+        let core = Core::open(CoreConfig::new(root.path())).expect("open core");
+        let mut card = NamedTempFile::new_in(root.path()).expect("card");
+        write!(
+            card,
+            r#"{{"spec":"chara_card_v3","data":{{"name":"Claim","description":"Safe"}}}}"#
+        )
+        .expect("write card");
+        let inspection = core.inspect_import(card.path()).expect("inspect");
+        let barrier = Arc::new(Barrier::new(3));
+        let mut workers = Vec::new();
+        for _ in 0..2 {
+            let core = core.clone();
+            let inspection_id = inspection.id.clone();
+            let barrier = Arc::clone(&barrier);
+            workers.push(thread::spawn(move || {
+                barrier.wait();
+                core.commit_import(&inspection_id)
+            }));
+        }
+        barrier.wait();
+        let results = workers
+            .into_iter()
+            .map(|worker| worker.join().expect("commit worker"))
+            .collect::<Vec<_>>();
+
+        assert_eq!(results.iter().filter(|result| result.is_ok()).count(), 1);
+        let loser = results
+            .iter()
+            .find_map(|result| result.as_ref().err())
+            .expect("one losing commit");
+        assert_eq!(loser.code, CoreErrorCode::NotFound);
+        assert_eq!(core.list_characters().expect("characters").len(), 1);
+    }
+
+    #[test]
+    fn concurrent_commit_and_discard_have_one_atomic_winner() {
+        let root = tempdir().expect("temp root");
+        let core = Core::open(CoreConfig::new(root.path())).expect("open core");
+        let mut card = NamedTempFile::new_in(root.path()).expect("card");
+        write!(
+            card,
+            r#"{{"spec":"chara_card_v3","data":{{"name":"Race","description":"Safe"}}}}"#
+        )
+        .expect("write card");
+        let inspection = core.inspect_import(card.path()).expect("inspect");
+        let barrier = Arc::new(Barrier::new(3));
+        let commit_core = core.clone();
+        let commit_id = inspection.id.clone();
+        let commit_barrier = Arc::clone(&barrier);
+        let commit = thread::spawn(move || {
+            commit_barrier.wait();
+            commit_core.commit_import(&commit_id)
+        });
+        let discard_core = core.clone();
+        let discard_id = inspection.id.clone();
+        let discard_barrier = Arc::clone(&barrier);
+        let discard = thread::spawn(move || {
+            discard_barrier.wait();
+            discard_core.discard_import(&discard_id)
+        });
+        barrier.wait();
+        let commit = commit.join().expect("commit worker");
+        let discard = discard.join().expect("discard worker");
+
+        assert_ne!(commit.is_ok(), discard.is_ok());
+        let loser = commit
+            .as_ref()
+            .err()
+            .or_else(|| discard.as_ref().err())
+            .expect("one losing operation");
+        assert_eq!(loser.code, CoreErrorCode::NotFound);
+        assert_eq!(
+            core.list_characters().expect("characters").len(),
+            usize::from(commit.is_ok())
+        );
+    }
+
+    #[test]
+    fn precommit_failure_restores_the_claim_for_a_safe_retry() {
+        let root = tempdir().expect("temp root");
+        let core = Core::open(CoreConfig::new(root.path())).expect("open core");
+        let mut card = NamedTempFile::new_in(root.path()).expect("card");
+        let card_bytes =
+            br#"{"spec":"chara_card_v3","data":{"name":"Retry","description":"Safe"}}"#;
+        card.write_all(card_bytes).expect("write card");
+        let inspection = core.inspect_import(card.path()).expect("inspect");
+        let snapshot = core
+            .inner
+            .pending_imports
+            .read()
+            .expect("pending imports")
+            .get(&inspection.id)
+            .expect("inspection")
+            .path
+            .clone();
+        fs::remove_file(&snapshot).expect("remove claimed snapshot");
+
+        let error = core
+            .commit_import(&inspection.id)
+            .expect_err("precommit failure");
+        assert_eq!(error.code, CoreErrorCode::StorageUnavailable);
+        assert!(
+            core.inner
+                .pending_imports
+                .read()
+                .expect("pending imports")
+                .contains_key(&inspection.id),
+            "a definitely uncommitted claim must be restored"
+        );
+
+        fs::write(&snapshot, card_bytes).expect("restore snapshot");
+        let character = core.commit_import(&inspection.id).expect("safe retry");
+        assert_eq!(character.name, "Retry");
+        assert_eq!(core.list_characters().expect("characters").len(), 1);
+    }
+
+    #[test]
+    fn user_message_and_provider_fields_have_utf8_safe_inclusive_bounds() {
+        let exact_message = "😀".repeat(MAX_USER_MESSAGE_CHARS);
+        assert_eq!(exact_message.len(), MAX_USER_MESSAGE_BYTES);
+        validate_bounded_text(
+            "message text",
+            &exact_message,
+            MAX_USER_MESSAGE_BYTES,
+            MAX_USER_MESSAGE_CHARS,
+        )
+        .expect("exact message boundary");
+        let message_error = validate_bounded_text(
+            "message text",
+            &format!("{exact_message}😀"),
+            MAX_USER_MESSAGE_BYTES,
+            MAX_USER_MESSAGE_CHARS,
+        )
+        .expect_err("message over boundary");
+        assert_eq!(message_error.code, CoreErrorCode::InvalidInput);
+        assert_eq!(
+            message_error.message,
+            "message text exceeds the 65536-byte or 16384-character limit"
+        );
+
+        for (field, max_bytes, max_chars) in [
+            (
+                "provider profile id",
+                MAX_PROVIDER_ID_BYTES,
+                MAX_PROVIDER_ID_CHARS,
+            ),
+            (
+                "provider display name",
+                MAX_PROVIDER_DISPLAY_NAME_BYTES,
+                MAX_PROVIDER_DISPLAY_NAME_CHARS,
+            ),
+            (
+                "provider base URL",
+                MAX_PROVIDER_BASE_URL_BYTES,
+                MAX_PROVIDER_BASE_URL_CHARS,
+            ),
+            (
+                "provider model",
+                MAX_PROVIDER_MODEL_BYTES,
+                MAX_PROVIDER_MODEL_CHARS,
+            ),
+        ] {
+            let exact = "😀".repeat(max_chars);
+            assert_eq!(exact.len(), max_bytes);
+            validate_bounded_text(field, &exact, max_bytes, max_chars)
+                .expect("exact provider field boundary");
+            assert!(
+                validate_bounded_text(field, &format!("{exact}😀"), max_bytes, max_chars).is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn oversized_user_input_and_provider_fields_are_not_persisted() {
         let (_root, core, character) = imported_core();
         let conversation = core.open_conversation(&character.id).expect("conversation");
+        let error = core
+            .send_message_with_provider(
+                &conversation.id,
+                &"😀".repeat(MAX_USER_MESSAGE_CHARS + 1),
+                "static".to_owned(),
+                None,
+                Arc::new(StaticProvider::new("unused")),
+            )
+            .expect_err("oversized message");
+        assert_eq!(error.code, CoreErrorCode::InvalidInput);
+        assert!(
+            core.list_messages(&conversation.id)
+                .expect("messages")
+                .is_empty()
+        );
+
+        let profile_error = core
+            .upsert_provider_profile(ProviderProfile {
+                id: "provider".to_owned(),
+                display_name: "Provider".to_owned(),
+                base_url: "http://127.0.0.1:11434/v1".to_owned(),
+                model: "😀".repeat(MAX_PROVIDER_MODEL_CHARS + 1),
+                timeout_seconds: 30,
+            })
+            .expect_err("oversized model");
+        assert_eq!(profile_error.code, CoreErrorCode::InvalidInput);
+        assert_eq!(
+            profile_error.message,
+            "provider model exceeds the 1024-byte or 256-character limit"
+        );
+        assert!(core.list_provider_profiles().expect("profiles").is_empty());
+    }
+
+    #[test]
+    fn every_provider_profile_string_is_bounded_before_storage() {
+        let root = tempdir().expect("temp root");
+        let core = Core::open(CoreConfig::new(root.path())).expect("open core");
+        let valid = || ProviderProfile {
+            id: "provider".to_owned(),
+            display_name: "Provider".to_owned(),
+            base_url: "http://127.0.0.1:11434/v1".to_owned(),
+            model: "model".to_owned(),
+            timeout_seconds: 30,
+        };
+        let mut cases = Vec::new();
+        let mut oversized_id = valid();
+        oversized_id.id = "😀".repeat(MAX_PROVIDER_ID_CHARS + 1);
+        cases.push(("provider profile id", oversized_id));
+        let mut oversized_display = valid();
+        oversized_display.display_name = "😀".repeat(MAX_PROVIDER_DISPLAY_NAME_CHARS + 1);
+        cases.push(("provider display name", oversized_display));
+        let mut oversized_url = valid();
+        oversized_url.base_url = format!(
+            "http://127.0.0.1/{}",
+            "a".repeat(MAX_PROVIDER_BASE_URL_BYTES)
+        );
+        cases.push(("provider base URL", oversized_url));
+        let mut oversized_model = valid();
+        oversized_model.model = "😀".repeat(MAX_PROVIDER_MODEL_CHARS + 1);
+        cases.push(("provider model", oversized_model));
+
+        for (field, profile) in cases {
+            let error = core
+                .upsert_provider_profile(profile)
+                .expect_err("oversized provider field");
+            assert_eq!(error.code, CoreErrorCode::InvalidInput);
+            assert!(error.message.starts_with(field), "{:?}", error.message);
+        }
+        assert!(core.list_provider_profiles().expect("profiles").is_empty());
+    }
+
+    #[test]
+    fn provider_output_limit_failure_obeys_the_partial_persistence_policy() {
+        let conversation_id = ConversationId::new();
+        let parent_id = lorepia_domain::MessageId::new();
+        let generation_id = GenerationId::new();
+        let failure = GenerationFailure {
+            error: CoreError::new(
+                CoreErrorCode::ProviderUnavailable,
+                lorepia_chat::OUTPUT_LIMIT_ERROR_MESSAGE,
+                false,
+            ),
+            partial_text: "safe prefix 😀".to_owned(),
+            last_sequence: 7,
+        };
+
+        let mut preserved = Message::pending_assistant(
+            conversation_id.clone(),
+            parent_id.clone(),
+            generation_id.clone(),
+        );
+        let (sequence, terminal, should_commit) =
+            apply_generation_result(&mut preserved, Err(failure.clone()), true);
+        assert_eq!(sequence, 8);
+        assert_eq!(preserved.status, MessageStatus::Failed);
+        assert_eq!(preserved.content, "safe prefix 😀");
+        assert!(should_commit);
+        assert!(matches!(
+            terminal,
+            ChatEventKind::GenerationFailed { code, message }
+                if code == "provider_unavailable"
+                    && message == lorepia_chat::OUTPUT_LIMIT_ERROR_MESSAGE
+        ));
+
+        let mut discarded = Message::pending_assistant(conversation_id, parent_id, generation_id);
+        let (_, _, should_commit) = apply_generation_result(&mut discarded, Err(failure), false);
+        assert!(!should_commit);
+    }
+
+    #[test]
+    fn static_provider_persists_assistant_message() {
+        let (root, core, character) = imported_core();
+        let conversation = core.open_conversation(&character.id).expect("conversation");
+        let mut events = core.subscribe_events();
         core.send_message_with_provider(
             &conversation.id,
             "Hello",
@@ -369,12 +1529,35 @@ mod tests {
         let deadline = Instant::now() + Duration::from_secs(2);
         loop {
             let messages = core.list_messages(&conversation.id).expect("messages");
-            if messages.len() == 2 {
+            if messages.len() == 2 && messages[1].status == MessageStatus::Complete {
                 assert_eq!(messages[1].content, "Hi there");
                 break;
             }
             assert!(Instant::now() < deadline, "generation timed out");
             thread::sleep(Duration::from_millis(10));
         }
+
+        let events = std::iter::from_fn(|| events.try_recv().ok()).collect::<Vec<_>>();
+        let committed = events
+            .iter()
+            .position(|event| matches!(event.kind, ChatEventKind::MessageCommitted { .. }))
+            .expect("message committed event");
+        let finished = events
+            .iter()
+            .position(|event| matches!(event.kind, ChatEventKind::GenerationFinished))
+            .expect("generation finished event");
+        assert!(committed < finished);
+        assert!(events.windows(2).all(|events| {
+            events[0].generation_id != events[1].generation_id
+                || events[0].sequence < events[1].sequence
+        }));
+
+        drop(core);
+        let reopened = Core::open(CoreConfig::new(root.path())).expect("reopen");
+        let restored = reopened
+            .list_messages(&conversation.id)
+            .expect("restored messages");
+        assert_eq!(restored.len(), 2);
+        assert_eq!(restored[1].content, "Hi there");
     }
 }

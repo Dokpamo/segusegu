@@ -109,3 +109,55 @@ $msbuild = Get-Command "msbuild.exe" -ErrorAction Stop
 if ($LASTEXITCODE -ne 0) {
     throw "WinUI build failed with exit code $LASTEXITCODE."
 }
+
+$runtimeIdentifier = "win-$Architecture"
+$appExecutable = Join-Path `
+    $windowsRoot `
+    "Lorepia.App/bin/$msbuildPlatform/$Configuration/net8.0-windows10.0.19041.0/$runtimeIdentifier/Lorepia.App.exe"
+if (-not (Test-Path -LiteralPath $appExecutable -PathType Leaf)) {
+    throw "Built WinUI executable was not found at '$appExecutable'."
+}
+
+$smokeMarker = Join-Path `
+    ([System.IO.Path]::GetTempPath()) `
+    "lorepia-ci-smoke-$([Guid]::NewGuid().ToString('N')).txt"
+$previousSmokeMarker = $env:LOREPIA_CI_SMOKE_MARKER
+$env:LOREPIA_CI_SMOKE_MARKER = $smokeMarker
+try {
+    $smokeProcess = Start-Process `
+        -FilePath $appExecutable `
+        -ArgumentList "--lorepia-ci-smoke" `
+        -PassThru
+    if (-not $smokeProcess.WaitForExit(30000)) {
+        $smokeProcess.Kill()
+        $smokeProcess.WaitForExit()
+        throw "WinUI launch smoke timed out after 30 seconds."
+    }
+    if ($smokeProcess.ExitCode -ne 0) {
+        $failureMarker = if (Test-Path -LiteralPath $smokeMarker) {
+            Get-Content -LiteralPath $smokeMarker -Raw
+        } else {
+            "no marker"
+        }
+        throw "WinUI launch smoke failed with exit code $($smokeProcess.ExitCode): $failureMarker"
+    }
+    if (-not (Test-Path -LiteralPath $smokeMarker -PathType Leaf)) {
+        throw "WinUI launch smoke did not write its success marker."
+    }
+    $markerContents = Get-Content -LiteralPath $smokeMarker -Raw
+    $expectedRouteTrace = "routes=Library>ImportReview>Chat>Settings>Library"
+    if (-not $markerContents.StartsWith("LOREPIA_CI_SMOKE_OK") `
+        -or -not $markerContents.Contains($expectedRouteTrace)) {
+        throw "WinUI launch smoke returned an invalid marker: $markerContents"
+    }
+    Write-Host $markerContents
+} finally {
+    if ($null -eq $previousSmokeMarker) {
+        Remove-Item Env:LOREPIA_CI_SMOKE_MARKER
+    } else {
+        $env:LOREPIA_CI_SMOKE_MARKER = $previousSmokeMarker
+    }
+    if (Test-Path -LiteralPath $smokeMarker) {
+        Remove-Item -LiteralPath $smokeMarker -Force
+    }
+}

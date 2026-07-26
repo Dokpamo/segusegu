@@ -26,6 +26,7 @@ fun LibraryRoute(
     contentPadding: PaddingValues,
     refreshSignal: Int,
     onReviewImport: (StagedDocument) -> Unit,
+    onOpenCharacter: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
@@ -80,6 +81,7 @@ fun LibraryRoute(
         isStaging = isStaging,
         stagingError = stagingError,
         onImport = openPicker,
+        onOpenCharacter = onOpenCharacter,
         onRetry = viewModel::refresh,
         contentPadding = contentPadding,
     )

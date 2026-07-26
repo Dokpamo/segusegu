@@ -17,4 +17,28 @@ internal static class WindowsDataRoot
         Directory.CreateDirectory(dataRoot);
         return dataRoot;
     }
+
+    internal static string GetOrCreateTransportStaging()
+    {
+        var staging = Path.Combine(GetOrCreate(), "transport-staging");
+        Directory.CreateDirectory(staging);
+        foreach (var path in Directory.EnumerateFiles(
+                     staging,
+                     "*",
+                     SearchOption.TopDirectoryOnly))
+        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch (Exception exception) when (
+                exception is IOException
+                or UnauthorizedAccessException)
+            {
+                // Another process may still own an actively staged file.
+            }
+        }
+
+        return staging;
+    }
 }

@@ -7,7 +7,9 @@ content. Regenerate the fixtures with:
 cargo xtask testdata regenerate
 ```
 
-- `cards/` and `packages/` contain the smallest accepted examples.
+- `cards/` and `packages/` contain minimal accepted examples, including a
+  project-owned one-pixel avatar used to verify representative-image metadata,
+  deterministic avatar selection, and asset CAS persistence.
 - `archives/` contains deliberately hostile or inconsistent ZIP inputs used to
   exercise the import trust boundary.
 

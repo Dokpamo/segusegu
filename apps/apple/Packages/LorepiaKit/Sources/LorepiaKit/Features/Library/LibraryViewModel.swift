@@ -5,8 +5,16 @@ import Foundation
 public final class LibraryViewModel: ObservableObject {
     @Published public var query = ""
     @Published public private(set) var characters: [LibraryCharacter]
+    @Published public private(set) var isLoading = false
+    @Published public private(set) var errorMessage: String?
 
-    public init(characters: [LibraryCharacter] = []) {
+    private let client: (any CoreClient)?
+
+    public init(
+        client: (any CoreClient)? = nil,
+        characters: [LibraryCharacter] = []
+    ) {
+        self.client = client
         self.characters = characters
     }
 
@@ -24,5 +32,19 @@ public final class LibraryViewModel: ObservableObject {
 
     public func replaceCharacters(_ characters: [LibraryCharacter]) {
         self.characters = characters
+    }
+
+    public func refresh() async {
+        guard let client else {
+            return
+        }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            characters = try await client.listCharacters().map(\.libraryCharacter)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

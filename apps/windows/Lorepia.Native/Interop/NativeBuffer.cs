@@ -6,6 +6,10 @@ namespace Lorepia.Native.Interop;
 
 internal sealed class NativeBuffer : IDisposable
 {
+    private static readonly UTF8Encoding StrictUtf8 = new(
+        encoderShouldEmitUTF8Identifier: false,
+        throwOnInvalidBytes: true);
+
     private readonly NativeBufferValue value;
     private Action<NativeBufferValue>? release;
     private int disposed;
@@ -39,7 +43,16 @@ internal sealed class NativeBuffer : IDisposable
 
         var bytes = new byte[length];
         Marshal.Copy(value.Pointer, bytes, 0, length);
-        return Encoding.UTF8.GetString(bytes);
+        try
+        {
+            return StrictUtf8.GetString(bytes);
+        }
+        catch (DecoderFallbackException exception)
+        {
+            throw new CoreInteropException(
+                "The native core returned a buffer that is not valid UTF-8.",
+                exception);
+        }
     }
 
     public void Dispose()

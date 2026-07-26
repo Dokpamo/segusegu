@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use lorepia_domain::{ConversationId, GenerationId, GenerationUsage};
+use lorepia_domain::{ConversationId, GenerationId, GenerationUsage, MessageId, MessageStatus};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -19,13 +19,20 @@ pub enum ChatEventKind {
     ReasoningDelta(String),
     TextDelta(String),
     UsageUpdated(GenerationUsage),
+    MessageCommitted {
+        message_id: MessageId,
+        status: MessageStatus,
+    },
     GenerationCancelled,
-    GenerationFailed { code: String, message: String },
+    GenerationFailed {
+        code: String,
+        message: String,
+    },
     GenerationFinished,
 }
 
 impl ChatEvent {
-    pub(crate) fn new(
+    pub fn new(
         generation_id: GenerationId,
         conversation_id: ConversationId,
         sequence: u64,

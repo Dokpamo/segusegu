@@ -7,12 +7,13 @@ pub use app::Core;
 pub use config::CoreConfig;
 pub use lorepia_chat::{ChatEvent, ChatEventKind};
 pub use lorepia_domain::{
-    AppSettings, Character, Conversation, ConversationId, CoreError, CoreErrorCode, CoreResult,
-    GenerationId, HealthReport, ImportInspection, InspectionId, Message, ProviderProfile,
+    AppSettings, Character, ContentKind, Conversation, ConversationId, CoreError, CoreErrorCode,
+    CoreResult, GenerationId, GenerationUsage, HealthReport, ImportImagePreview, ImportInspection,
+    ImportWarning, InspectionId, Message, MessageId, MessageRole, MessageStatus, ProviderProfile,
 };
 pub use lorepia_storage::DatabaseStats;
 
-pub const CORE_API_VERSION: u32 = 1;
+pub const CORE_API_VERSION: u32 = 2;
 
 pub fn core_version() -> &'static str {
     env!("CARGO_PKG_VERSION")

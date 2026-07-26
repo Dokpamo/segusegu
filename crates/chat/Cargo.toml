@@ -12,5 +12,8 @@ lorepia-providers = { path = "../providers" }
 serde.workspace = true
 tokio.workspace = true
 
+[dev-dependencies]
+async-trait.workspace = true
+
 [lints]
 workspace = true

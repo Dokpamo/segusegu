@@ -7,10 +7,15 @@ rust-version.workspace = true
 
 [dependencies]
 chrono.workspace = true
+hex.workspace = true
 lorepia-domain = { path = "../domain" }
 rusqlite.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 uuid.workspace = true
+
+[target.'cfg(any(target_os = "android", target_os = "linux", target_vendor = "apple"))'.dependencies]
+rustix.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

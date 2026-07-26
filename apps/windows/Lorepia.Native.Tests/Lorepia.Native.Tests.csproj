@@ -19,6 +19,27 @@
     <ProjectReference Include="..\Lorepia.Native\Lorepia.Native.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile
+      Include="..\Lorepia.App\Platform\BoundedStreamCopier.cs"
+      Link="AppLogic\BoundedStreamCopier.cs" />
+    <Compile
+      Include="..\Lorepia.App\Platform\PasswordVaultError.cs"
+      Link="AppLogic\PasswordVaultError.cs" />
+    <Compile
+      Include="..\Lorepia.App\ViewModels\GenerationEventCursor.cs"
+      Link="AppLogic\GenerationEventCursor.cs" />
+    <Compile
+      Include="..\Lorepia.App\ViewModels\ObservableObject.cs"
+      Link="AppLogic\ObservableObject.cs" />
+    <Compile
+      Include="..\Lorepia.App\ViewModels\ShellNavigationModel.cs"
+      Link="AppLogic\ShellNavigationModel.cs" />
+    <Compile
+      Include="..\Lorepia.App\ViewModels\ShellViewModel.cs"
+      Link="AppLogic\ShellViewModel.cs" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(LorepiaNativeDllPath)' != '' and Exists('$(LorepiaNativeDllPath)')">
     <None
       Include="$(LorepiaNativeDllPath)"

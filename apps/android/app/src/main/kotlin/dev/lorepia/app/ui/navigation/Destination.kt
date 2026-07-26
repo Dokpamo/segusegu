@@ -52,6 +52,20 @@ sealed class Destination(
         const val SIZE_ARGUMENT = "size"
     }
 
+    data object ChatSession : Destination(
+        route = "chat-session?characterId={characterId}&conversationId={conversationId}",
+        labelResource = R.string.chat_title,
+    ) {
+        fun forCharacter(characterId: String): String =
+            "chat-session?$CHARACTER_ARGUMENT=${Uri.encode(characterId)}"
+
+        fun forConversation(conversationId: String): String =
+            "chat-session?$CONVERSATION_ARGUMENT=${Uri.encode(conversationId)}"
+
+        const val CHARACTER_ARGUMENT = "characterId"
+        const val CONVERSATION_ARGUMENT = "conversationId"
+    }
+
     companion object {
         val primaryDestinations: List<Primary> = listOf(Library, Chat, Settings)
     }

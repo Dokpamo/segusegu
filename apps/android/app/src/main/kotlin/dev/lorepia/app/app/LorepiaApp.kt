@@ -28,6 +28,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import dev.lorepia.app.R
 import dev.lorepia.app.bridge.CoreClient
+import dev.lorepia.app.platform.credentials.CredentialStore
 import dev.lorepia.app.ui.navigation.Destination
 import dev.lorepia.app.ui.navigation.LorepiaNavHost
 import dev.lorepia.app.ui.theme.LorepiaTheme
@@ -35,6 +36,7 @@ import dev.lorepia.app.ui.theme.LorepiaTheme
 @Composable
 fun LorepiaApp(
     coreClientFactory: () -> CoreClient,
+    credentialStore: CredentialStore,
     releaseCoreClient: (CoreClient) -> Unit = CoreClient::close,
 ) {
     LorepiaTheme {
@@ -54,7 +56,7 @@ fun LorepiaApp(
                 if (coreClient == null) {
                     CoreUnavailable(onRetry = appViewModel::retry)
                 } else {
-                    ConnectedApp(coreClient)
+                    ConnectedApp(coreClient, credentialStore)
                 }
             }
         }
@@ -62,7 +64,10 @@ fun LorepiaApp(
 }
 
 @Composable
-private fun ConnectedApp(coreClient: CoreClient) {
+private fun ConnectedApp(
+    coreClient: CoreClient,
+    credentialStore: CredentialStore,
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -106,6 +111,7 @@ private fun ConnectedApp(coreClient: CoreClient) {
         LorepiaNavHost(
             navController = navController,
             coreClient = coreClient,
+            credentialStore = credentialStore,
             contentPadding = contentPadding,
             modifier = Modifier.fillMaxSize(),
         )

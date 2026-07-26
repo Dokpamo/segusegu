@@ -42,12 +42,29 @@ public struct LibraryView: View {
 
             if viewModel.filteredCharacters.isEmpty {
                 ContentUnavailableView {
-                    Label("서재가 비어 있습니다", systemImage: "books.vertical")
+                    Label(
+                        viewModel.errorMessage == nil
+                            ? "서재가 비어 있습니다"
+                            : "서재를 불러오지 못했습니다",
+                        systemImage: viewModel.errorMessage == nil
+                            ? "books.vertical"
+                            : "exclamationmark.triangle"
+                    )
                 } description: {
-                    Text("캐릭터 패키지를 선택하면 Rust 코어가 안전하게 검사합니다.")
+                    Text(
+                        viewModel.errorMessage
+                            ?? "캐릭터 패키지를 선택하면 Rust 코어가 안전하게 검사합니다."
+                    )
                 } actions: {
-                    Button("콘텐츠 가져오기", action: onImport)
-                        .buttonStyle(.borderedProminent)
+                    HStack {
+                        Button("다시 불러오기") {
+                            Task {
+                                await viewModel.refresh()
+                            }
+                        }
+                        Button("콘텐츠 가져오기", action: onImport)
+                            .buttonStyle(.borderedProminent)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -64,6 +81,13 @@ public struct LibraryView: View {
                         }
                     }
                     .padding(LorepiaSpacing.standard)
+                }
+                .overlay {
+                    if viewModel.isLoading {
+                        ProgressView("서재를 불러오는 중")
+                            .padding()
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                    }
                 }
             }
         }

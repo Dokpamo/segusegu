@@ -16,10 +16,12 @@
                 Icon="Library"
                 Tag="library" />
             <NavigationViewItem
+                x:Name="ImportItem"
                 Content="Import review"
                 Icon="OpenFile"
                 Tag="import" />
             <NavigationViewItem
+                x:Name="ChatItem"
                 Content="Chat"
                 Icon="Message"
                 Tag="chat" />

@@ -8,7 +8,7 @@ mod path;
 use std::{
     fs::File,
     io::{BufReader, Read},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use lorepia_domain::{
@@ -18,33 +18,29 @@ use lorepia_domain::{
 
 pub use hashing::sha256_file;
 
-const ZIP_MAGIC: &[u8; 4] = b"PK\x03\x04";
+const ZIP_LOCAL_FILE_MAGIC: &[u8; 4] = b"PK\x03\x04";
+const ZIP_EMPTY_ARCHIVE_MAGIC: &[u8; 4] = b"PK\x05\x06";
+const ZIP_SPANNED_ARCHIVE_MAGIC: &[u8; 4] = b"PK\x07\x08";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StagedAsset {
+    pub original_path: String,
+    pub staged_path: PathBuf,
+    pub sha256: String,
+    pub media_type: String,
+    pub size_bytes: u64,
+    pub signature_valid: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PreparedImport {
+    pub inspection: ImportInspection,
+    pub staged_assets: Vec<StagedAsset>,
+}
 
 /// Inspect an untrusted staging file without writing to the final library.
 pub fn inspect_file(path: &Path, limits: ImportLimits) -> CoreResult<ImportInspection> {
-    let metadata = path.metadata().map_err(|error| {
-        CoreError::new(
-            CoreErrorCode::StorageUnavailable,
-            format!("cannot read staging file metadata: {error}"),
-            true,
-        )
-    })?;
-    if !metadata.is_file() {
-        return Err(CoreError::invalid(
-            "the import source is not a regular file",
-        ));
-    }
-    if metadata.len() > limits.max_source_bytes {
-        return Err(CoreError::new(
-            CoreErrorCode::UnsupportedContent,
-            format!(
-                "source is {} bytes; maximum is {} bytes",
-                metadata.len(),
-                limits.max_source_bytes
-            ),
-            false,
-        ));
-    }
+    let source_metadata = validated_source_metadata(path, limits)?;
 
     let mut reader = BufReader::new(File::open(path).map_err(storage_error)?);
     let mut magic = [0_u8; 4];
@@ -55,54 +51,159 @@ pub fn inspect_file(path: &Path, limits: ImportLimits) -> CoreResult<ImportInspe
         .unwrap_or_default()
         .to_ascii_lowercase();
 
-    let (kind, metadata, asset_count, estimated_size, mut warnings) =
-        if read == ZIP_MAGIC.len() && &magic == ZIP_MAGIC {
-            let mut inspected = archive::inspect_archive(path, limits)?;
-            if extension != "charx" && extension != "zip" {
-                let mut extension_warnings = inspected_extension_warning(&extension, "CHARX/ZIP");
-                extension_warnings.append(&mut inspected.warnings);
-                inspected.warnings = extension_warnings;
-            }
-            (
-                ContentKind::CharxPackage,
-                inspected.metadata,
-                inspected.asset_count,
-                inspected.total_uncompressed,
-                inspected.warnings,
-            )
-        } else {
-            let bytes = std::fs::read(path).map_err(storage_error)?;
-            let metadata = adapters::parse_card_json(&bytes)?;
-            let estimated_size = metadata.len_bytes;
-            let warnings = inspected_extension_warning(&extension, "JSON");
-            (
-                ContentKind::CharacterCardV3,
-                metadata,
-                0,
-                estimated_size,
-                warnings,
-            )
-        };
+    let (
+        kind,
+        metadata,
+        representative_image,
+        asset_count,
+        estimated_size,
+        mut warnings,
+        blocked_reasons,
+    ) = if read == magic.len() && is_zip_signature(magic) {
+        let mut inspected = archive::inspect_archive(path, limits)?;
+        if extension != "charx" && extension != "zip" {
+            let mut extension_warnings = inspected_extension_warning(&extension, "CHARX/ZIP");
+            extension_warnings.append(&mut inspected.warnings);
+            inspected.warnings = extension_warnings;
+        }
+        (
+            ContentKind::CharxPackage,
+            inspected.metadata,
+            inspected.representative_image,
+            inspected.asset_count,
+            inspected.total_uncompressed,
+            inspected.warnings,
+            inspected.blocked_reasons,
+        )
+    } else {
+        let bytes = std::fs::read(path).map_err(storage_error)?;
+        let metadata = adapters::parse_card_json(&bytes)?;
+        let estimated_size = metadata.len_bytes;
+        let warnings = inspected_extension_warning(&extension, "JSON");
+        (
+            ContentKind::CharacterCardV3,
+            metadata,
+            None,
+            0,
+            estimated_size,
+            warnings,
+            Vec::new(),
+        )
+    };
 
-    if metadata.name.trim().is_empty() {
-        warnings.push(ImportWarning {
-            code: "empty_name".to_owned(),
-            message: "The character has no display name.".to_owned(),
-        });
-    }
+    warnings.sort_by(|left, right| {
+        left.code
+            .cmp(&right.code)
+            .then_with(|| left.message.cmp(&right.message))
+    });
 
     Ok(ImportInspection {
         id: InspectionId::new(),
         kind,
         display_name: metadata.name,
         description: metadata.description,
+        representative_image,
         source_sha256: sha256_file(path)?,
-        source_size: metadata_len(path)?,
+        source_size: source_metadata.len(),
         estimated_stored_size: estimated_size,
         asset_count,
         warnings,
-        blocked_reasons: Vec::new(),
+        blocked_reasons,
+        unsupported_optional_fields: metadata.unsupported_optional_fields,
     })
+}
+
+fn validated_source_metadata(path: &Path, limits: ImportLimits) -> CoreResult<std::fs::Metadata> {
+    let source_metadata = path.symlink_metadata().map_err(|error| {
+        CoreError::new(
+            CoreErrorCode::StorageUnavailable,
+            format!("cannot read staging file metadata: {error}"),
+            true,
+        )
+    })?;
+    if source_metadata.file_type().is_symlink() {
+        return Err(CoreError::new(
+            CoreErrorCode::UnsafeArchive,
+            "the import source must not be a symbolic link",
+            false,
+        ));
+    }
+    if !source_metadata.is_file() {
+        return Err(CoreError::invalid(
+            "the import source is not a regular file",
+        ));
+    }
+    if source_metadata.len() == 0 {
+        return Err(CoreError::new(
+            CoreErrorCode::UnsupportedContent,
+            "the import source is empty",
+            false,
+        ));
+    }
+    if source_metadata.len() > limits.max_source_bytes {
+        return Err(CoreError::new(
+            CoreErrorCode::UnsupportedContent,
+            format!(
+                "source is {} bytes; maximum is {} bytes",
+                source_metadata.len(),
+                limits.max_source_bytes
+            ),
+            false,
+        ));
+    }
+    Ok(source_metadata)
+}
+
+/// Inspect a source and stage validated CHARX assets for an approved commit.
+///
+/// Staged assets are written as uniquely named flat files below
+/// `asset_staging_directory`. Callers own their cleanup.
+pub fn prepare_import(
+    path: &Path,
+    limits: ImportLimits,
+    asset_staging_directory: &Path,
+) -> CoreResult<PreparedImport> {
+    let inspection = inspect_file(path, limits)?;
+    let staged_assets = if inspection.is_allowed() && inspection.kind == ContentKind::CharxPackage {
+        let assets =
+            archive::stage_archive_assets(path, limits, asset_staging_directory, &inspection.id.0)?;
+        let current_hash = sha256_file(path)?;
+        let current_size = path.metadata().map_err(storage_error)?.len();
+        if current_hash != inspection.source_sha256 || current_size != inspection.source_size {
+            for asset in &assets {
+                let _ = std::fs::remove_file(&asset.staged_path);
+            }
+            return Err(CoreError::new(
+                CoreErrorCode::UnsafeArchive,
+                "import source changed while assets were being staged",
+                false,
+            ));
+        }
+        if assets.len() != inspection.asset_count as usize {
+            for asset in &assets {
+                let _ = std::fs::remove_file(&asset.staged_path);
+            }
+            return Err(CoreError::new(
+                CoreErrorCode::StorageCorrupted,
+                "staged asset count does not match the inspected package",
+                false,
+            ));
+        }
+        assets
+    } else {
+        Vec::new()
+    };
+    Ok(PreparedImport {
+        inspection,
+        staged_assets,
+    })
+}
+
+fn is_zip_signature(magic: [u8; 4]) -> bool {
+    matches!(
+        &magic,
+        ZIP_LOCAL_FILE_MAGIC | ZIP_EMPTY_ARCHIVE_MAGIC | ZIP_SPANNED_ARCHIVE_MAGIC
+    )
 }
 
 fn inspected_extension_warning(extension: &str, detected: &str) -> Vec<ImportWarning> {
@@ -113,17 +214,16 @@ fn inspected_extension_warning(extension: &str, detected: &str) -> Vec<ImportWar
     if expected {
         Vec::new()
     } else {
+        let actual = if extension.is_empty() {
+            "no extension".to_owned()
+        } else {
+            format!(".{extension}")
+        };
         vec![ImportWarning {
             code: "extension_mismatch".to_owned(),
-            message: format!("File contents are {detected}, but the extension is .{extension}."),
+            message: format!("File contents are {detected}, but the file has {actual}."),
         }]
     }
-}
-
-fn metadata_len(path: &Path) -> CoreResult<u64> {
-    path.metadata()
-        .map(|value| value.len())
-        .map_err(storage_error)
 }
 
 fn storage_error(error: std::io::Error) -> CoreError {
@@ -138,7 +238,11 @@ fn storage_error(error: std::io::Error) -> CoreError {
 mod tests {
     use std::io::Write;
 
+    #[cfg(unix)]
+    use std::fs;
     use tempfile::NamedTempFile;
+    #[cfg(unix)]
+    use tempfile::tempdir;
 
     use super::*;
 
@@ -169,5 +273,50 @@ mod tests {
 
         let error = inspect_file(file.path(), limits).expect_err("must reject");
         assert_eq!(error.code, CoreErrorCode::UnsupportedContent);
+    }
+
+    #[test]
+    fn accepts_a_source_at_the_exact_size_boundary() {
+        let mut bytes = br#"{"spec":"chara_card_v3","data":{"name":"Boundary"}}"#.to_vec();
+        bytes.extend(std::iter::repeat_n(b' ', 32));
+        let mut file = NamedTempFile::new().expect("temp file");
+        file.write_all(&bytes).expect("write fixture");
+        let limits = ImportLimits {
+            max_source_bytes: bytes.len() as u64,
+            ..ImportLimits::default()
+        };
+
+        let inspection = inspect_file(file.path(), limits).expect("boundary is inclusive");
+        assert_eq!(inspection.source_size, bytes.len() as u64);
+        assert_eq!(inspection.estimated_stored_size, bytes.len() as u64);
+    }
+
+    #[test]
+    fn rejects_an_empty_source_with_a_stable_error() {
+        let file = NamedTempFile::new().expect("temp file");
+
+        let error = inspect_file(file.path(), ImportLimits::default()).expect_err("empty source");
+        assert_eq!(error.code, CoreErrorCode::UnsupportedContent);
+        assert_eq!(error.message, "the import source is empty");
+        assert!(!error.recoverable);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_a_symbolic_link_source() {
+        use std::os::unix::fs::symlink;
+
+        let directory = tempdir().expect("temp directory");
+        let target = directory.path().join("target.json");
+        fs::write(
+            &target,
+            br#"{"spec":"chara_card_v3","data":{"name":"Target"}}"#,
+        )
+        .expect("write target");
+        let link = directory.path().join("link.json");
+        symlink(&target, &link).expect("create symlink");
+
+        let error = inspect_file(&link, ImportLimits::default()).expect_err("reject symlink");
+        assert_eq!(error.code, CoreErrorCode::UnsafeArchive);
     }
 }

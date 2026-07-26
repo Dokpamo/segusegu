@@ -69,3 +69,45 @@ impl CoreError {
 }
 
 pub type CoreResult<T> = Result<T, CoreError>;
+
+#[cfg(test)]
+mod tests {
+    use super::{CoreError, CoreErrorCode};
+
+    #[test]
+    fn stable_error_codes_use_snake_case_wire_values() {
+        let cases = [
+            (CoreErrorCode::InvalidInput, "invalid_input"),
+            (CoreErrorCode::UnsupportedContent, "unsupported_content"),
+            (CoreErrorCode::UnsafeArchive, "unsafe_archive"),
+            (CoreErrorCode::NotFound, "not_found"),
+            (CoreErrorCode::PermissionDenied, "permission_denied"),
+            (CoreErrorCode::StorageUnavailable, "storage_unavailable"),
+            (CoreErrorCode::StorageCorrupted, "storage_corrupted"),
+            (CoreErrorCode::ProviderAuthFailed, "provider_auth_failed"),
+            (CoreErrorCode::ProviderRateLimited, "provider_rate_limited"),
+            (CoreErrorCode::ProviderUnavailable, "provider_unavailable"),
+            (CoreErrorCode::NetworkUnavailable, "network_unavailable"),
+            (CoreErrorCode::Cancelled, "cancelled"),
+            (CoreErrorCode::Internal, "internal"),
+        ];
+
+        for (code, expected) in cases {
+            assert_eq!(code.as_str(), expected);
+            assert_eq!(
+                serde_json::to_string(&code).expect("serialize error code"),
+                format!("\"{expected}\"")
+            );
+        }
+    }
+
+    #[test]
+    fn errors_receive_unique_operation_ids() {
+        let first = CoreError::invalid("first");
+        let second = CoreError::invalid("second");
+
+        assert!(!first.operation_id.is_empty());
+        assert_ne!(first.operation_id, second.operation_id);
+        assert!(!first.recoverable);
+    }
+}

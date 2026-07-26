@@ -10,7 +10,9 @@ mod provider;
 mod settings;
 
 pub use character::Character;
-pub use content::{ContentKind, ImportInspection, ImportLimits, ImportWarning, InspectionId};
+pub use content::{
+    ContentKind, ImportImagePreview, ImportInspection, ImportLimits, ImportWarning, InspectionId,
+};
 pub use conversation::{Conversation, ConversationId};
 pub use error::{CoreError, CoreErrorCode, CoreResult};
 pub use health::HealthReport;

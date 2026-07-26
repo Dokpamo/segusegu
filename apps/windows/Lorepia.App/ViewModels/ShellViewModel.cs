@@ -1,10 +1,10 @@
 using Lorepia.Native;
-using Lorepia.App.Platform;
 
 namespace Lorepia.App.ViewModels;
 
 public sealed class ShellViewModel : ObservableObject
 {
+    private readonly CoreClient core;
     private string coreVersionLabel = "Core: checking…";
     private string healthLabel = "Health check pending";
 
@@ -20,6 +20,11 @@ public sealed class ShellViewModel : ObservableObject
         private set => SetProperty(ref healthLabel, value);
     }
 
+    internal ShellViewModel(CoreClient core)
+    {
+        this.core = core;
+    }
+
     public async Task RefreshCoreStatusAsync()
     {
         CoreVersionLabel = "Core: checking…";
@@ -29,11 +34,9 @@ public sealed class ShellViewModel : ObservableObject
         {
             var result = await Task.Run(() =>
             {
-                using var client = CoreClient.Open(
-                    WindowsDataRoot.GetOrCreate());
-                var version = client.GetCoreVersion();
-                var health = client.GetHealthCheck();
-                return (client.AbiVersion, version, health);
+                var version = core.GetCoreVersion();
+                var health = core.GetHealthCheck();
+                return (core.AbiVersion, version, health);
             });
 
             CoreVersionLabel = $"Core {result.version} · ABI {result.AbiVersion}";

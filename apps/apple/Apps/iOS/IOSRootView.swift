@@ -1,6 +1,7 @@
 import LorepiaKit
 import SwiftUI
 import UniformTypeIdentifiers
+import Darwin
 
 struct IOSRootView: View {
     private enum Tab: Hashable {
@@ -10,10 +11,16 @@ struct IOSRootView: View {
     }
 
     let environment: AppEnvironment
+    @ObservedObject private var importReviewViewModel: ImportReviewViewModel
 
     @State private var selectedTab: Tab = .library
     @State private var showsFileImporter = false
     @State private var showsImportReview = false
+
+    init(environment: AppEnvironment) {
+        self.environment = environment
+        importReviewViewModel = environment.importReviewViewModel
+    }
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -24,8 +31,10 @@ struct IOSRootView: View {
                         showsFileImporter = true
                     },
                     onOpenChat: { character in
-                        environment.selectCharacter(character)
                         selectedTab = .chat
+                        Task {
+                            await environment.selectCharacter(character)
+                        }
                     }
                 )
                 .navigationTitle("서재")
@@ -79,15 +88,21 @@ struct IOSRootView: View {
             guard case let .success(urls) = result, let url = urls.first else {
                 return
             }
-            environment.prepareImport(from: url)
             showsImportReview = true
+            Task {
+                await environment.prepareImport(from: url)
+            }
         }
         .sheet(isPresented: $showsImportReview) {
             NavigationStack {
                 ImportReviewView(
-                    viewModel: environment.importReviewViewModel,
+                    viewModel: importReviewViewModel,
                     onPickFile: {
                         showsFileImporter = true
+                    },
+                    onFinished: {
+                        showsImportReview = false
+                        selectedTab = .library
                     }
                 )
                 .navigationTitle("가져오기 검토")
@@ -97,9 +112,29 @@ struct IOSRootView: View {
                         Button("완료") {
                             showsImportReview = false
                         }
+                        .disabled(importReviewViewModel.isBusy)
                     }
                 }
             }
+            .interactiveDismissDisabled(
+                importReviewViewModel.isBusy
+            )
         }
+        .task {
+            await environment.start()
+            if ProcessInfo.processInfo.arguments.contains("--lorepia-ci-smoke") {
+                do {
+                    try await environment.validateForLaunchSmoke()
+                    exit(EXIT_SUCCESS)
+                } catch {
+                    fputs(
+                        "LorePia iOS launch smoke failed: \(error)\n",
+                        stderr
+                    )
+                    exit(EXIT_FAILURE)
+                }
+            }
+        }
+        .accessibilityIdentifier("lorepia-root")
     }
 }

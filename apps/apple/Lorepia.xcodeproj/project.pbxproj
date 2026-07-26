@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		10D83B4C02AFED03A96BCF0D /* MacAppDirectories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A35C7CBD006B3128DA4A902 /* MacAppDirectories.swift */; };
+		2C355A7772333F8C8605236A /* IOSRootNavigationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E41E1457FDA2CDC8845D0DCC /* IOSRootNavigationUITests.swift */; };
 		3810B7313788DAAC05176FC8 /* IOSRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A45762D2D7B3E1DF310A20 /* IOSRootView.swift */; };
 		41722AF3C28BC6C878BD9C42 /* LorepiaKit in Frameworks */ = {isa = PBXBuildFile; productRef = B4F98EFF844DA48F3BD42DCA /* LorepiaKit */; };
 		59684055EF28F6E22B302AD9 /* LorepiaIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D200A9BA20E638B86090AFDE /* LorepiaIOSApp.swift */; };
@@ -17,17 +18,29 @@
 		F7695C01CA5BD117B78ADDDB /* MacRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F25FDD6952F3DB69049BCF /* MacRootView.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		B140FB3C663EE129A6860FC4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ABFBFBC4CA99F2FC8A0E65F2 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 83C85B5F890EF03394FFF636;
+			remoteInfo = LorepiaIOS;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		15A968E2201C7BED416CAE67 /* LorepiaMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LorepiaMacApp.swift; sourceTree = "<group>"; };
 		1691DB10016F7816F6113AA6 /* LorepiaKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LorepiaKit; path = Packages/LorepiaKit; sourceTree = SOURCE_ROOT; };
 		1AE3E1A4207AC29C5A9008F0 /* LorepiaMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LorepiaMac.entitlements; sourceTree = "<group>"; };
 		2A35C7CBD006B3128DA4A902 /* MacAppDirectories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAppDirectories.swift; sourceTree = "<group>"; };
+		4B612B0C94ACE1ED2D771A39 /* LorepiaIOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LorepiaIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5DFB3C809D238012ED100246 /* LorepiaIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LorepiaIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AD0E6C48AEE69F698C6BE3F /* IOSAppDirectories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSAppDirectories.swift; sourceTree = "<group>"; };
 		72F25FDD6952F3DB69049BCF /* MacRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacRootView.swift; sourceTree = "<group>"; };
 		A6A45762D2D7B3E1DF310A20 /* IOSRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSRootView.swift; sourceTree = "<group>"; };
 		CDC44D19092D3446E65555A4 /* LorepiaMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LorepiaMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D200A9BA20E638B86090AFDE /* LorepiaIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LorepiaIOSApp.swift; sourceTree = "<group>"; };
+		E41E1457FDA2CDC8845D0DCC /* IOSRootNavigationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSRootNavigationUITests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -55,6 +68,7 @@
 			children = (
 				0669F44E1FE5C253CBCA64BB /* Apps */,
 				CA63674EAAFCEB7404DBE3DD /* Packages */,
+				7A0F7226FFF89753ABA8F12D /* Tests */,
 				B2C1C684CF6D6CF890E1841A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -68,6 +82,14 @@
 			path = Apps;
 			sourceTree = "<group>";
 		};
+		2ED1369A648DED0416931372 /* iOSUITests */ = {
+			isa = PBXGroup;
+			children = (
+				E41E1457FDA2CDC8845D0DCC /* IOSRootNavigationUITests.swift */,
+			);
+			path = iOSUITests;
+			sourceTree = "<group>";
+		};
 		2F5F1E6905C1EEC00FF262D9 /* macOS */ = {
 			isa = PBXGroup;
 			children = (
@@ -79,10 +101,19 @@
 			path = macOS;
 			sourceTree = "<group>";
 		};
+		7A0F7226FFF89753ABA8F12D /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				2ED1369A648DED0416931372 /* iOSUITests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		B2C1C684CF6D6CF890E1841A /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				5DFB3C809D238012ED100246 /* LorepiaIOS.app */,
+				4B612B0C94ACE1ED2D771A39 /* LorepiaIOSUITests.xctest */,
 				CDC44D19092D3446E65555A4 /* LorepiaMac.app */,
 			);
 			name = Products;
@@ -147,6 +178,24 @@
 			productReference = CDC44D19092D3446E65555A4 /* LorepiaMac.app */;
 			productType = "com.apple.product-type.application";
 		};
+		F2961F198CC0B2A12B5B62BD /* LorepiaIOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2B06E48D325439457EED3713 /* Build configuration list for PBXNativeTarget "LorepiaIOSUITests" */;
+			buildPhases = (
+				4EAD815F7F6351FC80290B53 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9B5A38D1015D97D7C867D1A7 /* PBXTargetDependency */,
+			);
+			name = LorepiaIOSUITests;
+			packageProductDependencies = (
+			);
+			productName = LorepiaIOSUITests;
+			productReference = 4B612B0C94ACE1ED2D771A39 /* LorepiaIOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -156,6 +205,9 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					F2961F198CC0B2A12B5B62BD = {
+						TestTargetID = 83C85B5F890EF03394FFF636;
+					};
 				};
 			};
 			buildConfigurationList = A65E0F960CE7F05B50CBF9CB /* Build configuration list for PBXProject "Lorepia" */;
@@ -176,12 +228,21 @@
 			projectRoot = "";
 			targets = (
 				83C85B5F890EF03394FFF636 /* LorepiaIOS */,
+				F2961F198CC0B2A12B5B62BD /* LorepiaIOSUITests */,
 				865B927BF00730EB71AA75F9 /* LorepiaMac */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		4EAD815F7F6351FC80290B53 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2C355A7772333F8C8605236A /* IOSRootNavigationUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BAE51FC6295D65FF2D7590B0 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -203,6 +264,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9B5A38D1015D97D7C867D1A7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 83C85B5F890EF03394FFF636 /* LorepiaIOS */;
+			targetProxy = B140FB3C663EE129A6860FC4 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		1DE967CB404B0875A0AD1E8F /* Release */ = {
@@ -285,6 +354,23 @@
 			};
 			name = Release;
 		};
+		96DD4EA2E2662E2AABE97B39 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.lorepia.ios-ui-tests";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = LorepiaIOS;
+			};
+			name = Release;
+		};
 		C80F74EFC6E1DCAD14DD48C7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -343,6 +429,23 @@
 				SDKROOT = macosx;
 			};
 			name = Release;
+		};
+		DF654E883A499F01B599E341 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "dev.lorepia.ios-ui-tests";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = LorepiaIOS;
+			};
+			name = Debug;
 		};
 		FA2EE08FF26E81222A29F084 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -413,6 +516,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2B06E48D325439457EED3713 /* Build configuration list for PBXNativeTarget "LorepiaIOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DF654E883A499F01B599E341 /* Debug */,
+				96DD4EA2E2662E2AABE97B39 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		64099FC55BB122389E349F3E /* Build configuration list for PBXNativeTarget "LorepiaMac" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

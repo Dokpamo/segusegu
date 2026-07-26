@@ -15,6 +15,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             LorepiaApp(
                 coreClientFactory = application::openCoreClient,
+                credentialStore = application.credentialStore,
                 releaseCoreClient = {},
             )
         }

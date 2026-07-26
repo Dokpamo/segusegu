@@ -14,8 +14,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      required: ${{ steps.filter.outputs.required }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        name: Filter Android paths
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          required="$(./scripts/ci-path-filter.sh android "$BASE_SHA" "$HEAD_SHA")"
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+
+  android_build:
+    name: android-build
+    needs: changes
+    if: needs.changes.outputs.required == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -32,7 +54,43 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Build Rust bindings and Android app
         run: |
+          set -o pipefail
           export ANDROID_NDK_HOME="$ANDROID_HOME/ndk/27.2.12479018"
-          ./scripts/build-android.sh
-      - name: Verify generated Kotlin has no drift
-        run: git diff --exit-code -- apps/android/app/src/main/generated
+          ./scripts/build-android.sh 2>&1 | tee android-build.log
+      - name: Verify exact generated Kotlin tree
+        run: ./scripts/check-generated-tree.sh kotlin
+      - name: Run Android instrumentation tests
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod a+rw /dev/kvm
+          fi
+          ./scripts/test-android-emulator.sh
+      - name: Upload Android reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            android-build.log
+            android-emulator.log
+            apps/android/app/build/reports/
+            apps/android/app/build/outputs/androidTest-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  android:
+    needs: [changes, android_build]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require relevant Android build
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          BUILD_REQUIRED: ${{ needs.changes.outputs.required }}
+          BUILD_RESULT: ${{ needs.android_build.result }}
+        run: |
+          test "$CHANGES_RESULT" = "success"
+          if [ "$BUILD_REQUIRED" = "true" ]; then
+            test "$BUILD_RESULT" = "success"
+          fi

@@ -43,6 +43,26 @@ public sealed class NativeBufferTests
     }
 
     [Fact]
+    public void ReadUtf8_RejectsMalformedUtf8AndStillFrees()
+    {
+        var pointer = Marshal.AllocHGlobal(2);
+        Marshal.Copy(new byte[] { 0xc3, 0x28 }, 0, pointer, 2);
+        var freeCount = 0;
+        using (var buffer = new NativeBuffer(
+                   new NativeBufferValue(pointer, 2),
+                   value =>
+                   {
+                       freeCount++;
+                       Marshal.FreeHGlobal(value.Pointer);
+                   }))
+        {
+            Assert.Throws<CoreInteropException>(() => buffer.ReadUtf8());
+        }
+
+        Assert.Equal(1, freeCount);
+    }
+
+    [Fact]
     public void NativeBufferValue_MatchesTwoPointerAbiLayout()
     {
         Assert.Equal(IntPtr.Size * 2, Marshal.SizeOf<NativeBufferValue>());

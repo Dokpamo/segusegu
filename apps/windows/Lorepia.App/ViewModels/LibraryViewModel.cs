@@ -1,4 +1,3 @@
-using Lorepia.App.Platform;
 using Lorepia.Native;
 using Microsoft.UI.Xaml;
 using System.Collections.ObjectModel;
@@ -7,6 +6,7 @@ namespace Lorepia.App.ViewModels;
 
 public sealed class LibraryViewModel : ObservableObject
 {
+    private readonly CoreClient core;
     private string status = "Loading local characters…";
     private bool isLoading;
     private Visibility emptyStateVisibility = Visibility.Visible;
@@ -36,6 +36,11 @@ public sealed class LibraryViewModel : ObservableObject
         private set => SetProperty(ref emptyStateVisibility, value);
     }
 
+    internal LibraryViewModel(CoreClient core)
+    {
+        this.core = core;
+    }
+
     public async Task LoadAsync()
     {
         if (IsLoading)
@@ -49,11 +54,7 @@ public sealed class LibraryViewModel : ObservableObject
         try
         {
             var characters = await Task.Run(() =>
-            {
-                using var client = CoreClient.Open(
-                    WindowsDataRoot.GetOrCreate());
-                return client.ListCharacters();
-            });
+                core.ListCharacters());
 
             Characters.Clear();
             foreach (var character in characters)

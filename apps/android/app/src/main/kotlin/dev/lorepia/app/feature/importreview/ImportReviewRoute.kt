@@ -30,10 +30,11 @@ fun ImportReviewRoute(
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val isBusy = uiState is ImportReviewUiState.Loading ||
-        (uiState as? ImportReviewUiState.Ready)?.isCommitting == true
+        (uiState as? ImportReviewUiState.Ready)?.let {
+            it.isCommitting || it.isDiscarding
+        } == true
     val closeReview = {
-        viewModel.discard()
-        onNavigateBack()
+        viewModel.discard(onNavigateBack)
     }
 
     LaunchedEffect(uiState) {

@@ -728,6 +728,36 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -745,13 +775,43 @@ internal interface IntegrityCheckingUniffiLib : Library {
     // Integrity check functions only
     fun uniffi_lorepia_uniffi_checksum_func_core_version(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_func_version_info(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_cancel_generation(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_commit_import(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_database_stats(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_provider_profile(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_discard_import(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_character(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_settings(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_health_check(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_inspect_import(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_characters(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_messages(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_profiles(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_open_conversation(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_events(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_update_settings(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_provider_profile(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_constructor_lorepiacore_open(
 ): Short
@@ -810,7 +870,19 @@ fun uniffi_lorepia_uniffi_fn_free_lorepiacore(`ptr`: Pointer,uniffi_out_err: Uni
 ): Unit
 fun uniffi_lorepia_uniffi_fn_constructor_lorepiacore_open(`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Pointer
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_cancel_generation(`ptr`: Pointer,`generationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_commit_import(`ptr`: Pointer,`inspectionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_database_stats(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_provider_profile(`ptr`: Pointer,`profileId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_discard_import(`ptr`: Pointer,`inspectionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_character(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_settings(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_health_check(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -818,7 +890,25 @@ fun uniffi_lorepia_uniffi_fn_method_lorepiacore_inspect_import(`ptr`: Pointer,`s
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_characters(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversations(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_messages(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_profiles(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_open_conversation(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_events(`ptr`: Pointer,`maxEvents`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`text`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_update_settings(`ptr`: Pointer,`settings`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_provider_profile(`ptr`: Pointer,`profile`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_func_version_info(uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun ffi_lorepia_uniffi_rustbuffer_alloc(`size`: Long,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -949,7 +1039,28 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_func_core_version() != 3225.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_func_version_info() != 4578.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_cancel_generation() != 40179.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_commit_import() != 10817.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_database_stats() != 40106.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_provider_profile() != 29655.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_discard_import() != 58614.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_character() != 14947.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_settings() != 17684.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_health_check() != 56328.toShort()) {
@@ -959,6 +1070,30 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_characters() != 14524.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations() != 38055.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_messages() != 26339.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_profiles() != 28847.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_open_conversation() != 10904.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_events() != 26212.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message() != 36804.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_update_settings() != 60549.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_provider_profile() != 8414.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_constructor_lorepiacore_open() != 9294.toShort()) {
@@ -1334,13 +1469,44 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 
 public interface LorepiaCoreInterface {
     
+    fun `cancelGeneration`(`generationId`: kotlin.String)
+    
     fun `commitImport`(`inspectionId`: kotlin.String): FfiCharacter
+    
+    fun `databaseStats`(): FfiDatabaseStats
+    
+    fun `deleteProviderProfile`(`profileId`: kotlin.String)
+    
+    fun `discardImport`(`inspectionId`: kotlin.String)
+    
+    fun `getCharacter`(`characterId`: kotlin.String): FfiCharacter
+    
+    fun `getSettings`(): FfiAppSettings
     
     fun `healthCheck`(): FfiHealthReport
     
     fun `inspectImport`(`stagedPath`: kotlin.String): FfiImportInspection
     
     fun `listCharacters`(): List<FfiCharacter>
+    
+    fun `listConversations`(): List<FfiConversation>
+    
+    fun `listMessages`(`conversationId`: kotlin.String): List<FfiMessage>
+    
+    fun `listProviderProfiles`(): List<FfiProviderProfile>
+    
+    fun `openConversation`(`characterId`: kotlin.String): FfiConversation
+    
+    /**
+     * Drains up to `max_events` without blocking a platform UI thread.
+     */
+    fun `pollEvents`(`maxEvents`: kotlin.UInt): FfiEventBatch
+    
+    fun `sendMessage`(`conversationId`: kotlin.String, `text`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): kotlin.String
+    
+    fun `updateSettings`(`settings`: FfiAppSettings): FfiAppSettings
+    
+    fun `upsertProviderProfile`(`profile`: FfiProviderProfile): FfiProviderProfile
     
     companion object
 }
@@ -1428,12 +1594,87 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     }
 
     
+    @Throws(FfiException::class)override fun `cancelGeneration`(`generationId`: kotlin.String)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_cancel_generation(
+        it, FfiConverterString.lower(`generationId`),_status)
+}
+    }
+    
+    
+
+    
     @Throws(FfiException::class)override fun `commitImport`(`inspectionId`: kotlin.String): FfiCharacter {
             return FfiConverterTypeFfiCharacter.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_commit_import(
         it, FfiConverterString.lower(`inspectionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `databaseStats`(): FfiDatabaseStats {
+            return FfiConverterTypeFfiDatabaseStats.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_database_stats(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `deleteProviderProfile`(`profileId`: kotlin.String)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_provider_profile(
+        it, FfiConverterString.lower(`profileId`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `discardImport`(`inspectionId`: kotlin.String)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_discard_import(
+        it, FfiConverterString.lower(`inspectionId`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `getCharacter`(`characterId`: kotlin.String): FfiCharacter {
+            return FfiConverterTypeFfiCharacter.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_get_character(
+        it, FfiConverterString.lower(`characterId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `getSettings`(): FfiAppSettings {
+            return FfiConverterTypeFfiAppSettings.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_get_settings(
+        it, _status)
 }
     }
     )
@@ -1473,6 +1714,113 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_characters(
         it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listConversations`(): List<FfiConversation> {
+            return FfiConverterSequenceTypeFfiConversation.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversations(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listMessages`(`conversationId`: kotlin.String): List<FfiMessage> {
+            return FfiConverterSequenceTypeFfiMessage.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_messages(
+        it, FfiConverterString.lower(`conversationId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listProviderProfiles`(): List<FfiProviderProfile> {
+            return FfiConverterSequenceTypeFfiProviderProfile.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_profiles(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `openConversation`(`characterId`: kotlin.String): FfiConversation {
+            return FfiConverterTypeFfiConversation.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_open_conversation(
+        it, FfiConverterString.lower(`characterId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Drains up to `max_events` without blocking a platform UI thread.
+     */
+    @Throws(FfiException::class)override fun `pollEvents`(`maxEvents`: kotlin.UInt): FfiEventBatch {
+            return FfiConverterTypeFfiEventBatch.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_events(
+        it, FfiConverterUInt.lower(`maxEvents`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `sendMessage`(`conversationId`: kotlin.String, `text`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): kotlin.String {
+            return FfiConverterString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`text`),FfiConverterString.lower(`providerProfileId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `updateSettings`(`settings`: FfiAppSettings): FfiAppSettings {
+            return FfiConverterTypeFfiAppSettings.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_update_settings(
+        it, FfiConverterTypeFfiAppSettings.lower(`settings`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `upsertProviderProfile`(`profile`: FfiProviderProfile): FfiProviderProfile {
+            return FfiConverterTypeFfiProviderProfile.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_provider_profile(
+        it, FfiConverterTypeFfiProviderProfile.lower(`profile`),_status)
 }
     }
     )
@@ -1529,11 +1877,45 @@ public object FfiConverterTypeLorepiaCore: FfiConverter<LorepiaCore, Pointer> {
 
 
 
+data class FfiAppSettings (
+    var `preservePartialGenerations`: kotlin.Boolean, 
+    var `selectedProviderProfileId`: kotlin.String?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiAppSettings: FfiConverterRustBuffer<FfiAppSettings> {
+    override fun read(buf: ByteBuffer): FfiAppSettings {
+        return FfiAppSettings(
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiAppSettings) = (
+            FfiConverterBoolean.allocationSize(value.`preservePartialGenerations`) +
+            FfiConverterOptionalString.allocationSize(value.`selectedProviderProfileId`)
+    )
+
+    override fun write(value: FfiAppSettings, buf: ByteBuffer) {
+            FfiConverterBoolean.write(value.`preservePartialGenerations`, buf)
+            FfiConverterOptionalString.write(value.`selectedProviderProfileId`, buf)
+    }
+}
+
+
+
 data class FfiCharacter (
     var `id`: kotlin.String, 
     var `name`: kotlin.String, 
     var `description`: kotlin.String, 
-    var `sourceHash`: kotlin.String
+    var `sourceHash`: kotlin.String, 
+    var `avatarAssetHash`: kotlin.String?, 
+    var `createdAt`: kotlin.String
 ) {
     
     companion object
@@ -1549,6 +1931,8 @@ public object FfiConverterTypeFfiCharacter: FfiConverterRustBuffer<FfiCharacter>
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
         )
     }
 
@@ -1556,7 +1940,9 @@ public object FfiConverterTypeFfiCharacter: FfiConverterRustBuffer<FfiCharacter>
             FfiConverterString.allocationSize(value.`id`) +
             FfiConverterString.allocationSize(value.`name`) +
             FfiConverterString.allocationSize(value.`description`) +
-            FfiConverterString.allocationSize(value.`sourceHash`)
+            FfiConverterString.allocationSize(value.`sourceHash`) +
+            FfiConverterOptionalString.allocationSize(value.`avatarAssetHash`) +
+            FfiConverterString.allocationSize(value.`createdAt`)
     )
 
     override fun write(value: FfiCharacter, buf: ByteBuffer) {
@@ -1564,6 +1950,132 @@ public object FfiConverterTypeFfiCharacter: FfiConverterRustBuffer<FfiCharacter>
             FfiConverterString.write(value.`name`, buf)
             FfiConverterString.write(value.`description`, buf)
             FfiConverterString.write(value.`sourceHash`, buf)
+            FfiConverterOptionalString.write(value.`avatarAssetHash`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+    }
+}
+
+
+
+/**
+ * A flat, versioned event representation that is forward-compatible across
+ * Kotlin and Swift. Fields that do not apply to `kind` are `None`.
+ */
+data class FfiChatEvent (
+    var `eventVersion`: kotlin.UInt, 
+    var `generationId`: kotlin.String, 
+    var `conversationId`: kotlin.String, 
+    var `sequence`: kotlin.ULong, 
+    var `emittedAt`: kotlin.String, 
+    var `kind`: kotlin.String, 
+    var `text`: kotlin.String?, 
+    var `messageId`: kotlin.String?, 
+    var `messageStatus`: kotlin.String?, 
+    var `errorCode`: kotlin.String?, 
+    var `errorMessage`: kotlin.String?, 
+    var `usageInputTokens`: kotlin.ULong?, 
+    var `usageOutputTokens`: kotlin.ULong?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiChatEvent: FfiConverterRustBuffer<FfiChatEvent> {
+    override fun read(buf: ByteBuffer): FfiChatEvent {
+        return FfiChatEvent(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterOptionalULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiChatEvent) = (
+            FfiConverterUInt.allocationSize(value.`eventVersion`) +
+            FfiConverterString.allocationSize(value.`generationId`) +
+            FfiConverterString.allocationSize(value.`conversationId`) +
+            FfiConverterULong.allocationSize(value.`sequence`) +
+            FfiConverterString.allocationSize(value.`emittedAt`) +
+            FfiConverterString.allocationSize(value.`kind`) +
+            FfiConverterOptionalString.allocationSize(value.`text`) +
+            FfiConverterOptionalString.allocationSize(value.`messageId`) +
+            FfiConverterOptionalString.allocationSize(value.`messageStatus`) +
+            FfiConverterOptionalString.allocationSize(value.`errorCode`) +
+            FfiConverterOptionalString.allocationSize(value.`errorMessage`) +
+            FfiConverterOptionalULong.allocationSize(value.`usageInputTokens`) +
+            FfiConverterOptionalULong.allocationSize(value.`usageOutputTokens`)
+    )
+
+    override fun write(value: FfiChatEvent, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`eventVersion`, buf)
+            FfiConverterString.write(value.`generationId`, buf)
+            FfiConverterString.write(value.`conversationId`, buf)
+            FfiConverterULong.write(value.`sequence`, buf)
+            FfiConverterString.write(value.`emittedAt`, buf)
+            FfiConverterString.write(value.`kind`, buf)
+            FfiConverterOptionalString.write(value.`text`, buf)
+            FfiConverterOptionalString.write(value.`messageId`, buf)
+            FfiConverterOptionalString.write(value.`messageStatus`, buf)
+            FfiConverterOptionalString.write(value.`errorCode`, buf)
+            FfiConverterOptionalString.write(value.`errorMessage`, buf)
+            FfiConverterOptionalULong.write(value.`usageInputTokens`, buf)
+            FfiConverterOptionalULong.write(value.`usageOutputTokens`, buf)
+    }
+}
+
+
+
+data class FfiConversation (
+    var `id`: kotlin.String, 
+    var `characterId`: kotlin.String, 
+    var `title`: kotlin.String, 
+    var `createdAt`: kotlin.String, 
+    var `updatedAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiConversation: FfiConverterRustBuffer<FfiConversation> {
+    override fun read(buf: ByteBuffer): FfiConversation {
+        return FfiConversation(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiConversation) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`characterId`) +
+            FfiConverterString.allocationSize(value.`title`) +
+            FfiConverterString.allocationSize(value.`createdAt`) +
+            FfiConverterString.allocationSize(value.`updatedAt`)
+    )
+
+    override fun write(value: FfiConversation, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`characterId`, buf)
+            FfiConverterString.write(value.`title`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+            FfiConverterString.write(value.`updatedAt`, buf)
     }
 }
 
@@ -1592,6 +2104,84 @@ public object FfiConverterTypeFfiCoreConfig: FfiConverterRustBuffer<FfiCoreConfi
 
     override fun write(value: FfiCoreConfig, buf: ByteBuffer) {
             FfiConverterString.write(value.`dataRoot`, buf)
+    }
+}
+
+
+
+data class FfiDatabaseStats (
+    var `characters`: kotlin.ULong, 
+    var `conversations`: kotlin.ULong, 
+    var `messages`: kotlin.ULong, 
+    var `pendingImports`: kotlin.ULong
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDatabaseStats: FfiConverterRustBuffer<FfiDatabaseStats> {
+    override fun read(buf: ByteBuffer): FfiDatabaseStats {
+        return FfiDatabaseStats(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDatabaseStats) = (
+            FfiConverterULong.allocationSize(value.`characters`) +
+            FfiConverterULong.allocationSize(value.`conversations`) +
+            FfiConverterULong.allocationSize(value.`messages`) +
+            FfiConverterULong.allocationSize(value.`pendingImports`)
+    )
+
+    override fun write(value: FfiDatabaseStats, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`characters`, buf)
+            FfiConverterULong.write(value.`conversations`, buf)
+            FfiConverterULong.write(value.`messages`, buf)
+            FfiConverterULong.write(value.`pendingImports`, buf)
+    }
+}
+
+
+
+data class FfiEventBatch (
+    var `events`: List<FfiChatEvent>, 
+    /**
+     * Number of events evicted before this poll could receive them.
+     *
+     * A non-zero value tells the platform to refresh persisted messages before
+     * applying subsequent deltas.
+     */
+    var `droppedEventCount`: kotlin.ULong
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiEventBatch: FfiConverterRustBuffer<FfiEventBatch> {
+    override fun read(buf: ByteBuffer): FfiEventBatch {
+        return FfiEventBatch(
+            FfiConverterSequenceTypeFfiChatEvent.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiEventBatch) = (
+            FfiConverterSequenceTypeFfiChatEvent.allocationSize(value.`events`) +
+            FfiConverterULong.allocationSize(value.`droppedEventCount`)
+    )
+
+    override fun write(value: FfiEventBatch, buf: ByteBuffer) {
+            FfiConverterSequenceTypeFfiChatEvent.write(value.`events`, buf)
+            FfiConverterULong.write(value.`droppedEventCount`, buf)
     }
 }
 
@@ -1649,16 +2239,56 @@ public object FfiConverterTypeFfiHealthReport: FfiConverterRustBuffer<FfiHealthR
 
 
 
+data class FfiImportImagePreview (
+    var `logicalAssetId`: kotlin.String, 
+    var `mediaType`: kotlin.String, 
+    var `sizeBytes`: kotlin.ULong
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiImportImagePreview: FfiConverterRustBuffer<FfiImportImagePreview> {
+    override fun read(buf: ByteBuffer): FfiImportImagePreview {
+        return FfiImportImagePreview(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiImportImagePreview) = (
+            FfiConverterString.allocationSize(value.`logicalAssetId`) +
+            FfiConverterString.allocationSize(value.`mediaType`) +
+            FfiConverterULong.allocationSize(value.`sizeBytes`)
+    )
+
+    override fun write(value: FfiImportImagePreview, buf: ByteBuffer) {
+            FfiConverterString.write(value.`logicalAssetId`, buf)
+            FfiConverterString.write(value.`mediaType`, buf)
+            FfiConverterULong.write(value.`sizeBytes`, buf)
+    }
+}
+
+
+
 data class FfiImportInspection (
     var `id`: kotlin.String, 
     var `contentKind`: kotlin.String, 
     var `displayName`: kotlin.String, 
     var `description`: kotlin.String, 
+    var `representativeImage`: FfiImportImagePreview?, 
     var `sourceSha256`: kotlin.String, 
     var `sourceSize`: kotlin.ULong, 
+    var `estimatedStoredSize`: kotlin.ULong, 
     var `assetCount`: kotlin.UInt, 
-    var `warnings`: List<kotlin.String>, 
-    var `blockedReasons`: List<kotlin.String>
+    var `warnings`: List<FfiImportWarning>, 
+    var `blockedReasons`: List<kotlin.String>, 
+    var `unsupportedOptionalFields`: List<kotlin.String>, 
+    var `isAllowed`: kotlin.Boolean
 ) {
     
     companion object
@@ -1674,11 +2304,15 @@ public object FfiConverterTypeFfiImportInspection: FfiConverterRustBuffer<FfiImp
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
+            FfiConverterOptionalTypeFfiImportImagePreview.read(buf),
             FfiConverterString.read(buf),
             FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
             FfiConverterUInt.read(buf),
+            FfiConverterSequenceTypeFfiImportWarning.read(buf),
             FfiConverterSequenceString.read(buf),
             FfiConverterSequenceString.read(buf),
+            FfiConverterBoolean.read(buf),
         )
     }
 
@@ -1687,11 +2321,15 @@ public object FfiConverterTypeFfiImportInspection: FfiConverterRustBuffer<FfiImp
             FfiConverterString.allocationSize(value.`contentKind`) +
             FfiConverterString.allocationSize(value.`displayName`) +
             FfiConverterString.allocationSize(value.`description`) +
+            FfiConverterOptionalTypeFfiImportImagePreview.allocationSize(value.`representativeImage`) +
             FfiConverterString.allocationSize(value.`sourceSha256`) +
             FfiConverterULong.allocationSize(value.`sourceSize`) +
+            FfiConverterULong.allocationSize(value.`estimatedStoredSize`) +
             FfiConverterUInt.allocationSize(value.`assetCount`) +
-            FfiConverterSequenceString.allocationSize(value.`warnings`) +
-            FfiConverterSequenceString.allocationSize(value.`blockedReasons`)
+            FfiConverterSequenceTypeFfiImportWarning.allocationSize(value.`warnings`) +
+            FfiConverterSequenceString.allocationSize(value.`blockedReasons`) +
+            FfiConverterSequenceString.allocationSize(value.`unsupportedOptionalFields`) +
+            FfiConverterBoolean.allocationSize(value.`isAllowed`)
     )
 
     override fun write(value: FfiImportInspection, buf: ByteBuffer) {
@@ -1699,11 +2337,187 @@ public object FfiConverterTypeFfiImportInspection: FfiConverterRustBuffer<FfiImp
             FfiConverterString.write(value.`contentKind`, buf)
             FfiConverterString.write(value.`displayName`, buf)
             FfiConverterString.write(value.`description`, buf)
+            FfiConverterOptionalTypeFfiImportImagePreview.write(value.`representativeImage`, buf)
             FfiConverterString.write(value.`sourceSha256`, buf)
             FfiConverterULong.write(value.`sourceSize`, buf)
+            FfiConverterULong.write(value.`estimatedStoredSize`, buf)
             FfiConverterUInt.write(value.`assetCount`, buf)
-            FfiConverterSequenceString.write(value.`warnings`, buf)
+            FfiConverterSequenceTypeFfiImportWarning.write(value.`warnings`, buf)
             FfiConverterSequenceString.write(value.`blockedReasons`, buf)
+            FfiConverterSequenceString.write(value.`unsupportedOptionalFields`, buf)
+            FfiConverterBoolean.write(value.`isAllowed`, buf)
+    }
+}
+
+
+
+data class FfiImportWarning (
+    var `code`: kotlin.String, 
+    var `message`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiImportWarning: FfiConverterRustBuffer<FfiImportWarning> {
+    override fun read(buf: ByteBuffer): FfiImportWarning {
+        return FfiImportWarning(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiImportWarning) = (
+            FfiConverterString.allocationSize(value.`code`) +
+            FfiConverterString.allocationSize(value.`message`)
+    )
+
+    override fun write(value: FfiImportWarning, buf: ByteBuffer) {
+            FfiConverterString.write(value.`code`, buf)
+            FfiConverterString.write(value.`message`, buf)
+    }
+}
+
+
+
+data class FfiMessage (
+    var `id`: kotlin.String, 
+    var `conversationId`: kotlin.String, 
+    var `parentId`: kotlin.String?, 
+    var `role`: kotlin.String, 
+    var `content`: kotlin.String, 
+    var `status`: kotlin.String, 
+    var `generationId`: kotlin.String?, 
+    var `createdAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiMessage: FfiConverterRustBuffer<FfiMessage> {
+    override fun read(buf: ByteBuffer): FfiMessage {
+        return FfiMessage(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiMessage) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`conversationId`) +
+            FfiConverterOptionalString.allocationSize(value.`parentId`) +
+            FfiConverterString.allocationSize(value.`role`) +
+            FfiConverterString.allocationSize(value.`content`) +
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterOptionalString.allocationSize(value.`generationId`) +
+            FfiConverterString.allocationSize(value.`createdAt`)
+    )
+
+    override fun write(value: FfiMessage, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`conversationId`, buf)
+            FfiConverterOptionalString.write(value.`parentId`, buf)
+            FfiConverterString.write(value.`role`, buf)
+            FfiConverterString.write(value.`content`, buf)
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterOptionalString.write(value.`generationId`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+    }
+}
+
+
+
+data class FfiProviderProfile (
+    var `id`: kotlin.String, 
+    var `displayName`: kotlin.String, 
+    var `baseUrl`: kotlin.String, 
+    var `model`: kotlin.String, 
+    var `timeoutSeconds`: kotlin.UInt
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderProfile: FfiConverterRustBuffer<FfiProviderProfile> {
+    override fun read(buf: ByteBuffer): FfiProviderProfile {
+        return FfiProviderProfile(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderProfile) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`displayName`) +
+            FfiConverterString.allocationSize(value.`baseUrl`) +
+            FfiConverterString.allocationSize(value.`model`) +
+            FfiConverterUInt.allocationSize(value.`timeoutSeconds`)
+    )
+
+    override fun write(value: FfiProviderProfile, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+            FfiConverterString.write(value.`baseUrl`, buf)
+            FfiConverterString.write(value.`model`, buf)
+            FfiConverterUInt.write(value.`timeoutSeconds`, buf)
+    }
+}
+
+
+
+data class FfiVersionInfo (
+    var `coreVersion`: kotlin.String, 
+    var `coreApiVersion`: kotlin.UInt, 
+    var `bindingApiVersion`: kotlin.UInt, 
+    var `chatEventVersion`: kotlin.UInt
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiVersionInfo: FfiConverterRustBuffer<FfiVersionInfo> {
+    override fun read(buf: ByteBuffer): FfiVersionInfo {
+        return FfiVersionInfo(
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiVersionInfo) = (
+            FfiConverterString.allocationSize(value.`coreVersion`) +
+            FfiConverterUInt.allocationSize(value.`coreApiVersion`) +
+            FfiConverterUInt.allocationSize(value.`bindingApiVersion`) +
+            FfiConverterUInt.allocationSize(value.`chatEventVersion`)
+    )
+
+    override fun write(value: FfiVersionInfo, buf: ByteBuffer) {
+            FfiConverterString.write(value.`coreVersion`, buf)
+            FfiConverterUInt.write(value.`coreApiVersion`, buf)
+            FfiConverterUInt.write(value.`bindingApiVersion`, buf)
+            FfiConverterUInt.write(value.`chatEventVersion`, buf)
     }
 }
 
@@ -1787,6 +2601,102 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
 /**
  * @suppress
  */
+public object FfiConverterOptionalULong: FfiConverterRustBuffer<kotlin.ULong?> {
+    override fun read(buf: ByteBuffer): kotlin.ULong? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterULong.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.ULong?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterULong.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.ULong?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterULong.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?> {
+    override fun read(buf: ByteBuffer): kotlin.String? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterString.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.String?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterString.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.String?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterString.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiImportImagePreview: FfiConverterRustBuffer<FfiImportImagePreview?> {
+    override fun read(buf: ByteBuffer): FfiImportImagePreview? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiImportImagePreview.read(buf)
+    }
+
+    override fun allocationSize(value: FfiImportImagePreview?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiImportImagePreview.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiImportImagePreview?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiImportImagePreview.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
     override fun read(buf: ByteBuffer): List<kotlin.String> {
         val len = buf.getInt()
@@ -1835,10 +2745,159 @@ public object FfiConverterSequenceTypeFfiCharacter: FfiConverterRustBuffer<List<
             FfiConverterTypeFfiCharacter.write(it, buf)
         }
     }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiChatEvent: FfiConverterRustBuffer<List<FfiChatEvent>> {
+    override fun read(buf: ByteBuffer): List<FfiChatEvent> {
+        val len = buf.getInt()
+        return List<FfiChatEvent>(len) {
+            FfiConverterTypeFfiChatEvent.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiChatEvent>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiChatEvent.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiChatEvent>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiChatEvent.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiConversation: FfiConverterRustBuffer<List<FfiConversation>> {
+    override fun read(buf: ByteBuffer): List<FfiConversation> {
+        val len = buf.getInt()
+        return List<FfiConversation>(len) {
+            FfiConverterTypeFfiConversation.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiConversation>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiConversation.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiConversation>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiConversation.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiImportWarning: FfiConverterRustBuffer<List<FfiImportWarning>> {
+    override fun read(buf: ByteBuffer): List<FfiImportWarning> {
+        val len = buf.getInt()
+        return List<FfiImportWarning>(len) {
+            FfiConverterTypeFfiImportWarning.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiImportWarning>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiImportWarning.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiImportWarning>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiImportWarning.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiMessage: FfiConverterRustBuffer<List<FfiMessage>> {
+    override fun read(buf: ByteBuffer): List<FfiMessage> {
+        val len = buf.getInt()
+        return List<FfiMessage>(len) {
+            FfiConverterTypeFfiMessage.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiMessage>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiMessage.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiMessage>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiMessage.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiProviderProfile: FfiConverterRustBuffer<List<FfiProviderProfile>> {
+    override fun read(buf: ByteBuffer): List<FfiProviderProfile> {
+        val len = buf.getInt()
+        return List<FfiProviderProfile>(len) {
+            FfiConverterTypeFfiProviderProfile.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiProviderProfile>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiProviderProfile.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiProviderProfile>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiProviderProfile.write(it, buf)
+        }
+    }
 } fun `coreVersion`(): kotlin.String {
             return FfiConverterString.lift(
     uniffiRustCall() { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_func_core_version(
+        _status)
+}
+    )
+    }
+    
+ fun `versionInfo`(): FfiVersionInfo {
+            return FfiConverterTypeFfiVersionInfo.lift(
+    uniffiRustCall() { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_func_version_info(
         _status)
 }
     )

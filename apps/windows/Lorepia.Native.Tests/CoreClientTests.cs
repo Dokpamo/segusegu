@@ -64,8 +64,43 @@ public sealed class CoreClientTests
         var client = CoreClient.Open(api, CreateAbsoluteDataRoot());
         client.Dispose();
 
-        Assert.Throws<ObjectDisposedException>(() => client.GetCoreVersion());
-        Assert.Throws<ObjectDisposedException>(() => client.GetHealthCheck());
+        var calls = new Action[]
+        {
+            () => _ = client.GetCoreVersion(),
+            () => _ = client.GetHealthCheck(),
+            () => _ = client.ListCharacters(),
+            () => _ = client.GetCharacter("character-1"),
+            () => _ = client.InspectImport(
+                Path.Combine(CreateAbsoluteDataRoot(), "card.json")),
+            () => _ = client.CommitImport("inspection-1"),
+            () => client.DiscardImport("inspection-1"),
+            () => _ = client.ListConversations(),
+            () => _ = client.OpenConversation("character-1"),
+            () => _ = client.ListMessages("conversation-1"),
+            () => _ = client.SendMessage(
+                "conversation-1",
+                "hello",
+                "provider-1",
+                null),
+            () => client.CancelGeneration("generation-1"),
+            () => _ = client.PollEvents(),
+            () => _ = client.GetSettings(),
+            () => client.UpdateSettings(new AppSettings()),
+            () => _ = client.ListProviderProfiles(),
+            () => _ = client.UpsertProviderProfile(new ProviderProfile
+            {
+                Id = "provider-1",
+                DisplayName = "Provider",
+                BaseUrl = "https://example.invalid/v1",
+                Model = "model",
+                TimeoutSeconds = 30,
+            }),
+            () => client.DeleteProviderProfile("provider-1"),
+        };
+        foreach (var call in calls)
+        {
+            Assert.Throws<ObjectDisposedException>(call);
+        }
         Assert.Equal(1, api.DestroyCount);
     }
 

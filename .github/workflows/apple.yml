@@ -14,8 +14,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      required: ${{ steps.filter.outputs.required }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        name: Filter Apple paths
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          required="$(./scripts/ci-path-filter.sh apple "$BASE_SHA" "$HEAD_SHA")"
+          echo "required=$required" >> "$GITHUB_OUTPUT"
+
+  apple_build:
+    name: apple-build
+    needs: changes
+    if: needs.changes.outputs.required == 'true'
     runs-on: macos-15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.96.0
@@ -23,6 +45,59 @@ jobs:
           targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios,aarch64-apple-darwin
       - uses: Swatinem/rust-cache@v2
       - name: Build Rust XCFramework and Apple apps
-        run: ./scripts/build-apple.sh
-      - name: Verify generated Swift has no drift
-        run: git diff --exit-code -- apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/Generated
+        run: |
+          set -o pipefail
+          ./scripts/build-apple.sh 2>&1 | tee apple-build.log
+      - name: Verify exact generated Swift tree
+        run: ./scripts/check-generated-tree.sh swift
+      - name: Install pinned XcodeGen
+        env:
+          XCODEGEN_SHA256: 090ec29491aad50aec10631bf6e62253fed733c50f3aab0f5ffc86bc170bdbef
+          XCODEGEN_VERSION: 2.45.4
+        run: |
+          archive="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION.zip"
+          destination="$RUNNER_TEMP/xcodegen-$XCODEGEN_VERSION"
+          curl --fail --location --silent --show-error \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/$XCODEGEN_VERSION/xcodegen.zip" \
+            --output "$archive"
+          printf '%s  %s\n' "$XCODEGEN_SHA256" "$archive" | shasum -a 256 -c -
+          mkdir -p "$destination"
+          unzip -q "$archive" -d "$destination"
+          test "$("$destination/xcodegen/bin/xcodegen" --version)" = "Version: $XCODEGEN_VERSION"
+          echo "$destination/xcodegen/bin" >> "$GITHUB_PATH"
+      - name: Verify Xcode project matches project.yml
+        run: |
+          xcodegen generate --spec apps/apple/project.yml --project apps/apple --quiet
+          ./scripts/check-generated-tree.sh apple-project
+      - name: Launch iOS and macOS smoke applications
+        run: |
+          set -o pipefail
+          ./scripts/test-apple-launch.sh 2>&1 | tee apple-launch.log
+      - name: Upload Apple failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apple-build.log
+            apple-launch.log
+            apple-macos-smoke.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+  apple:
+    needs: [changes, apple_build]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require relevant Apple build
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          BUILD_REQUIRED: ${{ needs.changes.outputs.required }}
+          BUILD_RESULT: ${{ needs.apple_build.result }}
+        run: |
+          test "$CHANGES_RESULT" = "success"
+          if [ "$BUILD_REQUIRED" = "true" ]; then
+            test "$BUILD_RESULT" = "success"
+          fi

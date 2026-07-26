@@ -13,6 +13,7 @@ sealed interface ImportReviewUiState {
         val document: StagedDocument,
         val inspection: ImportInspection,
         val isCommitting: Boolean = false,
+        val isDiscarding: Boolean = false,
         val commitError: Throwable? = null,
     ) : ImportReviewUiState
 

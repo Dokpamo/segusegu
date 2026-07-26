@@ -18,12 +18,14 @@ import dev.lorepia.app.feature.importreview.ImportReviewRoute
 import dev.lorepia.app.feature.library.LibraryRoute
 import dev.lorepia.app.feature.settings.SettingsRoute
 import dev.lorepia.app.platform.files.StagedDocument
+import dev.lorepia.app.platform.credentials.CredentialStore
 import dev.lorepia.app.platform.paths.AppDirectories
 
 @Composable
 fun LorepiaNavHost(
     navController: NavHostController,
     coreClient: CoreClient,
+    credentialStore: CredentialStore,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
@@ -44,11 +46,17 @@ fun LorepiaNavHost(
                 onReviewImport = { document ->
                     navController.navigate(Destination.ImportReview.routeFor(document))
                 },
+                onOpenCharacter = { characterId ->
+                    navController.navigate(Destination.ChatSession.forCharacter(characterId))
+                },
             )
         }
         composable(Destination.Chat.route) {
             ChatRoute(
                 coreClient = coreClient,
+                credentialStore = credentialStore,
+                characterId = null,
+                conversationId = null,
                 contentPadding = contentPadding,
                 onOpenLibrary = {
                     navController.navigate(Destination.Library.route) {
@@ -59,12 +67,69 @@ fun LorepiaNavHost(
                         restoreState = true
                     }
                 },
+                onOpenSettings = {
+                    navController.navigate(Destination.Settings.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onOpenConversation = { conversationId ->
+                    navController.navigate(
+                        Destination.ChatSession.forConversation(conversationId),
+                    )
+                },
             )
         }
         composable(Destination.Settings.route) {
             SettingsRoute(
                 coreClient = coreClient,
+                credentialStore = credentialStore,
                 contentPadding = contentPadding,
+            )
+        }
+        composable(
+            route = Destination.ChatSession.route,
+            arguments = listOf(
+                navArgument(Destination.ChatSession.CHARACTER_ARGUMENT) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument(Destination.ChatSession.CONVERSATION_ARGUMENT) {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
+        ) { entry ->
+            ChatRoute(
+                coreClient = coreClient,
+                credentialStore = credentialStore,
+                characterId = entry.arguments
+                    ?.getString(Destination.ChatSession.CHARACTER_ARGUMENT),
+                conversationId = entry.arguments
+                    ?.getString(Destination.ChatSession.CONVERSATION_ARGUMENT),
+                contentPadding = contentPadding,
+                onOpenLibrary = {
+                    navController.navigate(Destination.Library.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onOpenSettings = {
+                    navController.navigate(Destination.Settings.route) {
+                        launchSingleTop = true
+                    }
+                },
+                onOpenConversation = { selectedConversationId ->
+                    navController.navigate(
+                        Destination.ChatSession.forConversation(selectedConversationId),
+                    ) {
+                        launchSingleTop = true
+                    }
+                },
             )
         }
         composable(

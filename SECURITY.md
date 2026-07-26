@@ -17,8 +17,9 @@ minimal synthetic proof of concept. Do not include real user data.
   size limit; Rust validates content and archives.
 - The source hash is checked again at commit time.
 - Rust accepts provider credentials only for the lifetime of a request and does
-  not write them to SQLite or logs. Native credential-store integration is
-  required before platform apps expose provider credentials.
+  not write them to SQLite or logs. Android stores encrypted credential records
+  behind a non-exportable Keystore key, Apple uses Keychain, and Windows uses
+  PasswordVault.
 - Remote model traffic is allowed only to user-selected HTTPS endpoints.
   Unencrypted HTTP is restricted to loopback development endpoints.
 - C ABI handles and buffers have explicit ownership and release functions.

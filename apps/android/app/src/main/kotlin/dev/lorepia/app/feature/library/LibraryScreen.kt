@@ -43,6 +43,7 @@ fun LibraryScreen(
     isStaging: Boolean,
     stagingError: Boolean,
     onImport: () -> Unit,
+    onOpenCharacter: (String) -> Unit,
     onRetry: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
@@ -87,6 +88,7 @@ fun LibraryScreen(
                     isStaging = isStaging,
                     stagingError = stagingError,
                     onImport = onImport,
+                    onOpenCharacter = onOpenCharacter,
                 )
 
                 is LibraryUiState.Error -> ErrorContent(onRetry)
@@ -101,6 +103,7 @@ private fun LibraryContent(
     isStaging: Boolean,
     stagingError: Boolean,
     onImport: () -> Unit,
+    onOpenCharacter: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -146,15 +149,24 @@ private fun LibraryContent(
                 items = characters,
                 key = CharacterSummary::id,
             ) { character ->
-                CharacterCard(character)
+                CharacterCard(
+                    character = character,
+                    onClick = { onOpenCharacter(character.id) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun CharacterCard(character: CharacterSummary) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+private fun CharacterCard(
+    character: CharacterSummary,
+    onClick: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick,
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),

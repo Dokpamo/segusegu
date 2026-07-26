@@ -1,26 +1,30 @@
-using Lorepia.App.ViewModels;
 using Lorepia.App.Platform;
+using Lorepia.App.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Windows.Storage;
+using Microsoft.UI.Xaml.Navigation;
 using Windows.Storage.Pickers;
 
 namespace Lorepia.App.Pages;
 
 public sealed partial class ImportReviewPage : Page
 {
-    private const ulong MaxStagingBytes = 512UL * 1024 * 1024;
-    private StorageFile? stagedFile;
+    private bool committed;
+    private bool navigatedAway;
+    private CancellationTokenSource? stagingCancellation;
 
-    public ImportReviewViewModel ViewModel { get; } = new();
+    public ImportReviewViewModel ViewModel { get; }
 
     public ImportReviewPage()
     {
+        ViewModel = new ImportReviewViewModel(App.Services.Core);
         InitializeComponent();
     }
 
     private async void ChooseFile_Click(object sender, RoutedEventArgs e)
     {
+        StagedTransportFile? staged = null;
+        CancellationTokenSource? stagingOperation = null;
         try
         {
             var picker = new FileOpenPicker
@@ -28,10 +32,13 @@ public sealed partial class ImportReviewPage : Page
                 SuggestedStartLocation = PickerLocationId.Downloads,
                 ViewMode = PickerViewMode.List,
             };
-            picker.FileTypeFilter.Add("*");
+            picker.FileTypeFilter.Add(".json");
+            picker.FileTypeFilter.Add(".charx");
+            picker.FileTypeFilter.Add(".zip");
 
             var window = App.MainWindow
-                ?? throw new InvalidOperationException("The application window is unavailable.");
+                ?? throw new InvalidOperationException(
+                    "The application window is unavailable.");
             var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(window);
             WinRT.Interop.InitializeWithWindow.Initialize(picker, windowHandle);
 
@@ -41,35 +48,38 @@ public sealed partial class ImportReviewPage : Page
                 return;
             }
 
-            var properties = await source.GetBasicPropertiesAsync();
-            if (properties.Size > MaxStagingBytes)
+            stagingCancellation?.Cancel();
+            stagingCancellation?.Dispose();
+            stagingOperation = new CancellationTokenSource();
+            stagingCancellation = stagingOperation;
+            ViewModel.BeginStaging(source.Name);
+            staged = await BoundedStagingCopier.CopyAsync(
+                source,
+                stagingOperation.Token);
+            stagingOperation.Token.ThrowIfCancellationRequested();
+            await ViewModel.InspectAsync(staged);
+            if (navigatedAway)
             {
-                ViewModel.SetFailure(
-                    "The selected file exceeds the Windows staging transport limit of 512 MB.");
-                return;
+                await ViewModel.DiscardAsync();
             }
-
-            ViewModel.BeginStaging();
-            await DeleteStagedFileAsync();
-
-            var dataRoot = await StorageFolder.GetFolderFromPathAsync(
-                WindowsDataRoot.GetOrCreate());
-            var staging = await dataRoot.CreateFolderAsync(
-                "staging",
-                CreationCollisionOption.OpenIfExists);
-            stagedFile = await source.CopyAsync(
-                staging,
-                source.Name,
-                NameCollisionOption.GenerateUniqueName);
-
-            ViewModel.SetStagedFile(
-                stagedFile.Name,
-                stagedFile.Path,
-                properties.Size);
+        }
+        catch (OperationCanceledException)
+        {
         }
         catch (Exception exception)
         {
-            ViewModel.SetFailure($"Could not stage the selected file: {exception.Message}");
+            ViewModel.SetFailure(
+                $"Could not stage or inspect the selected file: {exception.Message}");
+        }
+        finally
+        {
+            BoundedStagingCopier.TryDelete(staged?.Path);
+            if (ReferenceEquals(stagingCancellation, stagingOperation))
+            {
+                stagingCancellation = null;
+            }
+
+            stagingOperation?.Dispose();
         }
     }
 
@@ -77,23 +87,47 @@ public sealed partial class ImportReviewPage : Page
     {
         try
         {
-            await DeleteStagedFileAsync();
-            ViewModel.Clear();
+            await ViewModel.DiscardAsync();
+            ViewModel.ClearView();
         }
         catch (Exception exception)
         {
-            ViewModel.SetFailure($"Could not clear the staged file: {exception.Message}");
+            ViewModel.SetFailure(
+                $"Could not discard the inspection: {exception.Message}");
         }
     }
 
-    private async Task DeleteStagedFileAsync()
+    private async void Approve_Click(object sender, RoutedEventArgs e)
     {
-        if (stagedFile is null)
+        var character = await ViewModel.ApproveAsync();
+        if (character is null)
         {
             return;
         }
 
-        await stagedFile.DeleteAsync(StorageDeleteOption.PermanentDelete);
-        stagedFile = null;
+        committed = true;
+        if (App.MainWindow is MainWindow window)
+        {
+            window.OpenLibrary();
+        }
+    }
+
+    protected override async void OnNavigatedFrom(
+        NavigationEventArgs e)
+    {
+        base.OnNavigatedFrom(e);
+        navigatedAway = true;
+        stagingCancellation?.Cancel();
+        if (!committed)
+        {
+            try
+            {
+                await ViewModel.DiscardAsync();
+            }
+            catch
+            {
+                // Recovery removes abandoned core-owned snapshots at next open.
+            }
+        }
     }
 }
