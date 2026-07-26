@@ -86,4 +86,48 @@ final class IOSRootNavigationUITests: XCTestCase {
             app.buttons["파일에서 가져오기"].waitForExistence(timeout: 5)
         )
     }
+
+    @MainActor
+    func testChatSupportsNativeEdgeSwipeBack() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-native-navigation-ui-test"]
+        app.launch()
+
+        let character = app.staticTexts["미리보기 안내자"].firstMatch
+        XCTAssertTrue(character.waitForExistence(timeout: 10))
+
+        let window = app.windows.firstMatch
+        let leadingEdge = window.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5)
+        )
+        let destination = window.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)
+        )
+
+        character.tap()
+
+        let backButton = app.navigationBars.buttons["홈"]
+        XCTAssertTrue(backButton.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.tabBars.buttons["홈"].exists)
+
+        let cancellationPoint = window.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.12, dy: 0.5)
+        )
+        leadingEdge.press(
+            forDuration: 0.05,
+            thenDragTo: cancellationPoint,
+            withVelocity: 100,
+            thenHoldForDuration: 0.1
+        )
+        XCTAssertTrue(backButton.exists)
+        XCTAssertFalse(app.tabBars.buttons["홈"].exists)
+
+        leadingEdge.press(forDuration: 0.05, thenDragTo: destination)
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["home-screen"]
+                .waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(app.tabBars.buttons["홈"].exists)
+    }
 }

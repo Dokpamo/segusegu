@@ -187,14 +187,6 @@ public struct ChatView: View {
                 .chatDefaultBottomAnchor()
                 .coordinateSpace(name: ChatCoordinateSpace.name)
                 .chatInteractiveKeyboardDismissal()
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 8)
-                        .onChanged { value in
-                            if value.translation.height > 8 {
-                                followsLatest = false
-                            }
-                        }
-                )
                 .onPreferenceChange(ChatLayoutPreferenceKey.self) { metrics in
                     let observation = ChatBottomObservation(
                         scrollState: scrollState,
