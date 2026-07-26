@@ -11,7 +11,7 @@ junit = "4.13.2"
 androidxJunit = "1.2.1"
 espresso = "3.6.1"
 testRunner = "1.6.2"
-jna = "5.17.0"
+jna = "5.19.1"
 
 [libraries]
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
