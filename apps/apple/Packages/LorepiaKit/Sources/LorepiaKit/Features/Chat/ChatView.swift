@@ -81,7 +81,6 @@ public struct ChatView: View {
                         }
                     } label: {
                         Image(systemName: "stop.fill")
-                            .frame(minWidth: 44, minHeight: 44)
                     }
                     .accessibilityLabel("생성 취소")
                     .accessibilityHint("현재 모델 응답 생성을 중단합니다")
@@ -434,23 +433,7 @@ public struct ChatView: View {
     }
 
     private var composerArea: some View {
-        VStack(spacing: 0) {
-            HStack {
-                ChatRoomSettingsTrigger(
-                    mode: viewModel.mode,
-                    style: .modeChip,
-                    isEnabled: viewModel.conversation != nil
-                ) {
-                    isRoomSettingsPresented = true
-                }
-
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, listInset)
-            .padding(.top, 4)
-
-            composer
-        }
+        composer
     }
 
     private func handleMessageAction(
@@ -762,13 +745,13 @@ private struct ChatComposer: View {
     let canSubmit: Bool
     let onSubmit: () -> Void
 
-    @ScaledMetric(relativeTo: .body) private var scaledHorizontalInset = 12
-    @ScaledMetric(relativeTo: .body) private var scaledVerticalInset = 8
-    @ScaledMetric(relativeTo: .body) private var scaledFieldPadding = 10
-    @ScaledMetric(relativeTo: .title2) private var scaledSendSymbol = 28
+    @ScaledMetric(relativeTo: .body) private var scaledHorizontalInset = 10
+    @ScaledMetric(relativeTo: .body) private var scaledVerticalInset = 6
+    @ScaledMetric(relativeTo: .body) private var scaledFieldPadding = 14
+    @ScaledMetric(relativeTo: .body) private var scaledSendSymbol = 18
 
     var body: some View {
-        HStack(alignment: .bottom, spacing: LorepiaSpacing.compact) {
+        HStack(alignment: .bottom, spacing: 0) {
             TextField(
                 placeholder,
                 text: $draft,
@@ -777,7 +760,10 @@ private struct ChatComposer: View {
             .lineLimit(1 ... 5)
             .submitLabel(.send)
             .focused($isFocused)
+            .accessibilityIdentifier("chat-composer-field")
+            .accessibilityLabel(placeholder)
             .padding(.leading, fieldPadding)
+            .padding(.trailing, 2)
             .padding(.vertical, verticalInset)
             .disabled(!isEnabled)
             .onSubmit(submit)
@@ -789,10 +775,14 @@ private struct ChatComposer: View {
             .disabled(!canSubmit)
             .accessibilityLabel("메시지 보내기")
         }
-        .padding(.trailing, 4)
+        .padding(.trailing, 2)
+        .frame(minHeight: 44)
         .chatComposerSurface(isInteractive: isEnabled)
         .overlay {
-            Capsule()
+            RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
                 .strokeBorder(
                     Color.primary.opacity(
                         colorSchemeContrast == .increased
@@ -816,45 +806,58 @@ private struct ChatComposer: View {
     }
 
     private var horizontalInset: CGFloat {
-        min(max(scaledHorizontalInset, 10), 20)
+        min(max(scaledHorizontalInset, 8), 16)
     }
 
     private var verticalInset: CGFloat {
-        min(max(scaledVerticalInset, 7), 14)
+        min(max(scaledVerticalInset, 4), 10)
     }
 
     private var fieldPadding: CGFloat {
-        min(max(scaledFieldPadding, 9), 15)
+        min(max(scaledFieldPadding, 12), 18)
     }
 
     private var sendLabel: some View {
         Image(systemName: "arrow.up")
             .font(
                 .system(
-                    size: min(max(scaledSendSymbol, 20), 26),
-                    weight: .bold
+                    size: min(max(scaledSendSymbol, 17), 20),
+                    weight: .semibold
                 )
             )
             .foregroundStyle(
                 canSubmit
                     ? Color.white
                     : Color.primary.opacity(
-                        colorSchemeContrast == .increased ? 0.64 : 0.38
+                        colorSchemeContrast == .increased ? 0.64 : 0.32
                     )
             )
             .chatSendSymbolEffect(
                 trigger: sendFeedback,
                 reduceMotion: reduceMotion
             )
-            .frame(width: 36, height: 36)
+            .frame(width: 32, height: 32)
             .background(
                 canSubmit
                     ? outgoingColor
-                    : Color.primary.opacity(
-                        colorSchemeContrast == .increased ? 0.16 : 0.08
-                    ),
+                    : Color.clear,
                 in: Circle()
             )
+            .overlay {
+                Circle()
+                    .strokeBorder(
+                        Color.primary.opacity(
+                            canSubmit
+                                ? 0
+                                : (
+                                    colorSchemeContrast == .increased
+                                        ? 0.2
+                                        : 0.08
+                                )
+                        ),
+                        lineWidth: 0.5
+                    )
+            }
             .scaleEffect(canSubmit ? 1 : 0.9)
             .animation(
                 reduceMotion
@@ -1254,16 +1257,37 @@ private extension View {
         if #available(iOS 26.0, *) {
             glassEffect(
                 .regular.interactive(isInteractive),
-                in: Capsule()
+                in: RoundedRectangle(
+                    cornerRadius: 22,
+                    style: .continuous
+                )
             )
         } else {
-            background(.regularMaterial, in: Capsule())
+            background(
+                .regularMaterial,
+                in: RoundedRectangle(
+                    cornerRadius: 22,
+                    style: .continuous
+                )
+            )
         }
 #else
-        background(.regularMaterial, in: Capsule())
+        background(
+            .regularMaterial,
+            in: RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
+        )
 #endif
 #else
-        background(.regularMaterial, in: Capsule())
+        background(
+            .regularMaterial,
+            in: RoundedRectangle(
+                cornerRadius: 22,
+                style: .continuous
+            )
+        )
 #endif
     }
 

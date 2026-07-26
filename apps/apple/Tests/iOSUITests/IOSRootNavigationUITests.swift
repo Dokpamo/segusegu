@@ -147,6 +147,19 @@ final class IOSRootNavigationUITests: XCTestCase {
             "chat-room-settings-trigger-toolbar"
         ]
         XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        let backButton = app.navigationBars.buttons["홈"]
+        XCTAssertTrue(backButton.waitForExistence(timeout: 5))
+        if #available(iOS 26.0, *) {
+            XCTAssertEqual(
+                settings.frame.width,
+                settings.frame.height,
+                accuracy: 1
+            )
+            XCTAssertGreaterThanOrEqual(settings.frame.width, 36)
+        }
+        XCTAssertFalse(
+            app.buttons["chat-room-settings-trigger-mode"].exists
+        )
         settings.tap()
         XCTAssertTrue(
             app.navigationBars["대화 설정"].waitForExistence(timeout: 5)
@@ -155,11 +168,28 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(app.buttons["스토리"].exists)
         app.buttons["완료"].tap()
 
-        let composer = app.textFields["메시지"]
+        let composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
         XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        let send = app.buttons["메시지 보내기"]
+        XCTAssertTrue(send.waitForExistence(timeout: 5))
+        let compactComposerBounds = composer.frame.union(send.frame)
+        XCTAssertGreaterThanOrEqual(compactComposerBounds.height, 44)
+        XCTAssertGreaterThan(
+            compactComposerBounds.width,
+            app.windows.firstMatch.frame.width * 0.8
+        )
         composer.tap()
-        composer.typeText("직접 액션 확인")
-        app.buttons["메시지 보내기"].tap()
+        composer.typeText(
+            String(repeating: "입력바 확장 확인 ", count: 8)
+        )
+        let expandedComposerBounds = composer.frame.union(send.frame)
+        XCTAssertGreaterThan(
+            expandedComposerBounds.height,
+            compactComposerBounds.height + 20
+        )
+        send.tap()
 
         let edit = app.buttons.matching(
             NSPredicate(

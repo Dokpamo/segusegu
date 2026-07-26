@@ -65,13 +65,22 @@ public struct ChatRoomSettingsTrigger: View {
         self.action = action
     }
 
+    @ViewBuilder
     public var body: some View {
-        Button(action: action) {
-            switch style {
-            case .toolbar:
-                Image(systemName: "ellipsis")
-                    .frame(minWidth: 44, minHeight: 44)
-            case .modeChip:
+        switch style {
+        case .toolbar:
+            Button(
+                "대화 설정",
+                systemImage: "ellipsis",
+                action: action
+            )
+            .disabled(!isEnabled)
+            .chatRoomSettingsAccessibility(
+                mode: mode,
+                style: style
+            )
+        case .modeChip:
+            Button(action: action) {
                 Label(mode.title, systemImage: mode.systemImage)
                     .font(.caption.weight(.semibold))
                     .lineLimit(1)
@@ -79,19 +88,32 @@ public struct ChatRoomSettingsTrigger: View {
                     .frame(minHeight: 44)
                     .chatCompactControlSurface(isInteractive: isEnabled)
             }
+            .buttonStyle(.plain)
+            .disabled(!isEnabled)
+            .chatRoomSettingsAccessibility(
+                mode: mode,
+                style: style
+            )
         }
-        .buttonStyle(.plain)
-        .disabled(!isEnabled)
-        .accessibilityLabel(
-            style == .toolbar ? "대화 설정" : "\(mode.title) 모드"
-        )
-        .accessibilityValue(mode.title)
-        .accessibilityHint("응답 모드와 대화 분기를 설정합니다")
-        .accessibilityIdentifier(
-            style == .toolbar
-                ? "chat-room-settings-trigger-toolbar"
-                : "chat-room-settings-trigger-mode"
-        )
+    }
+}
+
+private extension View {
+    func chatRoomSettingsAccessibility(
+        mode: ConversationMode,
+        style: ChatRoomSettingsTriggerStyle
+    ) -> some View {
+        self
+            .accessibilityLabel(
+                style == .toolbar ? "대화 설정" : "\(mode.title) 모드"
+            )
+            .accessibilityValue(mode.title)
+            .accessibilityHint("응답 모드와 대화 분기를 설정합니다")
+            .accessibilityIdentifier(
+                style == .toolbar
+                    ? "chat-room-settings-trigger-toolbar"
+                    : "chat-room-settings-trigger-mode"
+            )
     }
 }
 
