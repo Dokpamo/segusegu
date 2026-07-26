@@ -83,6 +83,13 @@ final class ChatBranchControlsTests: XCTestCase {
             Set(ChatMessageAction.allCases.map(\.systemImage)).count,
             ChatMessageAction.allCases.count
         )
+        XCTAssertEqual(
+            Set(ChatMessageAction.allCases.map(\.glyph)).count,
+            ChatMessageAction.allCases.count
+        )
+        XCTAssertFalse(
+            ChatMessageAction.allCases.map(\.glyph).contains(.check)
+        )
         XCTAssertTrue(
             ChatMessageAction.allCases.allSatisfy { !$0.title.isEmpty }
         )
