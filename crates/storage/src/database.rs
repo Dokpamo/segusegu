@@ -1147,10 +1147,22 @@ fn ensure_regular_file(path: &Path) -> CoreResult<()> {
 }
 
 fn sync_file_and_parent(file_path: &Path, parent: &Path) -> CoreResult<()> {
-    File::open(file_path)
-        .and_then(|file| file.sync_all())
-        .map_err(storage_io_error)?;
+    sync_file(file_path).map_err(storage_io_error)?;
     sync_directory(parent)
+}
+
+#[cfg(not(windows))]
+fn sync_file(path: &Path) -> std::io::Result<()> {
+    File::open(path).and_then(|file| file.sync_all())
+}
+
+#[cfg(windows)]
+fn sync_file(path: &Path) -> std::io::Result<()> {
+    // FlushFileBuffers requires a handle with write access on Windows.
+    OpenOptions::new()
+        .write(true)
+        .open(path)
+        .and_then(|file| file.sync_all())
 }
 
 #[cfg(unix)]

@@ -5,6 +5,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    @MainActor
     func testRootTabsNavigateBetweenNativeScreens() {
         let app = XCUIApplication()
         app.launchArguments = ["--lorepia-ui-test"]
