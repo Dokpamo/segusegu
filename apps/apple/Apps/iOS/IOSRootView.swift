@@ -13,16 +13,19 @@ struct IOSRootView: View {
 
     let environment: AppEnvironment
     @ObservedObject private var importReviewViewModel: ImportReviewViewModel
+    @ObservedObject private var settingsViewModel: SettingsViewModel
 
     @State private var selectedTab: Tab = .home
     @State private var homeChatCharacter: LibraryCharacter?
     @State private var libraryChatCharacter: LibraryCharacter?
     @State private var showsFileImporter = false
     @State private var showsImportReview = false
+    @State private var showsCoreStatus = false
 
     init(environment: AppEnvironment) {
         self.environment = environment
         importReviewViewModel = environment.importReviewViewModel
+        settingsViewModel = environment.settingsViewModel
     }
 
     var body: some View {
@@ -99,15 +102,41 @@ struct IOSRootView: View {
             .tag(Tab.create)
 
             NavigationStack {
-                VStack(spacing: 0) {
-                    SettingsView(viewModel: environment.settingsViewModel)
-                    if environment.settingsViewModel.showTechnicalDetails {
-                        CoreStatusPanel(
-                            viewModel: environment.coreStatusViewModel
-                        )
-                        .padding(LorepiaSpacing.standard)
+                SettingsView(viewModel: settingsViewModel)
+                    .toolbar {
+                        if settingsViewModel.showTechnicalDetails {
+                            ToolbarItem(placement: .primaryAction) {
+                                Button {
+                                    showsCoreStatus = true
+                                } label: {
+                                    Label(
+                                        "코어 상태",
+                                        systemImage: "waveform.path.ecg"
+                                    )
+                                }
+                            }
+                        }
                     }
-                }
+                    .sheet(isPresented: $showsCoreStatus) {
+                        NavigationStack {
+                            ScrollView {
+                                CoreStatusPanel(
+                                    viewModel: environment.coreStatusViewModel
+                                )
+                                .padding(LorepiaSpacing.standard)
+                            }
+                            .navigationTitle("코어 상태")
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar {
+                                ToolbarItem(placement: .confirmationAction) {
+                                    Button("완료") {
+                                        showsCoreStatus = false
+                                    }
+                                }
+                            }
+                        }
+                        .presentationDetents([.medium, .large])
+                    }
                 .navigationTitle("설정")
             }
             .tabItem {

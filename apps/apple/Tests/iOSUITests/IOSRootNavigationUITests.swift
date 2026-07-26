@@ -38,6 +38,21 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(
             app.staticTexts["프로필 편집"].waitForExistence(timeout: 5)
         )
+        XCTAssertTrue(app.textFields["표시 이름"].isHittable)
+
+        let coreStatus = app.buttons["코어 상태"]
+        XCTAssertTrue(coreStatus.waitForExistence(timeout: 5))
+        coreStatus.tap()
+        XCTAssertTrue(
+            app.navigationBars["코어 상태"].waitForExistence(timeout: 5)
+        )
+        app.buttons["완료"].tap()
+
+        app.swipeUp()
+        let technicalDetails = app.switches["기술 상태 패널 표시"]
+        XCTAssertTrue(technicalDetails.waitForExistence(timeout: 5))
+        technicalDetails.tap()
+        XCTAssertFalse(coreStatus.exists)
 
         home.tap()
         XCTAssertTrue(home.isSelected)
