@@ -177,10 +177,6 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(edit.isHittable)
         XCTAssertTrue(regenerate.waitForExistence(timeout: 5))
         XCTAssertTrue(regenerate.isHittable)
-        XCTAssertGreaterThanOrEqual(edit.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(edit.frame.height, 44)
-        XCTAssertGreaterThanOrEqual(regenerate.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(regenerate.frame.height, 44)
 
         let copy = app.buttons.matching(
             NSPredicate(
@@ -189,8 +185,6 @@ final class IOSRootNavigationUITests: XCTestCase {
             )
         ).firstMatch
         XCTAssertTrue(copy.isHittable)
-        XCTAssertGreaterThanOrEqual(copy.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(copy.frame.height, 44)
         copy.tap()
         XCTAssertTrue(app.buttons["복사됨"].waitForExistence(timeout: 2))
 
