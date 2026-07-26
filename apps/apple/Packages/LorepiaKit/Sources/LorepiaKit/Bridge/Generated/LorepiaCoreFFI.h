@@ -614,3 +614,4 @@ uint32_t ffi_lorepia_uniffi_uniffi_contract_version(void
     
 );
 #endif
+
