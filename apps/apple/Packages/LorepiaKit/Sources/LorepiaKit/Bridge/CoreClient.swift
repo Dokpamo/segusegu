@@ -65,9 +65,45 @@ public protocol CoreClient: Sendable {
     func commitImport(inspectionID: String) async throws -> CoreCharacter
     func listConversations() async throws -> [CoreConversation]
     func openConversation(characterID: String) async throws -> CoreConversation
+    func createConversation(
+        characterID: String,
+        title: String,
+        mode: ConversationMode
+    ) async throws -> CoreConversation
+    func listConversations(characterID: String) async throws -> [CoreConversation]
+    func getConversation(id: String) async throws -> CoreConversation
+    func getConversationState(
+        conversationID: String
+    ) async throws -> CoreConversationState
+    func listConversationBranches(
+        conversationID: String
+    ) async throws -> [CoreConversationBranch]
+    func createConversationBranch(
+        conversationID: String,
+        fromMessageID: String?,
+        title: String?
+    ) async throws -> CoreConversationBranch
+    func selectConversationBranch(
+        conversationID: String,
+        branchID: String
+    ) async throws -> CoreConversationState
+    func setConversationMode(
+        conversationID: String,
+        mode: ConversationMode
+    ) async throws -> CoreConversationState
     func listMessages(conversationID: String) async throws -> [ChatMessage]
+    func listBranchMessages(branchID: String) async throws -> [ChatMessage]
     func sendMessage(
         conversationID: String,
+        text: String,
+        providerProfileID: String,
+        credential: String?
+    ) async throws -> String
+    func sendMessageToBranch(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        mode: ConversationMode,
         text: String,
         providerProfileID: String,
         credential: String?

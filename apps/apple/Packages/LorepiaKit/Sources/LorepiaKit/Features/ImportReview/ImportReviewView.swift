@@ -5,14 +5,17 @@ public struct ImportReviewView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let onPickFile: () -> Void
     private let onFinished: () -> Void
+    private let finishTitle: String
 
     public init(
         viewModel: ImportReviewViewModel,
         onPickFile: @escaping () -> Void,
+        finishTitle: String = "서재로 이동",
         onFinished: @escaping () -> Void = {}
     ) {
         self.viewModel = viewModel
         self.onPickFile = onPickFile
+        self.finishTitle = finishTitle
         self.onFinished = onFinished
     }
 
@@ -41,7 +44,7 @@ public struct ImportReviewView: View {
                     } description: {
                         Text("\(character.name)을(를) 서재에 저장했습니다.")
                     } actions: {
-                        Button("서재로 이동", action: onFinished)
+                        Button(finishTitle, action: onFinished)
                             .buttonStyle(.borderedProminent)
                     }
                 case let .commitFailed(inspection, message):

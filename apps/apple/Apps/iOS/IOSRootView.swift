@@ -6,7 +6,7 @@ import Darwin
 struct IOSRootView: View {
     private enum Tab: Hashable {
         case home
-        case library
+        case chats
         case create
         case settings
     }
@@ -17,7 +17,7 @@ struct IOSRootView: View {
 
     @State private var selectedTab: Tab = .home
     @State private var homeChatCharacter: LibraryCharacter?
-    @State private var libraryChatCharacter: LibraryCharacter?
+    @State private var selectedConversation: ConversationListItem?
     @State private var showsFileImporter = false
     @State private var showsImportReview = false
     @State private var showsCoreStatus = false
@@ -33,8 +33,8 @@ struct IOSRootView: View {
             NavigationStack {
                 IOSHomeView(
                     viewModel: environment.libraryViewModel,
-                    onOpenLibrary: {
-                        selectedTab = .library
+                    onOpenChats: {
+                        selectedTab = .chats
                     },
                     onCreate: {
                         selectedTab = .create
@@ -58,37 +58,31 @@ struct IOSRootView: View {
             .tag(Tab.home)
 
             NavigationStack {
-                LibraryView(
-                    viewModel: environment.libraryViewModel,
-                    onImport: {
-                        selectedTab = .create
+                ConversationListView(
+                    viewModel: environment.conversationListViewModel,
+                    onOpenConversation: { item in
+                        selectedConversation = item
                     },
-                    onOpenChat: { character in
-                        libraryChatCharacter = character
+                    onRequestCharacter: {
+                        selectedTab = .create
                     }
                 )
-                .navigationTitle("서재")
-                .navigationDestination(item: $libraryChatCharacter) { character in
+                .navigationTitle("채팅")
+                .navigationDestination(item: $selectedConversation) { item in
                     ChatView(viewModel: environment.chatViewModel)
                         .navigationBarTitleDisplayMode(.inline)
-                        .task(id: character.id) {
-                            await environment.selectCharacter(character)
+                        .task(id: item.id) {
+                            await environment.selectConversation(item)
                         }
-                }
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            selectedTab = .create
-                        } label: {
-                            Label("생성", systemImage: "plus")
-                        }
-                    }
                 }
             }
             .tabItem {
-                Label("서재", systemImage: "books.vertical")
+                Label(
+                    "채팅",
+                    systemImage: "bubble.left.and.bubble.right"
+                )
             }
-            .tag(Tab.library)
+            .tag(Tab.chats)
 
             NavigationStack {
                 IOSCreateView {
@@ -165,9 +159,13 @@ struct IOSRootView: View {
                     onPickFile: {
                         showsFileImporter = true
                     },
+                    finishTitle: "채팅으로 이동",
                     onFinished: {
                         showsImportReview = false
-                        selectedTab = .library
+                        selectedTab = .chats
+                        Task {
+                            await environment.conversationListViewModel.refresh()
+                        }
                     }
                 )
                 .navigationTitle("가져오기 검토")
@@ -219,7 +217,7 @@ private struct IOSHomeView: View {
     @ObservedObject var viewModel: LibraryViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    let onOpenLibrary: () -> Void
+    let onOpenChats: () -> Void
     let onCreate: () -> Void
     let onOpenChat: (LibraryCharacter) -> Void
 
@@ -235,14 +233,14 @@ private struct IOSHomeView: View {
                         HStack {
                             Button("캐릭터 생성", action: onCreate)
                                 .buttonStyle(.borderedProminent)
-                            Button("서재 보기", action: onOpenLibrary)
+                            Button("채팅 보기", action: onOpenChats)
                                 .buttonStyle(.bordered)
                         }
 
                         VStack {
                             Button("캐릭터 생성", action: onCreate)
                                 .buttonStyle(.borderedProminent)
-                            Button("서재 보기", action: onOpenLibrary)
+                            Button("채팅 보기", action: onOpenChats)
                                 .buttonStyle(.bordered)
                         }
                     }
@@ -265,11 +263,14 @@ private struct IOSHomeView: View {
                         Button(action: onCreate) {
                             Label("새 캐릭터 만들기", systemImage: "plus.circle")
                         }
-                        Button(action: onOpenLibrary) {
-                            Label("서재 전체 보기", systemImage: "books.vertical")
+                        Button(action: onOpenChats) {
+                            Label(
+                                "채팅 전체 보기",
+                                systemImage: "bubble.left.and.bubble.right"
+                            )
                         }
                     } footer: {
-                        Text("\(viewModel.characters.count)명의 캐릭터가 로컬 서재에 있습니다.")
+                        Text("\(viewModel.characters.count)명의 캐릭터가 이 기기에 저장되어 있습니다.")
                     }
                 }
                 .listStyle(.plain)
@@ -372,7 +373,7 @@ private struct IOSCreateView: View {
                 Button(action: onImport) {
                     IOSCreationModeRow(
                         title: "파일에서 가져오기",
-                        subtitle: "CCv3 JSON 또는 CHARX 파일을 검사한 뒤 서재에 저장합니다.",
+                        subtitle: "CCv3 JSON 또는 CHARX 파일을 검사한 뒤 이 기기에 저장합니다.",
                         systemImage: "square.and.arrow.down",
                         showsDisclosure: true
                     )

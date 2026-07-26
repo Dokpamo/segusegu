@@ -256,6 +256,210 @@ final class FeatureViewModelTests: XCTestCase {
         XCTAssertEqual(restored.messages, first.messages)
     }
 
+    func testChatModeSelectionPersistsAcrossViewModelRecreation() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let conversation = try await client.createConversation(
+            characterID: character.id,
+            title: "모드 영속화 방",
+            mode: .chat
+        )
+        let first = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+
+        await first.setConversation(conversation, character: character)
+        XCTAssertEqual(first.mode, .chat)
+
+        await first.setMode(.story)
+
+        XCTAssertEqual(first.mode, .story)
+        let persisted = try await client.getConversationState(
+            conversationID: conversation.id
+        )
+        XCTAssertEqual(persisted.selectedMode, .story)
+
+        let restored = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await restored.setConversation(conversation, character: character)
+
+        XCTAssertEqual(restored.mode, .story)
+        XCTAssertEqual(restored.activeBranchID, persisted.activeBranchID)
+    }
+
+    func testChatSelectsIndependentRoomsForTheSameCharacter() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let firstRoom = try await client.createConversation(
+            characterID: character.id,
+            title: "첫 번째 방",
+            mode: .chat
+        )
+        let secondRoom = try await client.createConversation(
+            characterID: character.id,
+            title: "두 번째 방",
+            mode: .story
+        )
+        let firstMessage = ChatMessage(
+            conversationID: firstRoom.id,
+            role: .user,
+            text: "첫 방의 합성 메시지"
+        )
+        let secondMessage = ChatMessage(
+            conversationID: secondRoom.id,
+            role: .user,
+            text: "둘째 방의 합성 메시지"
+        )
+        await client.replaceMessagesForTesting(
+            conversationID: firstRoom.id,
+            messages: [firstMessage]
+        )
+        await client.replaceMessagesForTesting(
+            conversationID: secondRoom.id,
+            messages: [secondMessage]
+        )
+        let rooms = try await client.listConversations(
+            characterID: character.id
+        )
+        XCTAssertEqual(Set(rooms.map(\.id)), [firstRoom.id, secondRoom.id])
+
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+
+        await viewModel.setConversation(firstRoom, character: character)
+        XCTAssertEqual(viewModel.conversation?.id, firstRoom.id)
+        XCTAssertEqual(viewModel.messages, [firstMessage])
+        XCTAssertEqual(viewModel.mode, .chat)
+
+        await viewModel.setConversation(secondRoom, character: character)
+        XCTAssertEqual(viewModel.conversation?.id, secondRoom.id)
+        XCTAssertEqual(viewModel.messages, [secondMessage])
+        XCTAssertEqual(viewModel.mode, .story)
+    }
+
+    func testChatBranchMessagesRemainIsolatedAndRestoreWhenSwitching() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let conversation = try await client.createConversation(
+            characterID: character.id,
+            title: "분기 격리 방",
+            mode: .chat
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setConversation(conversation, character: character)
+        let rootBranchID = try XCTUnwrap(viewModel.activeBranchID)
+
+        viewModel.draft = "공통 시작"
+        await viewModel.submitMessage()
+        let forkMessageID = try XCTUnwrap(viewModel.messages.last?.id)
+
+        await viewModel.createBranch(afterMessageID: forkMessageID)
+        let siblingBranchID = try XCTUnwrap(viewModel.activeBranchID)
+        XCTAssertNotEqual(siblingBranchID, rootBranchID)
+
+        viewModel.draft = "분기에만 남는 메시지"
+        await viewModel.submitMessage()
+        XCTAssertEqual(
+            viewModel.messages.filter { $0.role == .user }.map(\.text),
+            ["공통 시작", "분기에만 남는 메시지"]
+        )
+
+        await viewModel.selectBranch(id: rootBranchID)
+        XCTAssertEqual(viewModel.activeBranchID, rootBranchID)
+        XCTAssertEqual(
+            viewModel.messages.filter { $0.role == .user }.map(\.text),
+            ["공통 시작"]
+        )
+
+        viewModel.draft = "기본 흐름에만 남는 메시지"
+        await viewModel.submitMessage()
+        XCTAssertEqual(
+            viewModel.messages.filter { $0.role == .user }.map(\.text),
+            ["공통 시작", "기본 흐름에만 남는 메시지"]
+        )
+
+        await viewModel.selectBranch(id: siblingBranchID)
+        XCTAssertEqual(viewModel.activeBranchID, siblingBranchID)
+        XCTAssertEqual(
+            viewModel.messages.filter { $0.role == .user }.map(\.text),
+            ["공통 시작", "분기에만 남는 메시지"]
+        )
+
+        await viewModel.selectBranch(id: rootBranchID)
+        XCTAssertEqual(
+            viewModel.messages.filter { $0.role == .user }.map(\.text),
+            ["공통 시작", "기본 흐름에만 남는 메시지"]
+        )
+    }
+
+    func testChatIgnoresV2EventsFromInactiveBranch() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let conversation = try await client.createConversation(
+            characterID: character.id,
+            title: "분기 이벤트 필터 방",
+            mode: .chat
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setConversation(conversation, character: character)
+        let activeBranchID = try XCTUnwrap(viewModel.activeBranchID)
+        let inactiveBranch = try await client.createConversationBranch(
+            conversationID: conversation.id,
+            fromMessageID: nil,
+            title: "비활성 분기"
+        )
+        XCTAssertNotEqual(inactiveBranch.id, activeBranchID)
+        await client.enqueueEventBatch([
+            ChatEvent(
+                eventVersion: 2,
+                generationID: "inactive-generation",
+                conversationID: conversation.id,
+                branchID: inactiveBranch.id,
+                assistantMessageID: "inactive-assistant",
+                sequence: 1,
+                kind: "generation_started"
+            ),
+            ChatEvent(
+                eventVersion: 2,
+                generationID: "inactive-generation",
+                conversationID: conversation.id,
+                branchID: inactiveBranch.id,
+                assistantMessageID: "inactive-assistant",
+                sequence: 2,
+                kind: "text_delta",
+                text: "다른 분기에서 온 델타"
+            ),
+        ])
+
+        await viewModel.pollOnce()
+
+        XCTAssertEqual(viewModel.activeBranchID, activeBranchID)
+        XCTAssertTrue(viewModel.messages.isEmpty)
+        XCTAssertFalse(viewModel.isGenerating)
+        XCTAssertNil(viewModel.usageDescription)
+    }
+
     func testChatFiltersWrongGenerationDuplicateSequenceAndUnknownEventVersion() async {
         let client = FakeCoreClient()
         let viewModel = ChatViewModel(
@@ -265,7 +469,9 @@ final class FeatureViewModelTests: XCTestCase {
             automaticallyPollEvents: false
         )
         await viewModel.setCharacter(LibraryCharacter.previewCharacters[0])
-        guard let conversationID = viewModel.conversation?.id else {
+        guard let conversationID = viewModel.conversation?.id,
+              let branchID = viewModel.activeBranchID
+        else {
             return XCTFail("Expected a conversation")
         }
         let generationID = "synthetic-generation"
@@ -286,9 +492,11 @@ final class FeatureViewModelTests: XCTestCase {
         await client.enqueueEventBatch(
             [
                 ChatEvent(
-                    eventVersion: 2,
+                    eventVersion: 99,
                     generationID: generationID,
                     conversationID: conversationID,
+                    branchID: branchID,
+                    assistantMessageID: assistantID,
                     sequence: 1,
                     kind: "text_delta",
                     text: "UNSUPPORTED"
@@ -296,12 +504,16 @@ final class FeatureViewModelTests: XCTestCase {
                 ChatEvent(
                     generationID: generationID,
                     conversationID: conversationID,
+                    branchID: branchID,
+                    assistantMessageID: assistantID,
                     sequence: 1,
                     kind: "generation_started"
                 ),
                 ChatEvent(
                     generationID: generationID,
                     conversationID: conversationID,
+                    branchID: branchID,
+                    assistantMessageID: assistantID,
                     sequence: 2,
                     kind: "text_delta",
                     text: "A"
@@ -309,6 +521,8 @@ final class FeatureViewModelTests: XCTestCase {
                 ChatEvent(
                     generationID: generationID,
                     conversationID: conversationID,
+                    branchID: branchID,
+                    assistantMessageID: assistantID,
                     sequence: 2,
                     kind: "text_delta",
                     text: "DUPLICATE"
@@ -316,6 +530,7 @@ final class FeatureViewModelTests: XCTestCase {
                 ChatEvent(
                     generationID: "wrong-generation",
                     conversationID: conversationID,
+                    branchID: branchID,
                     sequence: 3,
                     kind: "text_delta",
                     text: "WRONG"
@@ -323,6 +538,8 @@ final class FeatureViewModelTests: XCTestCase {
                 ChatEvent(
                     generationID: generationID,
                     conversationID: conversationID,
+                    branchID: branchID,
+                    assistantMessageID: assistantID,
                     sequence: 3,
                     kind: "text_delta",
                     text: "C"

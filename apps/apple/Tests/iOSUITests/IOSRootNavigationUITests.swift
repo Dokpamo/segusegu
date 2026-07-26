@@ -12,7 +12,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         app.launch()
 
         let home = app.tabBars.buttons["홈"]
-        let library = app.tabBars.buttons["서재"]
+        let chats = app.tabBars.buttons["채팅"]
         let create = app.tabBars.buttons["생성"]
         let settings = app.tabBars.buttons["설정"]
         XCTAssertTrue(home.waitForExistence(timeout: 10))
@@ -21,10 +21,10 @@ final class IOSRootNavigationUITests: XCTestCase {
             app.staticTexts["첫 이야기를 시작해 보세요"].waitForExistence(timeout: 5)
         )
 
-        library.tap()
-        XCTAssertTrue(library.isSelected)
+        chats.tap()
+        XCTAssertTrue(chats.isSelected)
         XCTAssertTrue(
-            app.staticTexts["서재가 비어 있습니다"].waitForExistence(timeout: 5)
+            app.staticTexts["아직 대화가 없습니다"].waitForExistence(timeout: 5)
         )
 
         create.tap()
@@ -51,9 +51,14 @@ final class IOSRootNavigationUITests: XCTestCase {
         app.swipeUp()
         let technicalDetails = app.switches["기술 상태 패널 표시"]
         XCTAssertTrue(technicalDetails.waitForExistence(timeout: 5))
-        technicalDetails.tap()
-        XCTAssertFalse(coreStatus.exists)
+        technicalDetails.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)
+        ).tap()
+        XCTAssertEqual(technicalDetails.value as? String, "0")
+        XCTAssertTrue(coreStatus.waitForNonExistence(timeout: 5))
 
+        app.swipeDown()
+        XCTAssertTrue(home.waitForExistence(timeout: 5))
         home.tap()
         XCTAssertTrue(home.isSelected)
     }
@@ -69,10 +74,10 @@ final class IOSRootNavigationUITests: XCTestCase {
         app.launch()
 
         let createAction = app.buttons["캐릭터 생성"].firstMatch
-        let libraryAction = app.buttons["서재 보기"].firstMatch
+        let chatsAction = app.buttons["채팅 보기"].firstMatch
         XCTAssertTrue(createAction.waitForExistence(timeout: 10))
-        XCTAssertTrue(libraryAction.waitForExistence(timeout: 5))
-        XCTAssertGreaterThan(libraryAction.frame.minY, createAction.frame.minY)
+        XCTAssertTrue(chatsAction.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(chatsAction.frame.minY, createAction.frame.minY)
 
         createAction.tap()
         XCTAssertTrue(app.tabBars.buttons["생성"].isSelected)
@@ -124,10 +129,7 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         leadingEdge.press(forDuration: 0.05, thenDragTo: destination)
 
-        XCTAssertTrue(
-            app.descendants(matching: .any)["home-screen"]
-                .waitForExistence(timeout: 5)
-        )
-        XCTAssertTrue(app.tabBars.buttons["홈"].exists)
+        XCTAssertTrue(app.tabBars.buttons["홈"].waitForExistence(timeout: 5))
+        XCTAssertTrue(character.waitForExistence(timeout: 5))
     }
 }

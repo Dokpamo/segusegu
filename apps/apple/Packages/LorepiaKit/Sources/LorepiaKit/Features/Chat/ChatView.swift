@@ -34,19 +34,33 @@ public struct ChatView: View {
                         systemImage: "bubble.left.and.bubble.right"
                     )
                 } description: {
-                    Text("서재에서 캐릭터를 선택하면 저장된 대화를 이어갈 수 있습니다.")
+                    Text("채팅에서 캐릭터를 선택하면 저장된 대화를 이어갈 수 있습니다.")
                 }
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if viewModel.character != nil {
-                composer
+                composerArea
             }
         }
         .toolbar {
             if let character = viewModel.character {
                 ToolbarItem(placement: .principal) {
                     ChatToolbarIdentity(character: character)
+                }
+            }
+
+            if viewModel.conversation != nil {
+                ToolbarItem(placement: .primaryAction) {
+                    ChatBranchToolbarControl(
+                        branches: viewModel.branchOptions,
+                        selectedBranchID: viewModel.activeBranchID,
+                        isEnabled: viewModel.canManageBranches
+                    ) { branchID in
+                        Task {
+                            await viewModel.selectBranch(id: branchID)
+                        }
+                    }
                 }
             }
 
@@ -132,6 +146,10 @@ public struct ChatView: View {
                                 maximumWidth: maximumBubbleWidth(
                                     in: geometry.size.width
                                 ),
+                                storyMaximumWidth: maximumStoryWidth(
+                                    in: geometry.size.width
+                                ),
+                                mode: viewModel.mode,
                                 joinsPrevious: joinsPrevious,
                                 joinsNext: joinsNext
                             )
@@ -142,6 +160,16 @@ public struct ChatView: View {
                                     : (joinsPrevious ? 2 : 10)
                             )
                             .transition(messageTransition(for: message))
+                            .chatBranchContextMenu(
+                                messageID: message.id,
+                                isEnabled: viewModel.canManageBranches
+                            ) { messageID in
+                                Task {
+                                    await viewModel.createBranch(
+                                        afterMessageID: messageID
+                                    )
+                                }
+                            }
                             .id(message.id)
                         }
 
@@ -305,6 +333,26 @@ public struct ChatView: View {
         }
     }
 
+    private var composerArea: some View {
+        VStack(spacing: 0) {
+            ChatComposerModeControl(
+                selection: Binding(
+                    get: {
+                        viewModel.mode
+                    },
+                    set: { mode in
+                        Task {
+                            await viewModel.setMode(mode)
+                        }
+                    }
+                ),
+                isEnabled: viewModel.canManageBranches
+            )
+
+            composer
+        }
+    }
+
     private var composerPlaceholder: String {
         if viewModel.conversation == nil {
             return "대화를 준비하는 중입니다"
@@ -338,6 +386,18 @@ public struct ChatView: View {
         let readableMaximum: CGFloat =
             horizontalSizeClass == .compact ? 520 : 680
         return min(availableWidth * ratio, readableMaximum)
+    }
+
+    private func maximumStoryWidth(in containerWidth: CGFloat) -> CGFloat {
+        let availableWidth = max(containerWidth - (listInset * 2), 0)
+
+        if dynamicTypeSize.isAccessibilitySize
+            || horizontalSizeClass == .compact
+        {
+            return availableWidth
+        }
+
+        return availableWidth * 0.72
     }
 
     private var scrollState: ChatScrollState {
@@ -580,20 +640,39 @@ private struct ChatComposer: View {
 private struct ChatBubble: View {
     let message: ChatMessage
     let maximumWidth: CGFloat
+    let storyMaximumWidth: CGFloat
+    let mode: ConversationMode
     let joinsPrevious: Bool
     let joinsNext: Bool
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
     @ScaledMetric(relativeTo: .body) private var scaledHorizontalPadding = 14
     @ScaledMetric(relativeTo: .body) private var scaledVerticalPadding = 10
+    @ScaledMetric(relativeTo: .body) private var scaledStoryLineSpacing = 5
+    @ScaledMetric(relativeTo: .body) private var scaledStoryVerticalPadding = 7
 
     var body: some View {
-        if message.role == .system || message.role == .notice {
-            notice
-        } else {
-            bubble
+        Group {
+            if message.role == .system || message.role == .notice {
+                notice
+            } else if isStoryProse {
+                storyProse
+                    .transition(presentationTransition)
+            } else {
+                bubble
+                    .transition(presentationTransition)
+            }
         }
+        .animation(
+            reduceMotion ? nil : .easeInOut(duration: 0.2),
+            value: isStoryProse
+        )
+    }
+
+    private var isStoryProse: Bool {
+        mode == .story && message.role == .assistant
     }
 
     private var bubble: some View {
@@ -623,6 +702,27 @@ private struct ChatBubble: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: alignment)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var storyProse: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(message.text.isEmpty ? "…" : message.text)
+                .font(.body)
+                .lineSpacing(scaledStoryLineSpacing)
+                .textSelection(.enabled)
+
+            if message.status != .complete {
+                Text(statusText)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .foregroundStyle(.primary)
+        .padding(.vertical, scaledStoryVerticalPadding)
+        .frame(width: storyMaximumWidth, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityText)
     }
@@ -701,6 +801,16 @@ private struct ChatBubble: View {
         }
         let status = message.status == .complete ? "" : ", \(statusText)"
         return "\(speaker): \(message.text)\(status)"
+    }
+
+    private var presentationTransition: AnyTransition {
+        if reduceMotion {
+            return .identity
+        }
+
+        return .opacity.combined(
+            with: .scale(scale: 0.985, anchor: .top)
+        )
     }
 }
 

@@ -13,9 +13,15 @@ pub use character::Character;
 pub use content::{
     ContentKind, ImportImagePreview, ImportInspection, ImportLimits, ImportWarning, InspectionId,
 };
-pub use conversation::{Conversation, ConversationId};
+pub use conversation::{
+    Conversation, ConversationBranch, ConversationBranchId, ConversationId, ConversationMode,
+    ConversationState,
+};
 pub use error::{CoreError, CoreErrorCode, CoreResult};
 pub use health::HealthReport;
-pub use message::{GenerationId, Message, MessageId, MessageRole, MessageStatus};
+pub use message::{
+    GenerationId, GenerationRecord, GenerationStatus, Message, MessageId, MessageRole,
+    MessageStatus,
+};
 pub use provider::{GenerationRequest, GenerationUsage, ProviderCapabilities, ProviderProfile};
 pub use settings::AppSettings;

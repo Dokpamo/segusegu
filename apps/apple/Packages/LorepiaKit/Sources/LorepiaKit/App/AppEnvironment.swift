@@ -6,6 +6,7 @@ public final class AppEnvironment {
     public let sharedState: SharedAppState
     public let coreStatusViewModel: CoreStatusViewModel
     public let libraryViewModel: LibraryViewModel
+    public let conversationListViewModel: ConversationListViewModel
     public let chatViewModel: ChatViewModel
     public let importReviewViewModel: ImportReviewViewModel
     public let settingsViewModel: SettingsViewModel
@@ -32,6 +33,7 @@ public final class AppEnvironment {
             characters: characters
         )
         libraryViewModel = library
+        conversationListViewModel = ConversationListViewModel(client: coreClient)
         chatViewModel = ChatViewModel(
             client: coreClient,
             credentialStore: credentialStore,
@@ -72,6 +74,7 @@ public final class AppEnvironment {
         hasStarted = true
         await coreStatusViewModel.refresh()
         await libraryViewModel.refresh()
+        await conversationListViewModel.refresh()
         await settingsViewModel.refresh()
     }
 
@@ -104,6 +107,17 @@ public final class AppEnvironment {
     public func selectCharacter(_ character: LibraryCharacter) async {
         sharedState.selectCharacter(character)
         await chatViewModel.setCharacter(character)
+    }
+
+    public func selectConversation(_ item: ConversationListItem) async {
+        guard let character = item.character else {
+            return
+        }
+        sharedState.selectCharacter(character)
+        await chatViewModel.setConversation(
+            item.conversation,
+            character: character
+        )
     }
 
     public func prepareImport(from url: URL) async {

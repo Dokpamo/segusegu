@@ -5,6 +5,9 @@ import Foundation
 public final class ChatViewModel: ObservableObject {
     @Published public private(set) var character: LibraryCharacter?
     @Published public private(set) var conversation: CoreConversation?
+    @Published public private(set) var branches: [CoreConversationBranch] = []
+    @Published public private(set) var activeBranchID: String?
+    @Published public private(set) var mode: ConversationMode = .chat
     @Published public private(set) var messages: [ChatMessage] = []
     @Published public var draft = ""
     @Published public private(set) var isLoading = false
@@ -39,10 +42,42 @@ public final class ChatViewModel: ObservableObject {
 
     public var canSubmit: Bool {
         conversation != nil
+            && activeBranchID != nil
             && !isLoading
             && !isGenerating
             && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && coreIsAvailable
+    }
+
+    public var canManageBranches: Bool {
+        conversation != nil
+            && !isLoading
+            && !isGenerating
+            && coreIsAvailable
+    }
+
+    public var branchOptions: [ChatBranchOption] {
+        branches.enumerated().map { index, branch in
+            let title: String
+            if let branchTitle = branch.title?.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ), !branchTitle.isEmpty {
+                title = branchTitle
+            } else if branch.forkMessageID == nil {
+                title = "기본 흐름"
+            } else {
+                title = "분기 \(index + 1)"
+            }
+
+            let subtitle = branch.forkMessageID.flatMap { messageID in
+                messages.first(where: { $0.id == messageID })?.text
+            }
+            return ChatBranchOption(
+                id: branch.id,
+                title: title,
+                subtitle: subtitle
+            )
+        }
     }
 
     public func setCharacter(_ character: LibraryCharacter) async {
@@ -56,6 +91,9 @@ public final class ChatViewModel: ObservableObject {
         let epoch = selectionEpoch
         self.character = character
         conversation = nil
+        branches = []
+        activeBranchID = nil
+        mode = .chat
         messages = []
         draft = ""
         errorMessage = nil
@@ -89,27 +127,213 @@ public final class ChatViewModel: ObservableObject {
             guard selectionEpoch == epoch, self.character?.id == character.id else {
                 return
             }
-            let restoredMessages = try await client.listMessages(
-                conversationID: opened.id
+            try await restoreConversation(
+                opened,
+                characterID: character.id,
+                epoch: epoch
             )
-            guard selectionEpoch == epoch, self.character?.id == character.id else {
-                return
-            }
-            conversation = opened
-            messages = restoredMessages
-            isGenerating = messages.contains { $0.status == .pending }
-            activeGenerationID = messages.last(where: {
-                $0.status == .pending && $0.generationID != nil
-            })?.generationID
             startPolling()
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
+    public func setConversation(
+        _ conversation: CoreConversation,
+        character: LibraryCharacter
+    ) async {
+        if self.conversation?.id == conversation.id {
+            return
+        }
+
+        pollingTask?.cancel()
+        pollingTask = nil
+        let generationToCancel = activeGenerationID
+        selectionEpoch &+= 1
+        let epoch = selectionEpoch
+        self.character = character
+        self.conversation = nil
+        branches = []
+        activeBranchID = nil
+        mode = .chat
+        messages = []
+        draft = ""
+        errorMessage = nil
+        activeGenerationID = nil
+        latestSequenceByGeneration = [:]
+        idlePollsSinceReconciliation = 0
+        isGenerating = false
+        isLoading = true
+        defer {
+            if selectionEpoch == epoch {
+                isLoading = false
+            }
+        }
+
+        do {
+            if let generationToCancel {
+                try? await client.cancelGeneration(generationID: generationToCancel)
+            }
+            try await restoreConversation(
+                conversation,
+                characterID: character.id,
+                epoch: epoch
+            )
+            startPolling()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func restoreConversation(
+        _ conversation: CoreConversation,
+        characterID: String,
+        epoch: UInt64
+    ) async throws {
+        async let stateTask = client.getConversationState(
+            conversationID: conversation.id
+        )
+        async let branchesTask = client.listConversationBranches(
+            conversationID: conversation.id
+        )
+        let (state, loadedBranches) = try await (
+            stateTask,
+            branchesTask
+        )
+        let restoredMessages = try await client.listBranchMessages(
+            branchID: state.activeBranchID
+        )
+        guard selectionEpoch == epoch,
+              character?.id == characterID
+        else {
+            return
+        }
+        self.conversation = conversation
+        branches = loadedBranches
+        activeBranchID = state.activeBranchID
+        mode = state.selectedMode
+        messages = restoredMessages
+        isGenerating = messages.contains { $0.status == .pending }
+        activeGenerationID = messages.last(where: {
+            $0.status == .pending && $0.generationID != nil
+        })?.generationID
+    }
+
+    public func selectBranch(id branchID: String) async {
+        guard let conversation,
+              branchID != activeBranchID,
+              canManageBranches
+        else {
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let state = try await client.selectConversationBranch(
+                conversationID: conversation.id,
+                branchID: branchID
+            )
+            let restoredMessages = try await client.listBranchMessages(
+                branchID: state.activeBranchID
+            )
+            guard self.conversation?.id == conversation.id else {
+                return
+            }
+            activeBranchID = state.activeBranchID
+            mode = state.selectedMode
+            messages = restoredMessages
+            reconcileGenerationState(from: restoredMessages)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    public func createBranch(afterMessageID messageID: String) async {
+        guard let conversation,
+              canManageBranches,
+              messages.contains(where: {
+                  $0.id == messageID && $0.status != .pending
+              })
+        else {
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let branchNumber = branches.count + 1
+            let branch = try await client.createConversationBranch(
+                conversationID: conversation.id,
+                fromMessageID: messageID,
+                title: "분기 \(branchNumber)"
+            )
+            let state = try await client.selectConversationBranch(
+                conversationID: conversation.id,
+                branchID: branch.id
+            )
+            async let branchListTask = client.listConversationBranches(
+                conversationID: conversation.id
+            )
+            async let messagesTask = client.listBranchMessages(
+                branchID: state.activeBranchID
+            )
+            let (loadedBranches, restoredMessages) = try await (
+                branchListTask,
+                messagesTask
+            )
+            guard self.conversation?.id == conversation.id else {
+                return
+            }
+            branches = loadedBranches
+            activeBranchID = state.activeBranchID
+            mode = state.selectedMode
+            messages = restoredMessages
+            reconcileGenerationState(from: restoredMessages)
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    public func setMode(_ newMode: ConversationMode) async {
+        guard let conversation,
+              newMode != mode,
+              canManageBranches
+        else {
+            return
+        }
+
+        let previousMode = mode
+        mode = newMode
+        do {
+            let state = try await client.setConversationMode(
+                conversationID: conversation.id,
+                mode: newMode
+            )
+            guard self.conversation?.id == conversation.id else {
+                return
+            }
+            mode = state.selectedMode
+            errorMessage = nil
+        } catch {
+            if self.conversation?.id == conversation.id {
+                mode = previousMode
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
     public func submitMessage() async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, let conversation else {
+        guard !text.isEmpty,
+              let conversation,
+              let activeBranchID,
+              let activeBranch = branches.first(
+                  where: { $0.id == activeBranchID }
+              )
+        else {
             return
         }
         do {
@@ -128,8 +352,11 @@ public final class ChatViewModel: ObservableObject {
             draft = ""
             errorMessage = nil
             isGenerating = true
-            let generationID = try await client.sendMessage(
+            let generationID = try await client.sendMessageToBranch(
                 conversationID: conversation.id,
+                branchID: activeBranchID,
+                expectedHeadMessageID: activeBranch.headMessageID,
+                mode: mode,
                 text: text,
                 providerProfileID: profileID,
                 credential: credential
@@ -141,6 +368,7 @@ public final class ChatViewModel: ObservableObject {
             latestSequenceByGeneration[generationID] = 0
             idlePollsSinceReconciliation = 0
             await refreshMessages()
+            await refreshBranchMetadata(conversationID: conversation.id)
             startPolling()
         } catch {
             isGenerating = false
@@ -170,16 +398,45 @@ public final class ChatViewModel: ObservableObject {
     }
 
     private func reconcilePersistedMessages(conversationID: String) async {
+        guard let branchID = activeBranchID else {
+            return
+        }
         do {
-            let persisted = try await client.listMessages(
-                conversationID: conversationID
+            let persisted = try await client.listBranchMessages(
+                branchID: branchID
             )
-            guard conversation?.id == conversationID else {
+            guard conversation?.id == conversationID,
+                  activeBranchID == branchID
+            else {
                 return
             }
             messages = mergePersistedMessages(persisted)
             reconcileGenerationState(from: persisted)
             idlePollsSinceReconciliation = 0
+            await refreshBranchMetadata(conversationID: conversationID)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func refreshBranchMetadata(conversationID: String) async {
+        do {
+            async let stateTask = client.getConversationState(
+                conversationID: conversationID
+            )
+            async let branchesTask = client.listConversationBranches(
+                conversationID: conversationID
+            )
+            let (state, loadedBranches) = try await (
+                stateTask,
+                branchesTask
+            )
+            guard conversation?.id == conversationID else {
+                return
+            }
+            branches = loadedBranches
+            activeBranchID = state.activeBranchID
+            mode = state.selectedMode
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -198,8 +455,14 @@ public final class ChatViewModel: ObservableObject {
             var appliedEvent = false
             for event in batch.events
             where event.conversationID == conversation.id {
-                guard event.eventVersion == 1 else {
+                guard event.eventVersion == 2 else {
                     shouldReconcile = true
+                    continue
+                }
+                guard event.branchID == activeBranchID else {
+                    if event.branchID == nil {
+                        shouldReconcile = true
+                    }
                     continue
                 }
                 switch apply(event) {
@@ -274,6 +537,7 @@ public final class ChatViewModel: ObservableObject {
             } else {
                 messages.append(
                     ChatMessage(
+                        id: event.assistantMessageID ?? UUID().uuidString,
                         conversationID: event.conversationID,
                         role: .assistant,
                         text: delta,

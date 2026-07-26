@@ -82,9 +82,9 @@ class UniFfiCoreClientSmokeTest {
         try {
             val versions = core.versionInfo()
             assertEquals(core.coreVersion(), versions.coreVersion)
-            assertEquals(2u, versions.coreApiVersion)
-            assertEquals(2u, versions.bindingApiVersion)
-            assertEquals(1u, versions.chatEventVersion)
+            assertEquals(3u, versions.coreApiVersion)
+            assertEquals(3u, versions.bindingApiVersion)
+            assertEquals(2u, versions.chatEventVersion)
             assertTrue(core.listCharacters().isEmpty())
             assertTrue(core.listConversations().isEmpty())
             assertTrue(core.listProviderProfiles().isEmpty())
@@ -236,6 +236,8 @@ class UniFfiCoreClientSmokeTest {
                 assertEquals("generation_started", events.first().kind)
                 assertEquals("부분😀", events.first { it.kind == "text_delta" }.text)
                 assertEquals("generation_cancelled", events.last().kind)
+                assertTrue(events.all { it.branchId != null })
+                assertTrue(events.all { it.assistantMessageId != null })
                 assertTrue(
                     events.zipWithNext().all { (earlier, later) ->
                         earlier.sequence < later.sequence

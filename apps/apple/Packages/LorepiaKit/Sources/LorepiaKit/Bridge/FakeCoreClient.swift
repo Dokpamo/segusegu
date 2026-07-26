@@ -10,6 +10,9 @@ public actor FakeCoreClient: CoreClient {
     private var inspections: [String: ImportInspection] = [:]
     private var conversations: [CoreConversation] = []
     private var messagesByConversation: [String: [ChatMessage]] = [:]
+    private var branchesByConversation: [String: [CoreConversationBranch]] = [:]
+    private var statesByConversation: [String: CoreConversationState] = [:]
+    private var messagesByBranch: [String: [ChatMessage]] = [:]
     private var profiles: [ProviderProfile]
     private var settings: CoreAppSettings
     private var events: [ChatEvent] = []
@@ -65,9 +68,9 @@ public actor FakeCoreClient: CoreClient {
     public func apiVersions() async throws -> CoreVersionInfo {
         CoreVersionInfo(
             coreVersion: reportedVersion,
-            coreAPIVersion: 1,
-            bindingAPIVersion: 2,
-            chatEventVersion: 1
+            coreAPIVersion: 3,
+            bindingAPIVersion: 3,
+            chatEventVersion: 2
         )
     }
 
@@ -135,23 +138,193 @@ public actor FakeCoreClient: CoreClient {
     }
 
     public func openConversation(characterID: String) async throws -> CoreConversation {
+        guard let character = characters.first(where: { $0.id == characterID }) else {
+            throw CoreClientFailure.invalidResponse("캐릭터가 없습니다.")
+        }
+        return try createConversationRecord(
+            characterID: characterID,
+            title: character.name,
+            mode: .chat
+        )
+    }
+
+    public func createConversation(
+        characterID: String,
+        title: String,
+        mode: ConversationMode
+    ) async throws -> CoreConversation {
+        try createConversationRecord(
+            characterID: characterID,
+            title: title,
+            mode: mode
+        )
+    }
+
+    public func listConversations(
+        characterID: String
+    ) async throws -> [CoreConversation] {
         guard characters.contains(where: { $0.id == characterID }) else {
             throw CoreClientFailure.invalidResponse("캐릭터가 없습니다.")
         }
-        let conversation = CoreConversation(
-            id: UUID().uuidString,
-            characterID: characterID,
-            title: characters.first(where: { $0.id == characterID })?.name ?? "대화",
-            createdAt: "2026-01-01T00:00:00Z",
-            updatedAt: "2026-01-01T00:00:00Z"
-        )
-        conversations.append(conversation)
-        messagesByConversation[conversation.id] = []
+        return conversations.filter { $0.characterID == characterID }
+    }
+
+    public func getConversation(id: String) async throws -> CoreConversation {
+        guard let conversation = conversations.first(where: { $0.id == id }) else {
+            throw CoreClientFailure.invalidResponse("대화가 없습니다.")
+        }
         return conversation
     }
 
+    public func getConversationState(
+        conversationID: String
+    ) async throws -> CoreConversationState {
+        guard let state = statesByConversation[conversationID] else {
+            throw CoreClientFailure.invalidResponse("대화 상태가 없습니다.")
+        }
+        return state
+    }
+
+    public func listConversationBranches(
+        conversationID: String
+    ) async throws -> [CoreConversationBranch] {
+        guard conversations.contains(where: { $0.id == conversationID }) else {
+            throw CoreClientFailure.invalidResponse("대화가 없습니다.")
+        }
+        return branchesByConversation[conversationID] ?? []
+    }
+
+    public func createConversationBranch(
+        conversationID: String,
+        fromMessageID: String?,
+        title: String?
+    ) async throws -> CoreConversationBranch {
+        guard let state = statesByConversation[conversationID],
+              let sourceBranch = branchesByConversation[conversationID]?.first(
+                  where: { $0.id == state.activeBranchID }
+              )
+        else {
+            throw CoreClientFailure.invalidResponse("대화 상태가 없습니다.")
+        }
+        let sourceMessages = messagesByBranch[sourceBranch.id] ?? []
+        let branchedMessages: [ChatMessage]
+        if let fromMessageID {
+            guard let index = sourceMessages.firstIndex(
+                where: { $0.id == fromMessageID }
+            ) else {
+                throw CoreClientFailure.invalidResponse(
+                    "분기 기준 메시지가 현재 흐름에 없습니다."
+                )
+            }
+            branchedMessages = Array(sourceMessages.prefix(through: index))
+        } else {
+            branchedMessages = []
+        }
+        let branchID = UUID().uuidString
+        let timestamp = Self.timestamp()
+        let branch = CoreConversationBranch(
+            id: branchID,
+            conversationID: conversationID,
+            title: title,
+            forkMessageID: fromMessageID,
+            headMessageID: branchedMessages.last?.id,
+            createdAt: timestamp,
+            updatedAt: timestamp
+        )
+        branchesByConversation[conversationID, default: []].append(branch)
+        messagesByBranch[branchID] = branchedMessages
+        return branch
+    }
+
+    public func selectConversationBranch(
+        conversationID: String,
+        branchID: String
+    ) async throws -> CoreConversationState {
+        guard let previousState = statesByConversation[conversationID],
+              branchesByConversation[conversationID]?.contains(
+                  where: { $0.id == branchID }
+              ) == true
+        else {
+            throw CoreClientFailure.invalidResponse("대화 분기가 없습니다.")
+        }
+        let state = CoreConversationState(
+            conversationID: conversationID,
+            activeBranchID: branchID,
+            selectedMode: previousState.selectedMode,
+            updatedAt: Self.timestamp()
+        )
+        statesByConversation[conversationID] = state
+        messagesByConversation[conversationID] = messagesByBranch[branchID] ?? []
+        return state
+    }
+
+    public func setConversationMode(
+        conversationID: String,
+        mode: ConversationMode
+    ) async throws -> CoreConversationState {
+        guard let previousState = statesByConversation[conversationID] else {
+            throw CoreClientFailure.invalidResponse("대화 상태가 없습니다.")
+        }
+        let state = CoreConversationState(
+            conversationID: conversationID,
+            activeBranchID: previousState.activeBranchID,
+            selectedMode: mode,
+            updatedAt: Self.timestamp()
+        )
+        statesByConversation[conversationID] = state
+        return state
+    }
+
     public func listMessages(conversationID: String) async throws -> [ChatMessage] {
-        messagesByConversation[conversationID] ?? []
+        guard let state = statesByConversation[conversationID] else {
+            return messagesByConversation[conversationID] ?? []
+        }
+        return messagesByBranch[state.activeBranchID] ?? []
+    }
+
+    public func listBranchMessages(branchID: String) async throws -> [ChatMessage] {
+        guard let messages = messagesByBranch[branchID] else {
+            throw CoreClientFailure.invalidResponse("대화 분기가 없습니다.")
+        }
+        return messages
+    }
+
+    private func createConversationRecord(
+        characterID: String,
+        title: String,
+        mode: ConversationMode
+    ) throws -> CoreConversation {
+        guard characters.contains(where: { $0.id == characterID }) else {
+            throw CoreClientFailure.invalidResponse("캐릭터가 없습니다.")
+        }
+        let timestamp = Self.timestamp()
+        let conversation = CoreConversation(
+            id: UUID().uuidString,
+            characterID: characterID,
+            title: title,
+            createdAt: timestamp,
+            updatedAt: timestamp
+        )
+        let branch = CoreConversationBranch(
+            id: UUID().uuidString,
+            conversationID: conversation.id,
+            title: nil,
+            forkMessageID: nil,
+            headMessageID: nil,
+            createdAt: timestamp,
+            updatedAt: timestamp
+        )
+        conversations.append(conversation)
+        messagesByConversation[conversation.id] = []
+        branchesByConversation[conversation.id] = [branch]
+        messagesByBranch[branch.id] = []
+        statesByConversation[conversation.id] = CoreConversationState(
+            conversationID: conversation.id,
+            activeBranchID: branch.id,
+            selectedMode: mode,
+            updatedAt: timestamp
+        )
+        return conversation
     }
 
     public func sendMessage(
@@ -160,12 +333,68 @@ public actor FakeCoreClient: CoreClient {
         providerProfileID: String,
         credential _: String?
     ) async throws -> String {
+        guard let state = statesByConversation[conversationID],
+              let branch = branchesByConversation[conversationID]?.first(
+                  where: { $0.id == state.activeBranchID }
+              )
+        else {
+            throw CoreClientFailure.invalidResponse("대화 상태가 없습니다.")
+        }
+        return try sendMessageRecord(
+            conversationID: conversationID,
+            branchID: branch.id,
+            expectedHeadMessageID: branch.headMessageID,
+            mode: state.selectedMode,
+            text: text,
+            providerProfileID: providerProfileID
+        )
+    }
+
+    public func sendMessageToBranch(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        mode: ConversationMode,
+        text: String,
+        providerProfileID: String,
+        credential _: String?
+    ) async throws -> String {
+        try sendMessageRecord(
+            conversationID: conversationID,
+            branchID: branchID,
+            expectedHeadMessageID: expectedHeadMessageID,
+            mode: mode,
+            text: text,
+            providerProfileID: providerProfileID
+        )
+    }
+
+    private func sendMessageRecord(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        mode: ConversationMode,
+        text: String,
+        providerProfileID: String
+    ) throws -> String {
         guard profiles.contains(where: { $0.id == providerProfileID }) else {
             throw CoreClientFailure.invalidResponse("프로바이더 프로필이 없습니다.")
+        }
+        guard let branchIndex = branchesByConversation[conversationID]?.firstIndex(
+            where: { $0.id == branchID }
+        ), let branch = branchesByConversation[conversationID]?[branchIndex]
+        else {
+            throw CoreClientFailure.invalidResponse("대화 분기가 없습니다.")
+        }
+        guard branch.headMessageID == expectedHeadMessageID else {
+            throw CoreClientFailure.invalidResponse(
+                "다른 기기나 흐름에서 대화가 먼저 변경되었습니다."
+            )
         }
         let generationID = UUID().uuidString
         let userMessage = ChatMessage(
             conversationID: conversationID,
+            parentID: branch.headMessageID,
             role: .user,
             text: text
         )
@@ -178,33 +407,79 @@ public actor FakeCoreClient: CoreClient {
             text: "이 응답은 테스트용 합성 메시지입니다.",
             generationID: generationID
         )
-        messagesByConversation[conversationID, default: []].append(userMessage)
-        messagesByConversation[conversationID, default: []].append(assistantMessage)
+        messagesByBranch[branchID, default: []].append(userMessage)
+        messagesByBranch[branchID, default: []].append(assistantMessage)
+        let timestamp = Self.timestamp()
+        branchesByConversation[conversationID]?[branchIndex] =
+            CoreConversationBranch(
+                id: branch.id,
+                conversationID: branch.conversationID,
+                title: branch.title,
+                forkMessageID: branch.forkMessageID,
+                headMessageID: assistantID,
+                createdAt: branch.createdAt,
+                updatedAt: timestamp
+            )
+        if let state = statesByConversation[conversationID] {
+            statesByConversation[conversationID] = CoreConversationState(
+                conversationID: conversationID,
+                activeBranchID: state.activeBranchID,
+                selectedMode: state.selectedMode,
+                updatedAt: timestamp
+            )
+            if state.activeBranchID == branchID {
+                messagesByConversation[conversationID] = messagesByBranch[branchID]
+            }
+        }
+        if let conversationIndex = conversations.firstIndex(
+            where: { $0.id == conversationID }
+        ) {
+            let conversation = conversations[conversationIndex]
+            conversations[conversationIndex] = CoreConversation(
+                id: conversation.id,
+                characterID: conversation.characterID,
+                title: conversation.title,
+                createdAt: conversation.createdAt,
+                updatedAt: timestamp
+            )
+        }
         events.append(contentsOf: [
             ChatEvent(
+                eventVersion: 2,
                 generationID: generationID,
                 conversationID: conversationID,
+                branchID: branchID,
+                assistantMessageID: assistantID,
                 sequence: 1,
                 kind: "generation_started"
             ),
             ChatEvent(
+                eventVersion: 2,
                 generationID: generationID,
                 conversationID: conversationID,
+                branchID: branchID,
+                assistantMessageID: assistantID,
                 sequence: 2,
                 kind: "text_delta",
                 text: assistantMessage.text
             ),
             ChatEvent(
+                eventVersion: 2,
                 generationID: generationID,
                 conversationID: conversationID,
+                branchID: branchID,
+                assistantMessageID: assistantID,
                 sequence: 3,
                 kind: "message_committed",
                 messageID: assistantID,
                 messageStatus: "complete"
             ),
             ChatEvent(
+                eventVersion: 2,
                 generationID: generationID,
                 conversationID: conversationID,
+                branchID: branchID,
+                assistantMessageID: assistantID,
                 sequence: 4,
                 kind: "generation_finished"
             ),
@@ -213,19 +488,32 @@ public actor FakeCoreClient: CoreClient {
     }
 
     public func cancelGeneration(generationID: String) async throws {
-        guard let conversation = messagesByConversation.first(where: { entry in
+        guard let branchEntry = messagesByBranch.first(where: { entry in
             entry.value.contains(where: { $0.generationID == generationID })
-        }) else {
+        }), let conversationID = branchesByConversation.first(where: { entry in
+            entry.value.contains(where: { $0.id == branchEntry.key })
+        })?.key
+        else {
             throw CoreClientFailure.invalidResponse("생성 작업이 없습니다.")
         }
+        let assistantMessageID = branchEntry.value.first(where: {
+            $0.generationID == generationID && $0.role == .assistant
+        })?.id
         events.append(
             ChatEvent(
+                eventVersion: 2,
                 generationID: generationID,
-                conversationID: conversation.key,
+                conversationID: conversationID,
+                branchID: branchEntry.key,
+                assistantMessageID: assistantMessageID,
                 sequence: 5,
                 kind: "generation_cancelled"
             )
         )
+    }
+
+    private static func timestamp() -> String {
+        ISO8601DateFormatter().string(from: Date())
     }
 
     public func pollEvents(maxEvents: UInt32) async throws -> ChatEventBatch {
@@ -251,6 +539,26 @@ public actor FakeCoreClient: CoreClient {
         messages: [ChatMessage]
     ) {
         messagesByConversation[conversationID] = messages
+        guard let state = statesByConversation[conversationID] else {
+            return
+        }
+        messagesByBranch[state.activeBranchID] = messages
+        guard let branchIndex = branchesByConversation[conversationID]?.firstIndex(
+            where: { $0.id == state.activeBranchID }
+        ), let branch = branchesByConversation[conversationID]?[branchIndex]
+        else {
+            return
+        }
+        branchesByConversation[conversationID]?[branchIndex] =
+            CoreConversationBranch(
+                id: branch.id,
+                conversationID: branch.conversationID,
+                title: branch.title,
+                forkMessageID: branch.forkMessageID,
+                headMessageID: messages.last?.id,
+                createdAt: branch.createdAt,
+                updatedAt: Self.timestamp()
+            )
     }
 
     public func listProviderProfiles() async throws -> [ProviderProfile] {
@@ -284,10 +592,15 @@ public actor FakeCoreClient: CoreClient {
     }
 
     public func databaseStats() async throws -> DatabaseStats {
-        DatabaseStats(
+        let messageIDs = Set(
+            messagesByBranch.values
+                .flatMap { $0 }
+                .map(\.id)
+        )
+        return DatabaseStats(
             characters: UInt64(characters.count),
             conversations: UInt64(conversations.count),
-            messages: UInt64(messagesByConversation.values.flatMap { $0 }.count),
+            messages: UInt64(messageIDs.count),
             pendingImports: UInt64(inspections.count)
         )
     }
@@ -323,11 +636,71 @@ public actor UnavailableCoreClient: CoreClient {
     public func openConversation(characterID _: String) async throws -> CoreConversation {
         try unavailable()
     }
+    public func createConversation(
+        characterID _: String,
+        title _: String,
+        mode _: ConversationMode
+    ) async throws -> CoreConversation {
+        try unavailable()
+    }
+    public func listConversations(
+        characterID _: String
+    ) async throws -> [CoreConversation] {
+        try unavailable()
+    }
+    public func getConversation(id _: String) async throws -> CoreConversation {
+        try unavailable()
+    }
+    public func getConversationState(
+        conversationID _: String
+    ) async throws -> CoreConversationState {
+        try unavailable()
+    }
+    public func listConversationBranches(
+        conversationID _: String
+    ) async throws -> [CoreConversationBranch] {
+        try unavailable()
+    }
+    public func createConversationBranch(
+        conversationID _: String,
+        fromMessageID _: String?,
+        title _: String?
+    ) async throws -> CoreConversationBranch {
+        try unavailable()
+    }
+    public func selectConversationBranch(
+        conversationID _: String,
+        branchID _: String
+    ) async throws -> CoreConversationState {
+        try unavailable()
+    }
+    public func setConversationMode(
+        conversationID _: String,
+        mode _: ConversationMode
+    ) async throws -> CoreConversationState {
+        try unavailable()
+    }
     public func listMessages(conversationID _: String) async throws -> [ChatMessage] {
+        try unavailable()
+    }
+    public func listBranchMessages(
+        branchID _: String
+    ) async throws -> [ChatMessage] {
         try unavailable()
     }
     public func sendMessage(
         conversationID _: String,
+        text _: String,
+        providerProfileID _: String,
+        credential _: String?
+    ) async throws -> String {
+        try unavailable()
+    }
+    public func sendMessageToBranch(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        mode _: ConversationMode,
         text _: String,
         providerProfileID _: String,
         credential _: String?

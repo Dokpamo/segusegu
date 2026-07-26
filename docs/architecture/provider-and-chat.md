@@ -1,7 +1,23 @@
 # Provider and chat
 
 The chat crate constructs the final ordered message list from a character
-definition and persisted history. Native apps never rebuild the final prompt.
+definition and persisted branch history. Native apps never rebuild the final
+prompt.
+
+A character can own multiple conversation rooms. Every room has one selected
+`chat` or `story` mode and one active branch. Messages form a parent-linked
+lineage rather than a flat transcript. Creating a branch records its fork
+message without copying the shared ancestors; selecting a branch changes only
+the room's active-lineage pointer. Prompt history follows that parent chain, so
+messages from sibling branches never leak into a request.
+
+Sending to a branch includes its expected head. SQLite atomically checks that
+head while appending the user message, pending assistant message, and
+generation record. A stale writer fails instead of silently splicing two
+histories together. The generation snapshots the selected mode so changing the
+room control later cannot reinterpret an in-flight or restored request. Chat
+mode requests concise character dialogue, while story mode requests scene-led
+prose and dialogue without taking control of the user's choices.
 
 Core applies finite request and response budgets before anything reaches a
 provider or the message database:
@@ -30,15 +46,17 @@ is not persisted.
 
 Each request receives a generation ID and cancellation channel. Provider deltas
 are buffered through bounded channels, assigned a monotonic sequence, and
-published as versioned events. The user message is committed before the
-request and a pending assistant row records in-flight work. After the provider
-finishes, the assistant row is committed before `message_committed` and the
-terminal generation event are published. When partial-generation preservation
-is enabled, accepted text is also checkpointed while streaming at roughly
-500-millisecond intervals or each additional 64 KiB, whichever comes first.
-When it is disabled, streamed text is never written to the pending row. On
-restart, preserved pending rows are marked cancelled and non-preserved pending
-rows are removed.
+published as versioned events. Every event carries the room ID plus the branch
+and pending assistant IDs, allowing a native client to reject a valid event
+that belongs to a different visible branch. The user message is committed
+before the request and a pending assistant row records in-flight work. After
+the provider finishes, the assistant row is committed before
+`message_committed` and the terminal generation event are published. When
+partial-generation preservation is enabled, accepted text is also checkpointed
+while streaming at roughly 500-millisecond intervals or each additional 64
+KiB, whichever comes first. When it is disabled, streamed text is never
+written to the pending row. On restart, preserved pending rows are marked
+cancelled and non-preserved pending rows are removed.
 
 The async runtime is created and destroyed by a dedicated owner thread.
 Dropping the last core handle cancels every active generation, allows a bounded

@@ -503,6 +503,10 @@ public protocol LorepiaCoreProtocol: AnyObject, Sendable {
     
     func commitImport(inspectionId: String) throws  -> FfiCharacter
     
+    func createConversation(characterId: String, title: String, mode: String) throws  -> FfiConversation
+    
+    func createConversationBranch(conversationId: String, fromMessageId: String?, title: String?) throws  -> FfiConversationBranch
+    
     func databaseStats() throws  -> FfiDatabaseStats
     
     func deleteProviderProfile(profileId: String) throws 
@@ -511,15 +515,25 @@ public protocol LorepiaCoreProtocol: AnyObject, Sendable {
     
     func getCharacter(characterId: String) throws  -> FfiCharacter
     
+    func getConversation(conversationId: String) throws  -> FfiConversation
+    
+    func getConversationState(conversationId: String) throws  -> FfiConversationState
+    
     func getSettings() throws  -> FfiAppSettings
     
     func healthCheck() throws  -> FfiHealthReport
     
     func inspectImport(stagedPath: String) throws  -> FfiImportInspection
     
+    func listBranchMessages(branchId: String) throws  -> [FfiMessage]
+    
     func listCharacters() throws  -> [FfiCharacter]
     
+    func listConversationBranches(conversationId: String) throws  -> [FfiConversationBranch]
+    
     func listConversations() throws  -> [FfiConversation]
+    
+    func listConversationsForCharacter(characterId: String) throws  -> [FfiConversation]
     
     func listMessages(conversationId: String) throws  -> [FfiMessage]
     
@@ -532,7 +546,13 @@ public protocol LorepiaCoreProtocol: AnyObject, Sendable {
      */
     func pollEvents(maxEvents: UInt32) throws  -> FfiEventBatch
     
+    func selectConversationBranch(conversationId: String, branchId: String) throws  -> FfiConversationState
+    
     func sendMessage(conversationId: String, text: String, providerProfileId: String, credential: String?) throws  -> String
+    
+    func sendMessageToBranch(conversationId: String, branchId: String, expectedHead: String?, mode: String, text: String, providerProfileId: String, credential: String?) throws  -> String
+    
+    func setConversationMode(conversationId: String, mode: String) throws  -> FfiConversationState
     
     func updateSettings(settings: FfiAppSettings) throws  -> FfiAppSettings
     
@@ -614,6 +634,26 @@ open func commitImport(inspectionId: String)throws  -> FfiCharacter  {
 })
 }
     
+open func createConversation(characterId: String, title: String, mode: String)throws  -> FfiConversation  {
+    return try  FfiConverterTypeFfiConversation_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_create_conversation(self.uniffiClonePointer(),
+        FfiConverterString.lower(characterId),
+        FfiConverterString.lower(title),
+        FfiConverterString.lower(mode),$0
+    )
+})
+}
+    
+open func createConversationBranch(conversationId: String, fromMessageId: String?, title: String?)throws  -> FfiConversationBranch  {
+    return try  FfiConverterTypeFfiConversationBranch_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_create_conversation_branch(self.uniffiClonePointer(),
+        FfiConverterString.lower(conversationId),
+        FfiConverterOptionString.lower(fromMessageId),
+        FfiConverterOptionString.lower(title),$0
+    )
+})
+}
+    
 open func databaseStats()throws  -> FfiDatabaseStats  {
     return try  FfiConverterTypeFfiDatabaseStats_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
     uniffi_lorepia_uniffi_fn_method_lorepiacore_database_stats(self.uniffiClonePointer(),$0
@@ -643,6 +683,22 @@ open func getCharacter(characterId: String)throws  -> FfiCharacter  {
 })
 }
     
+open func getConversation(conversationId: String)throws  -> FfiConversation  {
+    return try  FfiConverterTypeFfiConversation_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_get_conversation(self.uniffiClonePointer(),
+        FfiConverterString.lower(conversationId),$0
+    )
+})
+}
+    
+open func getConversationState(conversationId: String)throws  -> FfiConversationState  {
+    return try  FfiConverterTypeFfiConversationState_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_get_conversation_state(self.uniffiClonePointer(),
+        FfiConverterString.lower(conversationId),$0
+    )
+})
+}
+    
 open func getSettings()throws  -> FfiAppSettings  {
     return try  FfiConverterTypeFfiAppSettings_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
     uniffi_lorepia_uniffi_fn_method_lorepiacore_get_settings(self.uniffiClonePointer(),$0
@@ -665,6 +721,14 @@ open func inspectImport(stagedPath: String)throws  -> FfiImportInspection  {
 })
 }
     
+open func listBranchMessages(branchId: String)throws  -> [FfiMessage]  {
+    return try  FfiConverterSequenceTypeFfiMessage.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_list_branch_messages(self.uniffiClonePointer(),
+        FfiConverterString.lower(branchId),$0
+    )
+})
+}
+    
 open func listCharacters()throws  -> [FfiCharacter]  {
     return try  FfiConverterSequenceTypeFfiCharacter.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
     uniffi_lorepia_uniffi_fn_method_lorepiacore_list_characters(self.uniffiClonePointer(),$0
@@ -672,9 +736,25 @@ open func listCharacters()throws  -> [FfiCharacter]  {
 })
 }
     
+open func listConversationBranches(conversationId: String)throws  -> [FfiConversationBranch]  {
+    return try  FfiConverterSequenceTypeFfiConversationBranch.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversation_branches(self.uniffiClonePointer(),
+        FfiConverterString.lower(conversationId),$0
+    )
+})
+}
+    
 open func listConversations()throws  -> [FfiConversation]  {
     return try  FfiConverterSequenceTypeFfiConversation.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
     uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversations(self.uniffiClonePointer(),$0
+    )
+})
+}
+    
+open func listConversationsForCharacter(characterId: String)throws  -> [FfiConversation]  {
+    return try  FfiConverterSequenceTypeFfiConversation.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversations_for_character(self.uniffiClonePointer(),
+        FfiConverterString.lower(characterId),$0
     )
 })
 }
@@ -713,6 +793,15 @@ open func pollEvents(maxEvents: UInt32)throws  -> FfiEventBatch  {
 })
 }
     
+open func selectConversationBranch(conversationId: String, branchId: String)throws  -> FfiConversationState  {
+    return try  FfiConverterTypeFfiConversationState_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_select_conversation_branch(self.uniffiClonePointer(),
+        FfiConverterString.lower(conversationId),
+        FfiConverterString.lower(branchId),$0
+    )
+})
+}
+    
 open func sendMessage(conversationId: String, text: String, providerProfileId: String, credential: String?)throws  -> String  {
     return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
     uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message(self.uniffiClonePointer(),
@@ -720,6 +809,29 @@ open func sendMessage(conversationId: String, text: String, providerProfileId: S
         FfiConverterString.lower(text),
         FfiConverterString.lower(providerProfileId),
         FfiConverterOptionString.lower(credential),$0
+    )
+})
+}
+    
+open func sendMessageToBranch(conversationId: String, branchId: String, expectedHead: String?, mode: String, text: String, providerProfileId: String, credential: String?)throws  -> String  {
+    return try  FfiConverterString.lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message_to_branch(self.uniffiClonePointer(),
+        FfiConverterString.lower(conversationId),
+        FfiConverterString.lower(branchId),
+        FfiConverterOptionString.lower(expectedHead),
+        FfiConverterString.lower(mode),
+        FfiConverterString.lower(text),
+        FfiConverterString.lower(providerProfileId),
+        FfiConverterOptionString.lower(credential),$0
+    )
+})
+}
+    
+open func setConversationMode(conversationId: String, mode: String)throws  -> FfiConversationState  {
+    return try  FfiConverterTypeFfiConversationState_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_set_conversation_mode(self.uniffiClonePointer(),
+        FfiConverterString.lower(conversationId),
+        FfiConverterString.lower(mode),$0
     )
 })
 }
@@ -976,6 +1088,8 @@ public struct FfiChatEvent {
     public var eventVersion: UInt32
     public var generationId: String
     public var conversationId: String
+    public var branchId: String?
+    public var assistantMessageId: String?
     public var sequence: UInt64
     public var emittedAt: String
     public var kind: String
@@ -989,10 +1103,12 @@ public struct FfiChatEvent {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(eventVersion: UInt32, generationId: String, conversationId: String, sequence: UInt64, emittedAt: String, kind: String, text: String?, messageId: String?, messageStatus: String?, errorCode: String?, errorMessage: String?, usageInputTokens: UInt64?, usageOutputTokens: UInt64?) {
+    public init(eventVersion: UInt32, generationId: String, conversationId: String, branchId: String?, assistantMessageId: String?, sequence: UInt64, emittedAt: String, kind: String, text: String?, messageId: String?, messageStatus: String?, errorCode: String?, errorMessage: String?, usageInputTokens: UInt64?, usageOutputTokens: UInt64?) {
         self.eventVersion = eventVersion
         self.generationId = generationId
         self.conversationId = conversationId
+        self.branchId = branchId
+        self.assistantMessageId = assistantMessageId
         self.sequence = sequence
         self.emittedAt = emittedAt
         self.kind = kind
@@ -1020,6 +1136,12 @@ extension FfiChatEvent: Equatable, Hashable {
             return false
         }
         if lhs.conversationId != rhs.conversationId {
+            return false
+        }
+        if lhs.branchId != rhs.branchId {
+            return false
+        }
+        if lhs.assistantMessageId != rhs.assistantMessageId {
             return false
         }
         if lhs.sequence != rhs.sequence {
@@ -1059,6 +1181,8 @@ extension FfiChatEvent: Equatable, Hashable {
         hasher.combine(eventVersion)
         hasher.combine(generationId)
         hasher.combine(conversationId)
+        hasher.combine(branchId)
+        hasher.combine(assistantMessageId)
         hasher.combine(sequence)
         hasher.combine(emittedAt)
         hasher.combine(kind)
@@ -1084,6 +1208,8 @@ public struct FfiConverterTypeFfiChatEvent: FfiConverterRustBuffer {
                 eventVersion: FfiConverterUInt32.read(from: &buf), 
                 generationId: FfiConverterString.read(from: &buf), 
                 conversationId: FfiConverterString.read(from: &buf), 
+                branchId: FfiConverterOptionString.read(from: &buf), 
+                assistantMessageId: FfiConverterOptionString.read(from: &buf), 
                 sequence: FfiConverterUInt64.read(from: &buf), 
                 emittedAt: FfiConverterString.read(from: &buf), 
                 kind: FfiConverterString.read(from: &buf), 
@@ -1101,6 +1227,8 @@ public struct FfiConverterTypeFfiChatEvent: FfiConverterRustBuffer {
         FfiConverterUInt32.write(value.eventVersion, into: &buf)
         FfiConverterString.write(value.generationId, into: &buf)
         FfiConverterString.write(value.conversationId, into: &buf)
+        FfiConverterOptionString.write(value.branchId, into: &buf)
+        FfiConverterOptionString.write(value.assistantMessageId, into: &buf)
         FfiConverterUInt64.write(value.sequence, into: &buf)
         FfiConverterString.write(value.emittedAt, into: &buf)
         FfiConverterString.write(value.kind, into: &buf)
@@ -1221,6 +1349,202 @@ public func FfiConverterTypeFfiConversation_lift(_ buf: RustBuffer) throws -> Ff
 #endif
 public func FfiConverterTypeFfiConversation_lower(_ value: FfiConversation) -> RustBuffer {
     return FfiConverterTypeFfiConversation.lower(value)
+}
+
+
+public struct FfiConversationBranch {
+    public var id: String
+    public var conversationId: String
+    public var title: String?
+    public var forkMessageId: String?
+    public var headMessageId: String?
+    public var createdAt: String
+    public var updatedAt: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(id: String, conversationId: String, title: String?, forkMessageId: String?, headMessageId: String?, createdAt: String, updatedAt: String) {
+        self.id = id
+        self.conversationId = conversationId
+        self.title = title
+        self.forkMessageId = forkMessageId
+        self.headMessageId = headMessageId
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+#if compiler(>=6)
+extension FfiConversationBranch: Sendable {}
+#endif
+
+
+extension FfiConversationBranch: Equatable, Hashable {
+    public static func ==(lhs: FfiConversationBranch, rhs: FfiConversationBranch) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.conversationId != rhs.conversationId {
+            return false
+        }
+        if lhs.title != rhs.title {
+            return false
+        }
+        if lhs.forkMessageId != rhs.forkMessageId {
+            return false
+        }
+        if lhs.headMessageId != rhs.headMessageId {
+            return false
+        }
+        if lhs.createdAt != rhs.createdAt {
+            return false
+        }
+        if lhs.updatedAt != rhs.updatedAt {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(conversationId)
+        hasher.combine(title)
+        hasher.combine(forkMessageId)
+        hasher.combine(headMessageId)
+        hasher.combine(createdAt)
+        hasher.combine(updatedAt)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiConversationBranch: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConversationBranch {
+        return
+            try FfiConversationBranch(
+                id: FfiConverterString.read(from: &buf), 
+                conversationId: FfiConverterString.read(from: &buf), 
+                title: FfiConverterOptionString.read(from: &buf), 
+                forkMessageId: FfiConverterOptionString.read(from: &buf), 
+                headMessageId: FfiConverterOptionString.read(from: &buf), 
+                createdAt: FfiConverterString.read(from: &buf), 
+                updatedAt: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiConversationBranch, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.id, into: &buf)
+        FfiConverterString.write(value.conversationId, into: &buf)
+        FfiConverterOptionString.write(value.title, into: &buf)
+        FfiConverterOptionString.write(value.forkMessageId, into: &buf)
+        FfiConverterOptionString.write(value.headMessageId, into: &buf)
+        FfiConverterString.write(value.createdAt, into: &buf)
+        FfiConverterString.write(value.updatedAt, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiConversationBranch_lift(_ buf: RustBuffer) throws -> FfiConversationBranch {
+    return try FfiConverterTypeFfiConversationBranch.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiConversationBranch_lower(_ value: FfiConversationBranch) -> RustBuffer {
+    return FfiConverterTypeFfiConversationBranch.lower(value)
+}
+
+
+public struct FfiConversationState {
+    public var conversationId: String
+    public var activeBranchId: String
+    public var selectedMode: String
+    public var updatedAt: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(conversationId: String, activeBranchId: String, selectedMode: String, updatedAt: String) {
+        self.conversationId = conversationId
+        self.activeBranchId = activeBranchId
+        self.selectedMode = selectedMode
+        self.updatedAt = updatedAt
+    }
+}
+
+#if compiler(>=6)
+extension FfiConversationState: Sendable {}
+#endif
+
+
+extension FfiConversationState: Equatable, Hashable {
+    public static func ==(lhs: FfiConversationState, rhs: FfiConversationState) -> Bool {
+        if lhs.conversationId != rhs.conversationId {
+            return false
+        }
+        if lhs.activeBranchId != rhs.activeBranchId {
+            return false
+        }
+        if lhs.selectedMode != rhs.selectedMode {
+            return false
+        }
+        if lhs.updatedAt != rhs.updatedAt {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(conversationId)
+        hasher.combine(activeBranchId)
+        hasher.combine(selectedMode)
+        hasher.combine(updatedAt)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiConversationState: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiConversationState {
+        return
+            try FfiConversationState(
+                conversationId: FfiConverterString.read(from: &buf), 
+                activeBranchId: FfiConverterString.read(from: &buf), 
+                selectedMode: FfiConverterString.read(from: &buf), 
+                updatedAt: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiConversationState, into buf: inout [UInt8]) {
+        FfiConverterString.write(value.conversationId, into: &buf)
+        FfiConverterString.write(value.activeBranchId, into: &buf)
+        FfiConverterString.write(value.selectedMode, into: &buf)
+        FfiConverterString.write(value.updatedAt, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiConversationState_lift(_ buf: RustBuffer) throws -> FfiConversationState {
+    return try FfiConverterTypeFfiConversationState.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiConversationState_lower(_ value: FfiConversationState) -> RustBuffer {
+    return FfiConverterTypeFfiConversationState.lower(value)
 }
 
 
@@ -2424,6 +2748,31 @@ fileprivate struct FfiConverterSequenceTypeFfiConversation: FfiConverterRustBuff
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterSequenceTypeFfiConversationBranch: FfiConverterRustBuffer {
+    typealias SwiftType = [FfiConversationBranch]
+
+    public static func write(_ value: [FfiConversationBranch], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeFfiConversationBranch.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [FfiConversationBranch] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [FfiConversationBranch]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeFfiConversationBranch.read(from: &buf))
+        }
+        return seq
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterSequenceTypeFfiImportWarning: FfiConverterRustBuffer {
     typealias SwiftType = [FfiImportWarning]
 
@@ -2535,6 +2884,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_commit_import() != 10817) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_conversation() != 42878) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_conversation_branch() != 45496) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_database_stats() != 40106) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2547,6 +2902,12 @@ private let initializationResult: InitializationResult = {
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_character() != 14947) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_conversation() != 28073) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_conversation_state() != 54639) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_settings() != 17684) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2556,10 +2917,19 @@ private let initializationResult: InitializationResult = {
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_inspect_import() != 2442) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_branch_messages() != 10026) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_characters() != 14524) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversation_branches() != 47027) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations() != 38055) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations_for_character() != 45805) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_messages() != 26339) {
@@ -2574,7 +2944,16 @@ private let initializationResult: InitializationResult = {
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_events() != 26212) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_select_conversation_branch() != 62171) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message() != 36804) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message_to_branch() != 19800) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_set_conversation_mode() != 60815) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_update_settings() != 60549) {

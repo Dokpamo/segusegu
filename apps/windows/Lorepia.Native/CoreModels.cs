@@ -158,6 +158,10 @@ public sealed record ChatEvent
 
     public string ConversationId { get; init; } = string.Empty;
 
+    public string? BranchId { get; init; }
+
+    public string? AssistantMessageId { get; init; }
+
     public ulong Sequence { get; init; }
 
     public DateTimeOffset EmittedAt { get; init; }
@@ -202,6 +206,12 @@ internal sealed record ChatEventPayload
 
     [JsonPropertyName("conversation_id")]
     public string ConversationId { get; init; } = string.Empty;
+
+    [JsonPropertyName("branch_id")]
+    public string? BranchId { get; init; }
+
+    [JsonPropertyName("assistant_message_id")]
+    public string? AssistantMessageId { get; init; }
 
     [JsonPropertyName("sequence")]
     public ulong Sequence { get; init; }

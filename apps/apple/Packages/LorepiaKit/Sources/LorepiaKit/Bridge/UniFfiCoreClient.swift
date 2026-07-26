@@ -91,19 +91,100 @@ public actor UniFfiCoreClient: CoreClient {
         try Self.mapConversation(core.openConversation(characterId: characterID))
     }
 
-    public func listMessages(conversationID: String) async throws -> [ChatMessage] {
-        try core.listMessages(conversationId: conversationID).map { message in
-            ChatMessage(
-                id: message.id,
-                conversationID: message.conversationId,
-                parentID: message.parentId,
-                role: ChatMessage.Role(rawValue: message.role) ?? .notice,
-                text: message.content,
-                status: ChatMessage.Status(rawValue: message.status) ?? .notice,
-                generationID: message.generationId,
-                createdAt: message.createdAt
+    public func createConversation(
+        characterID: String,
+        title: String,
+        mode: ConversationMode
+    ) async throws -> CoreConversation {
+        try Self.mapConversation(
+            core.createConversation(
+                characterId: characterID,
+                title: title,
+                mode: mode.rawValue
             )
-        }
+        )
+    }
+
+    public func listConversations(
+        characterID: String
+    ) async throws -> [CoreConversation] {
+        try core.listConversationsForCharacter(
+            characterId: characterID
+        ).map(Self.mapConversation)
+    }
+
+    public func getConversation(id: String) async throws -> CoreConversation {
+        try Self.mapConversation(
+            core.getConversation(conversationId: id)
+        )
+    }
+
+    public func getConversationState(
+        conversationID: String
+    ) async throws -> CoreConversationState {
+        try Self.mapConversationState(
+            core.getConversationState(conversationId: conversationID)
+        )
+    }
+
+    public func listConversationBranches(
+        conversationID: String
+    ) async throws -> [CoreConversationBranch] {
+        try core.listConversationBranches(
+            conversationId: conversationID
+        ).map(Self.mapConversationBranch)
+    }
+
+    public func createConversationBranch(
+        conversationID: String,
+        fromMessageID: String?,
+        title: String?
+    ) async throws -> CoreConversationBranch {
+        try Self.mapConversationBranch(
+            core.createConversationBranch(
+                conversationId: conversationID,
+                fromMessageId: fromMessageID,
+                title: title
+            )
+        )
+    }
+
+    public func selectConversationBranch(
+        conversationID: String,
+        branchID: String
+    ) async throws -> CoreConversationState {
+        try Self.mapConversationState(
+            core.selectConversationBranch(
+                conversationId: conversationID,
+                branchId: branchID
+            )
+        )
+    }
+
+    public func setConversationMode(
+        conversationID: String,
+        mode: ConversationMode
+    ) async throws -> CoreConversationState {
+        try Self.mapConversationState(
+            core.setConversationMode(
+                conversationId: conversationID,
+                mode: mode.rawValue
+            )
+        )
+    }
+
+    public func listMessages(conversationID: String) async throws -> [ChatMessage] {
+        try core.listMessages(
+            conversationId: conversationID
+        ).map(Self.mapMessage)
+    }
+
+    public func listBranchMessages(
+        branchID: String
+    ) async throws -> [ChatMessage] {
+        try core.listBranchMessages(
+            branchId: branchID
+        ).map(Self.mapMessage)
     }
 
     public func sendMessage(
@@ -114,6 +195,26 @@ public actor UniFfiCoreClient: CoreClient {
     ) async throws -> String {
         try core.sendMessage(
             conversationId: conversationID,
+            text: text,
+            providerProfileId: providerProfileID,
+            credential: credential
+        )
+    }
+
+    public func sendMessageToBranch(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        mode: ConversationMode,
+        text: String,
+        providerProfileID: String,
+        credential: String?
+    ) async throws -> String {
+        try core.sendMessageToBranch(
+            conversationId: conversationID,
+            branchId: branchID,
+            expectedHead: expectedHeadMessageID,
+            mode: mode.rawValue,
             text: text,
             providerProfileId: providerProfileID,
             credential: credential
@@ -132,6 +233,8 @@ public actor UniFfiCoreClient: CoreClient {
                     eventVersion: event.eventVersion,
                     generationID: event.generationId,
                     conversationID: event.conversationId,
+                    branchID: event.branchId,
+                    assistantMessageID: event.assistantMessageId,
                     sequence: event.sequence,
                     emittedAt: event.emittedAt,
                     kind: event.kind,
@@ -227,6 +330,49 @@ public actor UniFfiCoreClient: CoreClient {
         )
     }
 
+    private static func mapConversationBranch(
+        _ branch: FfiConversationBranch
+    ) -> CoreConversationBranch {
+        CoreConversationBranch(
+            id: branch.id,
+            conversationID: branch.conversationId,
+            title: branch.title,
+            forkMessageID: branch.forkMessageId,
+            headMessageID: branch.headMessageId,
+            createdAt: branch.createdAt,
+            updatedAt: branch.updatedAt
+        )
+    }
+
+    private static func mapConversationState(
+        _ state: FfiConversationState
+    ) throws -> CoreConversationState {
+        guard let mode = ConversationMode(rawValue: state.selectedMode) else {
+            throw CoreClientFailure.invalidResponse(
+                "지원하지 않는 대화 모드입니다: \(state.selectedMode)"
+            )
+        }
+        return CoreConversationState(
+            conversationID: state.conversationId,
+            activeBranchID: state.activeBranchId,
+            selectedMode: mode,
+            updatedAt: state.updatedAt
+        )
+    }
+
+    private static func mapMessage(_ message: FfiMessage) -> ChatMessage {
+        ChatMessage(
+            id: message.id,
+            conversationID: message.conversationId,
+            parentID: message.parentId,
+            role: ChatMessage.Role(rawValue: message.role) ?? .notice,
+            text: message.content,
+            status: ChatMessage.Status(rawValue: message.status) ?? .notice,
+            generationID: message.generationId,
+            createdAt: message.createdAt
+        )
+    }
+
     private static func mapProviderProfile(
         _ profile: FfiProviderProfile
     ) -> ProviderProfile {
@@ -263,11 +409,71 @@ public actor UniFfiCoreClient: CoreClient {
     public func openConversation(characterID _: String) async throws -> CoreConversation {
         try unavailable()
     }
+    public func createConversation(
+        characterID _: String,
+        title _: String,
+        mode _: ConversationMode
+    ) async throws -> CoreConversation {
+        try unavailable()
+    }
+    public func listConversations(
+        characterID _: String
+    ) async throws -> [CoreConversation] {
+        try unavailable()
+    }
+    public func getConversation(id _: String) async throws -> CoreConversation {
+        try unavailable()
+    }
+    public func getConversationState(
+        conversationID _: String
+    ) async throws -> CoreConversationState {
+        try unavailable()
+    }
+    public func listConversationBranches(
+        conversationID _: String
+    ) async throws -> [CoreConversationBranch] {
+        try unavailable()
+    }
+    public func createConversationBranch(
+        conversationID _: String,
+        fromMessageID _: String?,
+        title _: String?
+    ) async throws -> CoreConversationBranch {
+        try unavailable()
+    }
+    public func selectConversationBranch(
+        conversationID _: String,
+        branchID _: String
+    ) async throws -> CoreConversationState {
+        try unavailable()
+    }
+    public func setConversationMode(
+        conversationID _: String,
+        mode _: ConversationMode
+    ) async throws -> CoreConversationState {
+        try unavailable()
+    }
     public func listMessages(conversationID _: String) async throws -> [ChatMessage] {
+        try unavailable()
+    }
+    public func listBranchMessages(
+        branchID _: String
+    ) async throws -> [ChatMessage] {
         try unavailable()
     }
     public func sendMessage(
         conversationID _: String,
+        text _: String,
+        providerProfileID _: String,
+        credential _: String?
+    ) async throws -> String {
+        try unavailable()
+    }
+    public func sendMessageToBranch(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        mode _: ConversationMode,
         text _: String,
         providerProfileID _: String,
         credential _: String?

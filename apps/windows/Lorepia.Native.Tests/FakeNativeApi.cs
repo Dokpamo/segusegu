@@ -122,9 +122,11 @@ internal sealed class FakeNativeApi : INativeApi
         {
           "events": [
             {
-              "event_version": 1,
+              "event_version": 2,
               "generation_id": "generation-1",
               "conversation_id": "conversation-1",
+              "branch_id": "branch-1",
+              "assistant_message_id": "assistant-1",
               "sequence": 1,
               "emitted_at": "2026-07-26T00:00:00Z",
               "kind": {

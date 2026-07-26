@@ -82,7 +82,21 @@ public struct CoreCharacter: Identifiable, Equatable, Sendable {
     }
 }
 
-public struct CoreConversation: Identifiable, Equatable, Sendable {
+public enum ConversationMode: String, CaseIterable, Equatable, Hashable, Sendable {
+    case chat
+    case story
+
+    public var title: String {
+        switch self {
+        case .chat:
+            "채팅"
+        case .story:
+            "스토리"
+        }
+    }
+}
+
+public struct CoreConversation: Identifiable, Equatable, Hashable, Sendable {
     public let id: String
     public let characterID: String
     public let title: String
@@ -100,6 +114,53 @@ public struct CoreConversation: Identifiable, Equatable, Sendable {
         self.characterID = characterID
         self.title = title
         self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+public struct CoreConversationBranch: Identifiable, Equatable, Hashable, Sendable {
+    public let id: String
+    public let conversationID: String
+    public let title: String?
+    public let forkMessageID: String?
+    public let headMessageID: String?
+    public let createdAt: String
+    public let updatedAt: String
+
+    public init(
+        id: String,
+        conversationID: String,
+        title: String?,
+        forkMessageID: String?,
+        headMessageID: String?,
+        createdAt: String,
+        updatedAt: String
+    ) {
+        self.id = id
+        self.conversationID = conversationID
+        self.title = title
+        self.forkMessageID = forkMessageID
+        self.headMessageID = headMessageID
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
+public struct CoreConversationState: Equatable, Sendable {
+    public let conversationID: String
+    public let activeBranchID: String
+    public let selectedMode: ConversationMode
+    public let updatedAt: String
+
+    public init(
+        conversationID: String,
+        activeBranchID: String,
+        selectedMode: ConversationMode,
+        updatedAt: String
+    ) {
+        self.conversationID = conversationID
+        self.activeBranchID = activeBranchID
+        self.selectedMode = selectedMode
         self.updatedAt = updatedAt
     }
 }
@@ -265,6 +326,8 @@ public struct ChatEvent: Equatable, Sendable {
     public let eventVersion: UInt32
     public let generationID: String
     public let conversationID: String
+    public let branchID: String?
+    public let assistantMessageID: String?
     public let sequence: UInt64
     public let emittedAt: String
     public let kind: String
@@ -277,9 +340,11 @@ public struct ChatEvent: Equatable, Sendable {
     public let usageOutputTokens: UInt64?
 
     public init(
-        eventVersion: UInt32 = 1,
+        eventVersion: UInt32 = 2,
         generationID: String,
         conversationID: String,
+        branchID: String? = nil,
+        assistantMessageID: String? = nil,
         sequence: UInt64,
         emittedAt: String = "",
         kind: String,
@@ -294,6 +359,8 @@ public struct ChatEvent: Equatable, Sendable {
         self.eventVersion = eventVersion
         self.generationID = generationID
         self.conversationID = conversationID
+        self.branchID = branchID
+        self.assistantMessageID = assistantMessageID
         self.sequence = sequence
         self.emittedAt = emittedAt
         self.kind = kind

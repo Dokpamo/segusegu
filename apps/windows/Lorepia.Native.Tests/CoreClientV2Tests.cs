@@ -345,13 +345,58 @@ public sealed class CoreClientV2Tests
     }
 
     [Fact]
+    public void MapsV2RoutingMetadataAndKeepsV1EventsCompatible()
+    {
+        var versionTwo = new FakeNativeApi
+        {
+            EventsJson =
+                """
+                {
+                  "events": [
+                    {
+                      "event_version": 2,
+                      "generation_id": "generation-2",
+                      "conversation_id": "conversation-2",
+                      "branch_id": "branch-2",
+                      "assistant_message_id": "assistant-2",
+                      "sequence": 1,
+                      "emitted_at": "2026-07-26T00:00:00Z",
+                      "kind": {"type":"generation_started"}
+                    }
+                  ],
+                  "dropped_events": 0
+                }
+                """,
+        };
+        using (var client = CoreClient.Open(versionTwo, CreateDataRoot()))
+        {
+            var chatEvent = Assert.Single(client.PollEvents().Events);
+            Assert.Equal(2u, chatEvent.EventVersion);
+            Assert.Equal("branch-2", chatEvent.BranchId);
+            Assert.Equal("assistant-2", chatEvent.AssistantMessageId);
+        }
+
+        var versionOne = new FakeNativeApi
+        {
+            EventsJson = EventBatch("""{"type":"generation_started"}"""),
+        };
+        using (var client = CoreClient.Open(versionOne, CreateDataRoot()))
+        {
+            var chatEvent = Assert.Single(client.PollEvents().Events);
+            Assert.Equal(1u, chatEvent.EventVersion);
+            Assert.Null(chatEvent.BranchId);
+            Assert.Null(chatEvent.AssistantMessageId);
+        }
+    }
+
+    [Fact]
     public void RejectsUnknownEventVersionAndType()
     {
         var wrongVersion = new FakeNativeApi
         {
             EventsJson = EventBatch(
                 """{"type":"generation_started"}""",
-                eventVersion: 2),
+                eventVersion: 3),
         };
         using (var client = CoreClient.Open(wrongVersion, CreateDataRoot()))
         {

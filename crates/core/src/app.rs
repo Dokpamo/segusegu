@@ -14,9 +14,10 @@ use lorepia_chat::{
 };
 use lorepia_content::{StagedAsset, prepare_import};
 use lorepia_domain::{
-    AppSettings, Character, Conversation, ConversationId, CoreError, CoreErrorCode, CoreResult,
-    GenerationId, GenerationRequest, HealthReport, ImportInspection, ImportLimits, InspectionId,
-    Message, MessageStatus, ProviderProfile,
+    AppSettings, Character, Conversation, ConversationBranch, ConversationBranchId, ConversationId,
+    ConversationMode, ConversationState, CoreError, CoreErrorCode, CoreResult, GenerationId,
+    GenerationRecord, GenerationRequest, GenerationStatus, HealthReport, ImportInspection,
+    ImportLimits, InspectionId, Message, MessageId, MessageStatus, ProviderProfile,
 };
 use lorepia_providers::{OpenAiCompatibleProvider, Provider};
 use lorepia_storage::{DatabaseStats, StagedAssetImport, Storage};
@@ -44,6 +45,10 @@ const MAX_PROVIDER_BASE_URL_BYTES: usize = 4 * 1024;
 const MAX_PROVIDER_BASE_URL_CHARS: usize = 1_024;
 const MAX_PROVIDER_MODEL_BYTES: usize = 1_024;
 const MAX_PROVIDER_MODEL_CHARS: usize = 256;
+const MAX_CONVERSATION_TITLE_BYTES: usize = 1_024;
+const MAX_CONVERSATION_TITLE_CHARS: usize = 256;
+const MAX_BRANCH_TITLE_BYTES: usize = 1_024;
+const MAX_BRANCH_TITLE_CHARS: usize = 256;
 
 #[derive(Clone)]
 pub struct Core {
@@ -81,6 +86,7 @@ struct GenerationTask {
     storage: Arc<Storage>,
     active_generations: Arc<GenerationRegistry>,
     event_bus: broadcast::Sender<ChatEvent>,
+    branch_id: ConversationBranchId,
     request: GenerationRequest,
     assistant: Message,
     provider: Arc<dyn Provider>,
@@ -371,8 +377,26 @@ impl Core {
 
     pub fn open_conversation(&self, character_id: &str) -> CoreResult<Conversation> {
         let character = self.get_character(character_id)?;
-        let conversation = Conversation::new(character.id, character.name);
-        self.inner.storage.save_conversation(&conversation)?;
+        self.create_conversation(&character.id, character.name, ConversationMode::Chat)
+    }
+
+    pub fn create_conversation(
+        &self,
+        character_id: &str,
+        title: impl Into<String>,
+        mode: ConversationMode,
+    ) -> CoreResult<Conversation> {
+        self.get_character(character_id)?;
+        let title = normalize_bounded_text(
+            "conversation title",
+            title.into(),
+            MAX_CONVERSATION_TITLE_BYTES,
+            MAX_CONVERSATION_TITLE_CHARS,
+        )?;
+        let conversation = Conversation::new(character_id, title);
+        self.inner
+            .storage
+            .save_conversation_with_mode(&conversation, mode)?;
         Ok(conversation)
     }
 
@@ -380,8 +404,90 @@ impl Core {
         self.inner.storage.list_conversations()
     }
 
+    pub fn list_conversations_for_character(
+        &self,
+        character_id: &str,
+    ) -> CoreResult<Vec<Conversation>> {
+        self.get_character(character_id)?;
+        self.inner
+            .storage
+            .list_conversations_for_character(character_id)
+    }
+
+    pub fn get_conversation(&self, conversation_id: &ConversationId) -> CoreResult<Conversation> {
+        self.inner.storage.get_conversation(conversation_id)
+    }
+
+    pub fn get_conversation_state(
+        &self,
+        conversation_id: &ConversationId,
+    ) -> CoreResult<ConversationState> {
+        self.inner.storage.get_conversation_state(conversation_id)
+    }
+
+    pub fn list_conversation_branches(
+        &self,
+        conversation_id: &ConversationId,
+    ) -> CoreResult<Vec<ConversationBranch>> {
+        self.inner.storage.get_conversation(conversation_id)?;
+        self.inner
+            .storage
+            .list_conversation_branches(conversation_id)
+    }
+
+    pub fn create_conversation_branch(
+        &self,
+        conversation_id: &ConversationId,
+        from_message_id: Option<&MessageId>,
+        title: Option<String>,
+    ) -> CoreResult<ConversationBranch> {
+        let title = title
+            .map(|title| {
+                normalize_bounded_text(
+                    "conversation branch title",
+                    title,
+                    MAX_BRANCH_TITLE_BYTES,
+                    MAX_BRANCH_TITLE_CHARS,
+                )
+            })
+            .transpose()?;
+        self.inner
+            .storage
+            .create_conversation_branch(conversation_id, from_message_id, title)
+    }
+
+    pub fn select_conversation_branch(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+    ) -> CoreResult<ConversationState> {
+        self.inner
+            .storage
+            .select_conversation_branch(conversation_id, branch_id)
+    }
+
+    pub fn set_conversation_mode(
+        &self,
+        conversation_id: &ConversationId,
+        mode: ConversationMode,
+    ) -> CoreResult<ConversationState> {
+        self.inner
+            .storage
+            .set_conversation_mode(conversation_id, mode)
+    }
+
+    pub fn list_branch_messages(
+        &self,
+        branch_id: &ConversationBranchId,
+    ) -> CoreResult<Vec<Message>> {
+        self.inner.storage.list_branch_messages(branch_id)
+    }
+
     pub fn list_messages(&self, conversation_id: &ConversationId) -> CoreResult<Vec<Message>> {
-        self.inner.storage.list_messages(conversation_id)
+        let state = self.inner.storage.get_conversation_state(conversation_id)?;
+        self.inner
+            .storage
+            .list_branch_messages(&state.active_branch_id)
     }
 
     pub fn send_message(
@@ -399,7 +505,52 @@ impl Core {
             &profile.base_url,
             Duration::from_secs(u64::from(profile.timeout_seconds.max(1))),
         )?);
-        self.send_message_with_provider(conversation_id, text, profile.model, credential, provider)
+        let state = self.inner.storage.get_conversation_state(conversation_id)?;
+        let branch = self
+            .inner
+            .storage
+            .get_conversation_branch(&state.active_branch_id)?;
+        self.send_message_to_branch_with_provider(
+            conversation_id,
+            &state.active_branch_id,
+            branch.head_message_id.as_ref(),
+            state.selected_mode,
+            text,
+            profile.model,
+            credential,
+            provider,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn send_message_to_branch(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        mode: ConversationMode,
+        text: &str,
+        provider_profile_id: &str,
+        credential: Option<String>,
+    ) -> CoreResult<GenerationId> {
+        let profile = self
+            .inner
+            .storage
+            .get_provider_profile(provider_profile_id)?;
+        let provider = Arc::new(OpenAiCompatibleProvider::new(
+            &profile.base_url,
+            Duration::from_secs(u64::from(profile.timeout_seconds.max(1))),
+        )?);
+        self.send_message_to_branch_with_provider(
+            conversation_id,
+            branch_id,
+            expected_head,
+            mode,
+            text,
+            profile.model,
+            credential,
+            provider,
+        )
     }
 
     pub fn cancel_generation(&self, generation_id: &GenerationId) -> CoreResult<()> {
@@ -499,9 +650,39 @@ impl Core {
         }
     }
 
+    #[cfg(test)]
     fn send_message_with_provider(
         &self,
         conversation_id: &ConversationId,
+        text: &str,
+        model: String,
+        credential: Option<String>,
+        provider: Arc<dyn Provider>,
+    ) -> CoreResult<GenerationId> {
+        let state = self.inner.storage.get_conversation_state(conversation_id)?;
+        let branch = self
+            .inner
+            .storage
+            .get_conversation_branch(&state.active_branch_id)?;
+        self.send_message_to_branch_with_provider(
+            conversation_id,
+            &state.active_branch_id,
+            branch.head_message_id.as_ref(),
+            state.selected_mode,
+            text,
+            model,
+            credential,
+            provider,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn send_message_to_branch_with_provider(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        mode: ConversationMode,
         text: &str,
         model: String,
         credential: Option<String>,
@@ -522,30 +703,60 @@ impl Core {
             .inner
             .storage
             .get_character(&conversation.character_id)?;
-        let user_message = Message::user(conversation_id.clone(), text);
-        let mut history = self.inner.storage.list_recent_messages_for_prompt(
-            conversation_id,
+        let branch = self.inner.storage.get_conversation_branch(branch_id)?;
+        if branch.conversation_id != *conversation_id {
+            return Err(CoreError::new(
+                CoreErrorCode::NotFound,
+                "conversation branch was not found in the conversation",
+                false,
+            ));
+        }
+        let user_message =
+            Message::user_after(conversation_id.clone(), expected_head.cloned(), text);
+        let mut history = self.inner.storage.list_recent_branch_messages_for_prompt(
+            branch_id,
             MAX_PROMPT_MESSAGES.saturating_sub(2),
             MAX_HISTORY_MESSAGE_BYTES,
             MAX_HISTORY_MESSAGE_CHARS,
         )?;
         history.push(user_message.clone());
-        let request = PromptPlanner::plan(
+        let request = PromptPlanner::plan_with_mode(
             &character,
             conversation_id.clone(),
+            mode,
             &history,
-            model,
+            model.clone(),
             1.0,
             Some(CORE_MAX_OUTPUT_TOKENS),
         )?;
-        self.inner.storage.save_message(&user_message)?;
         let generation_id = request.generation_id.clone();
         let assistant_message = Message::pending_assistant(
             conversation_id.clone(),
             user_message.id.clone(),
             generation_id.clone(),
         );
-        self.inner.storage.save_message(&assistant_message)?;
+        let generation = GenerationRecord {
+            id: generation_id.clone(),
+            conversation_id: conversation_id.clone(),
+            branch_id: branch_id.clone(),
+            user_message_id: user_message.id.clone(),
+            assistant_message_id: Some(assistant_message.id.clone()),
+            mode,
+            model,
+            status: GenerationStatus::Running,
+            input_tokens: None,
+            output_tokens: None,
+            error_code: None,
+            started_at: assistant_message.created_at,
+            finished_at: None,
+        };
+        self.inner.storage.append_generation(
+            branch_id,
+            expected_head,
+            &user_message,
+            &assistant_message,
+            &generation,
+        )?;
         let preserve_partial_generations = self
             .inner
             .storage
@@ -560,6 +771,7 @@ impl Core {
             storage: Arc::clone(&self.inner.storage),
             active_generations: Arc::clone(&self.inner.active_generations),
             event_bus: self.inner.event_bus.clone(),
+            branch_id: branch_id.clone(),
             request,
             assistant: assistant_message,
             provider,
@@ -581,6 +793,7 @@ async fn execute_generation_task(task: GenerationTask) {
         storage,
         active_generations,
         event_bus,
+        branch_id,
         request,
         mut assistant,
         provider,
@@ -590,6 +803,7 @@ async fn execute_generation_task(task: GenerationTask) {
     } = task;
     let generation_id = request.generation_id.clone();
     let conversation_id = request.conversation_id.clone();
+    let assistant_message_id = assistant.id.clone();
     let (event_sender, event_receiver) = mpsc::channel(128);
     let checkpoint_storage = Arc::clone(&storage);
     let checkpoint_assistant = assistant.clone();
@@ -599,6 +813,8 @@ async fn execute_generation_task(task: GenerationTask) {
         forwarding_event_bus,
         checkpoint_storage,
         checkpoint_assistant,
+        branch_id.clone(),
+        assistant_message_id.clone(),
         preserve_partial,
     ));
     let generation_result = run_generation(
@@ -620,25 +836,34 @@ async fn execute_generation_task(task: GenerationTask) {
         })
         .and_then(std::convert::identity);
     let result = merge_generation_and_forwarding_results(generation_result, forwarding_result);
+    let usage = result.as_ref().ok().map(|outcome| outcome.usage.clone());
+    let error_code = result
+        .as_ref()
+        .err()
+        .map(|failure| failure.error.code.as_str().to_owned());
 
     let (mut sequence, mut terminal_kind, should_commit) =
         apply_generation_result(&mut assistant, result, preserve_partial);
-    let persistence = if should_commit {
-        storage.save_message(&assistant)
-    } else {
-        storage.delete_message(&assistant.id)
-    };
+    let persistence = storage.finalize_generation(
+        &assistant,
+        usage.as_ref(),
+        error_code.as_deref(),
+        should_commit,
+    );
     match persistence {
         Ok(()) if should_commit => {
-            let _ = event_bus.send(ChatEvent::new(
-                generation_id.clone(),
-                conversation_id.clone(),
-                sequence,
-                ChatEventKind::MessageCommitted {
-                    message_id: assistant.id,
-                    status: assistant.status,
-                },
-            ));
+            let _ = event_bus.send(
+                ChatEvent::new(
+                    generation_id.clone(),
+                    conversation_id.clone(),
+                    sequence,
+                    ChatEventKind::MessageCommitted {
+                        message_id: assistant.id,
+                        status: assistant.status,
+                    },
+                )
+                .with_route(branch_id.clone(), assistant_message_id.clone()),
+            );
             sequence = sequence.saturating_add(1);
         }
         Ok(()) => {}
@@ -649,12 +874,15 @@ async fn execute_generation_task(task: GenerationTask) {
             };
         }
     }
-    let _ = event_bus.send(ChatEvent::new(
-        generation_id.clone(),
-        conversation_id,
-        sequence,
-        terminal_kind,
-    ));
+    let _ = event_bus.send(
+        ChatEvent::new(
+            generation_id.clone(),
+            conversation_id,
+            sequence,
+            terminal_kind,
+        )
+        .with_route(branch_id, assistant_message_id),
+    );
     active_generations.remove(&generation_id);
 }
 
@@ -663,6 +891,8 @@ async fn forward_generation_events(
     event_bus: broadcast::Sender<ChatEvent>,
     storage: Arc<Storage>,
     mut checkpoint: Message,
+    branch_id: ConversationBranchId,
+    assistant_message_id: MessageId,
     preserve_partial: bool,
 ) -> CoreResult<()> {
     let start = time::Instant::now() + PARTIAL_CHECKPOINT_INTERVAL;
@@ -686,7 +916,9 @@ async fn forward_generation_events(
                     checkpoint.content.push_str(delta);
                     dirty = true;
                 }
-                let _ = event_bus.send(event);
+                let _ = event_bus.send(
+                    event.with_route(branch_id.clone(), assistant_message_id.clone())
+                );
                 if preserve_partial
                     && dirty
                     && partial_checkpoint_due(checkpoint.content.len(), last_checkpoint_bytes)
@@ -954,6 +1186,57 @@ mod tests {
         started: Mutex<Option<std_mpsc::Sender<()>>>,
     }
 
+    struct CapturingProvider {
+        response: String,
+        captured: Mutex<Option<std_mpsc::Sender<Vec<String>>>>,
+    }
+
+    impl CapturingProvider {
+        fn new(response: impl Into<String>) -> (Arc<Self>, std_mpsc::Receiver<Vec<String>>) {
+            let (sender, receiver) = std_mpsc::channel();
+            (
+                Arc::new(Self {
+                    response: response.into(),
+                    captured: Mutex::new(Some(sender)),
+                }),
+                receiver,
+            )
+        }
+    }
+
+    #[async_trait]
+    impl Provider for CapturingProvider {
+        fn capabilities(&self) -> ProviderCapabilities {
+            ProviderCapabilities {
+                streaming: true,
+                reasoning: false,
+                max_context_tokens: None,
+            }
+        }
+
+        async fn generate(
+            &self,
+            request: GenerationRequest,
+            _credential: Option<&str>,
+            sink: ProviderEventSender,
+            _cancelled: watch::Receiver<bool>,
+        ) -> CoreResult<GenerationUsage> {
+            if let Some(sender) = self.captured.lock().expect("capture lock").take() {
+                let _ = sender.send(
+                    request
+                        .messages
+                        .into_iter()
+                        .map(|message| message.content)
+                        .collect(),
+                );
+            }
+            sink.send(ProviderEvent::TextDelta(self.response.clone()))
+                .await
+                .map_err(|_| CoreError::internal("chat event receiver closed"))?;
+            Ok(GenerationUsage::default())
+        }
+    }
+
     impl StallingProvider {
         fn new(partial: impl Into<String>) -> (Arc<Self>, std_mpsc::Receiver<()>) {
             let (started_sender, started_receiver) = std_mpsc::channel();
@@ -1032,7 +1315,7 @@ mod tests {
         let health = core.health_check().expect("health");
         assert!(health.database_open);
         assert!(health.data_root_writable);
-        assert_eq!(health.schema_version, 2);
+        assert_eq!(health.schema_version, 3);
     }
 
     #[test]
@@ -1475,6 +1758,186 @@ mod tests {
     }
 
     #[test]
+    fn one_character_can_own_multiple_explicit_rooms_with_independent_modes() {
+        let (_root, core, character) = imported_core();
+        let chat = core
+            .create_conversation(&character.id, "첫 번째 방", ConversationMode::Chat)
+            .expect("chat room");
+        let story = core
+            .create_conversation(&character.id, "두 번째 방", ConversationMode::Story)
+            .expect("story room");
+
+        assert_ne!(chat.id, story.id);
+        assert_eq!(
+            core.list_conversations_for_character(&character.id)
+                .expect("character rooms")
+                .len(),
+            2
+        );
+        assert_eq!(
+            core.get_conversation_state(&chat.id)
+                .expect("chat state")
+                .selected_mode,
+            ConversationMode::Chat
+        );
+        assert_eq!(
+            core.get_conversation_state(&story.id)
+                .expect("story state")
+                .selected_mode,
+            ConversationMode::Story
+        );
+        assert_eq!(
+            core.list_conversation_branches(&chat.id)
+                .expect("default branch")
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn forked_branch_uses_only_its_parent_lineage_and_rejects_a_stale_head() {
+        let (_root, core, character) = imported_core();
+        let conversation = core
+            .create_conversation(&character.id, "분기 테스트", ConversationMode::Chat)
+            .expect("conversation");
+        core.send_message_with_provider(
+            &conversation.id,
+            "공통 시작",
+            "static".to_owned(),
+            None,
+            Arc::new(StaticProvider::new("원본 답변")),
+        )
+        .expect("initial generation");
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let original = loop {
+            let messages = core.list_messages(&conversation.id).expect("messages");
+            if messages.len() == 2 && messages[1].status == MessageStatus::Complete {
+                break messages;
+            }
+            assert!(Instant::now() < deadline, "initial generation timed out");
+            thread::sleep(Duration::from_millis(10));
+        };
+
+        let fork = core
+            .create_conversation_branch(
+                &conversation.id,
+                Some(&original[0].id),
+                Some("다른 선택".to_owned()),
+            )
+            .expect("fork");
+        let (provider, captured) = CapturingProvider::new("분기 답변");
+        let generation_id = core
+            .send_message_to_branch_with_provider(
+                &conversation.id,
+                &fork.id,
+                Some(&original[0].id),
+                ConversationMode::Story,
+                "분기 질문",
+                "captured".to_owned(),
+                None,
+                provider,
+            )
+            .expect("branch generation");
+        let request_messages = captured
+            .recv_timeout(Duration::from_secs(2))
+            .expect("captured prompt");
+        assert!(
+            request_messages
+                .first()
+                .is_some_and(|message| message.contains("Story mode:")),
+            "the provider prompt must use the generation snapshot mode"
+        );
+        assert!(
+            request_messages
+                .iter()
+                .any(|message| message == "공통 시작")
+        );
+        assert!(
+            request_messages
+                .iter()
+                .any(|message| message == "분기 질문")
+        );
+        assert!(
+            !request_messages
+                .iter()
+                .any(|message| message == "원본 답변"),
+            "a sibling assistant response must not leak into the fork prompt"
+        );
+
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let forked = loop {
+            let messages = core.list_branch_messages(&fork.id).expect("fork messages");
+            if messages.len() == 3
+                && messages
+                    .last()
+                    .is_some_and(|message| message.status == MessageStatus::Complete)
+            {
+                break messages;
+            }
+            assert!(Instant::now() < deadline, "branch generation timed out");
+            thread::sleep(Duration::from_millis(10));
+        };
+        assert_eq!(
+            forked
+                .iter()
+                .map(|message| message.content.as_str())
+                .collect::<Vec<_>>(),
+            ["공통 시작", "분기 질문", "분기 답변"]
+        );
+        assert_eq!(
+            core.inner
+                .storage
+                .get_generation(&generation_id)
+                .expect("generation snapshot")
+                .mode,
+            ConversationMode::Story
+        );
+        assert_eq!(
+            core.list_branch_messages(
+                &core
+                    .get_conversation_state(&conversation.id)
+                    .expect("state")
+                    .active_branch_id
+            )
+            .expect("original branch")
+            .iter()
+            .map(|message| message.content.as_str())
+            .collect::<Vec<_>>(),
+            ["공통 시작", "원본 답변"]
+        );
+
+        let stale = core
+            .send_message_to_branch_with_provider(
+                &conversation.id,
+                &fork.id,
+                Some(&original[0].id),
+                ConversationMode::Story,
+                "오래된 head",
+                "static".to_owned(),
+                None,
+                Arc::new(StaticProvider::new("should not run")),
+            )
+            .expect_err("stale branch head");
+        assert_eq!(stale.code, CoreErrorCode::InvalidInput);
+        assert!(stale.recoverable);
+        assert_eq!(
+            core.list_branch_messages(&fork.id)
+                .expect("unchanged fork")
+                .len(),
+            3
+        );
+
+        core.select_conversation_branch(&conversation.id, &fork.id)
+            .expect("select fork");
+        assert_eq!(
+            core.list_messages(&conversation.id)
+                .expect("active branch messages"),
+            forked
+        );
+    }
+
+    #[test]
     fn provider_output_limit_failure_obeys_the_partial_persistence_policy() {
         let conversation_id = ConversationId::new();
         let parent_id = lorepia_domain::MessageId::new();
@@ -1517,14 +1980,15 @@ mod tests {
         let (root, core, character) = imported_core();
         let conversation = core.open_conversation(&character.id).expect("conversation");
         let mut events = core.subscribe_events();
-        core.send_message_with_provider(
-            &conversation.id,
-            "Hello",
-            "static".to_owned(),
-            None,
-            Arc::new(StaticProvider::new("Hi there")),
-        )
-        .expect("send");
+        let generation_id = core
+            .send_message_with_provider(
+                &conversation.id,
+                "Hello",
+                "static".to_owned(),
+                None,
+                Arc::new(StaticProvider::new("Hi there")),
+            )
+            .expect("send");
 
         let deadline = Instant::now() + Duration::from_secs(2);
         loop {
@@ -1550,6 +2014,19 @@ mod tests {
         assert!(events.windows(2).all(|events| {
             events[0].generation_id != events[1].generation_id
                 || events[0].sequence < events[1].sequence
+        }));
+        let state = core
+            .get_conversation_state(&conversation.id)
+            .expect("conversation state");
+        let generation = core
+            .inner
+            .storage
+            .get_generation(&generation_id)
+            .expect("generation snapshot");
+        assert_eq!(generation.mode, ConversationMode::Chat);
+        assert!(events.iter().all(|event| {
+            event.branch_id.as_ref() == Some(&state.active_branch_id)
+                && event.assistant_message_id.as_ref() == generation.assistant_message_id.as_ref()
         }));
 
         drop(core);

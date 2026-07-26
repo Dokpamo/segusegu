@@ -8,7 +8,17 @@ struct LorepiaIOSApp: App {
 
     init() {
 #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains(
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("--lorepia-ui-test") {
+            environment = AppEnvironment(
+                coreClient: FakeCoreClient(characters: []),
+                runtimeMode: .preview,
+                credentialStore: InMemoryCredentialStore(),
+                characters: []
+            )
+            return
+        }
+        if arguments.contains(
             "--lorepia-native-navigation-ui-test"
         ) {
             environment = AppEnvironment(

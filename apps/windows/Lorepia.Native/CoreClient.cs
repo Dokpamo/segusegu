@@ -426,7 +426,7 @@ public sealed class CoreClient : IDisposable
 
     private static ChatEvent MapEvent(ChatEventPayload payload)
     {
-        if (payload.EventVersion != 1)
+        if (payload.EventVersion is not 1 and not 2)
         {
             throw new CoreInteropException(
                 $"Unsupported chat event version {payload.EventVersion}.");
@@ -439,6 +439,8 @@ public sealed class CoreClient : IDisposable
             EventVersion = payload.EventVersion,
             GenerationId = payload.GenerationId,
             ConversationId = payload.ConversationId,
+            BranchId = payload.BranchId,
+            AssistantMessageId = payload.AssistantMessageId,
             Sequence = payload.Sequence,
             EmittedAt = payload.EmittedAt,
         };
