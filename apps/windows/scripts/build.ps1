@@ -96,13 +96,16 @@ try {
     }
 }
 
-& dotnet build `
+$msbuild = Get-Command "msbuild.exe" -ErrorAction Stop
+& $msbuild.Source `
     $appProject `
-    --configuration $Configuration `
-    --no-restore `
-    "--property:Platform=$msbuildPlatform" `
-    "--property:LorepiaNativeDllPath=$resolvedNativeDll" `
-    "--property:RequireLorepiaNativeDll=true"
+    /nologo `
+    /m `
+    /t:Build `
+    "/p:Configuration=$Configuration" `
+    "/p:Platform=$msbuildPlatform" `
+    "/p:LorepiaNativeDllPath=$resolvedNativeDll" `
+    /p:RequireLorepiaNativeDll=true
 if ($LASTEXITCODE -ne 0) {
     throw "WinUI build failed with exit code $LASTEXITCODE."
 }

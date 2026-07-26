@@ -20,6 +20,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
+      - uses: microsoft/setup-msbuild@v2
       - uses: dtolnay/rust-toolchain@1.96.0
         with:
           targets: x86_64-pc-windows-msvc

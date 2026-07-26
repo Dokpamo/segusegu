@@ -27,6 +27,7 @@ jobs:
       - run: cargo doc --workspace --no-deps --locked
         env:
           RUSTDOCFLAGS: -D warnings
-      - uses: EmbarkStudios/cargo-deny-action@v2
+      - uses: taiki-e/install-action@v2
         with:
-          command: check
+          tool: cargo-deny@0.20.2
+      - run: cargo deny check
