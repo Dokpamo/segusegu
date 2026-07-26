@@ -11,16 +11,26 @@ final class IOSRootNavigationUITests: XCTestCase {
         app.launchArguments = ["--lorepia-ui-test"]
         app.launch()
 
+        let home = app.tabBars.buttons["홈"]
         let library = app.tabBars.buttons["서재"]
-        let chat = app.tabBars.buttons["채팅"]
+        let create = app.tabBars.buttons["생성"]
         let settings = app.tabBars.buttons["설정"]
-        XCTAssertTrue(library.waitForExistence(timeout: 10))
-        XCTAssertTrue(library.isSelected)
-
-        chat.tap()
-        XCTAssertTrue(chat.isSelected)
+        XCTAssertTrue(home.waitForExistence(timeout: 10))
+        XCTAssertTrue(home.isSelected)
         XCTAssertTrue(
-            app.staticTexts["대화를 선택하세요"].waitForExistence(timeout: 5)
+            app.staticTexts["첫 이야기를 시작해 보세요"].waitForExistence(timeout: 5)
+        )
+
+        library.tap()
+        XCTAssertTrue(library.isSelected)
+        XCTAssertTrue(
+            app.staticTexts["서재가 비어 있습니다"].waitForExistence(timeout: 5)
+        )
+
+        create.tap()
+        XCTAssertTrue(create.isSelected)
+        XCTAssertTrue(
+            app.staticTexts["캐릭터 생성"].waitForExistence(timeout: 5)
         )
 
         settings.tap()
@@ -29,7 +39,36 @@ final class IOSRootNavigationUITests: XCTestCase {
             app.staticTexts["프로필 편집"].waitForExistence(timeout: 5)
         )
 
-        library.tap()
-        XCTAssertTrue(library.isSelected)
+        home.tap()
+        XCTAssertTrue(home.isSelected)
+    }
+
+    @MainActor
+    func testRootActionsReflowAtAccessibilityTextSize() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--lorepia-ui-test",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityXXXL",
+        ]
+        app.launch()
+
+        let createAction = app.buttons["캐릭터 생성"].firstMatch
+        let libraryAction = app.buttons["서재 보기"].firstMatch
+        XCTAssertTrue(createAction.waitForExistence(timeout: 10))
+        XCTAssertTrue(libraryAction.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(libraryAction.frame.minY, createAction.frame.minY)
+
+        createAction.tap()
+        XCTAssertTrue(app.tabBars.buttons["생성"].isSelected)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["create-manual-mode"]
+                .waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(app.descendants(matching: .any)["create-ai-mode"].exists)
+        app.swipeUp()
+        XCTAssertTrue(
+            app.buttons["파일에서 가져오기"].waitForExistence(timeout: 5)
+        )
     }
 }

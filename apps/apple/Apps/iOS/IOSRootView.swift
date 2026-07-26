@@ -5,15 +5,18 @@ import Darwin
 
 struct IOSRootView: View {
     private enum Tab: Hashable {
+        case home
         case library
-        case chat
+        case create
         case settings
     }
 
     let environment: AppEnvironment
     @ObservedObject private var importReviewViewModel: ImportReviewViewModel
 
-    @State private var selectedTab: Tab = .library
+    @State private var selectedTab: Tab = .home
+    @State private var homeChatCharacter: LibraryCharacter?
+    @State private var libraryChatCharacter: LibraryCharacter?
     @State private var showsFileImporter = false
     @State private var showsImportReview = false
 
@@ -25,25 +28,56 @@ struct IOSRootView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
+                IOSHomeView(
+                    viewModel: environment.libraryViewModel,
+                    onOpenLibrary: {
+                        selectedTab = .library
+                    },
+                    onCreate: {
+                        selectedTab = .create
+                    },
+                    onOpenChat: { character in
+                        homeChatCharacter = character
+                    }
+                )
+                .navigationTitle("홈")
+                .navigationDestination(item: $homeChatCharacter) { character in
+                    ChatView(viewModel: environment.chatViewModel)
+                        .navigationBarTitleDisplayMode(.inline)
+                        .task(id: character.id) {
+                            await environment.selectCharacter(character)
+                        }
+                }
+            }
+            .tabItem {
+                Label("홈", systemImage: "house")
+            }
+            .tag(Tab.home)
+
+            NavigationStack {
                 LibraryView(
                     viewModel: environment.libraryViewModel,
                     onImport: {
-                        showsFileImporter = true
+                        selectedTab = .create
                     },
                     onOpenChat: { character in
-                        selectedTab = .chat
-                        Task {
-                            await environment.selectCharacter(character)
-                        }
+                        libraryChatCharacter = character
                     }
                 )
                 .navigationTitle("서재")
+                .navigationDestination(item: $libraryChatCharacter) { character in
+                    ChatView(viewModel: environment.chatViewModel)
+                        .navigationBarTitleDisplayMode(.inline)
+                        .task(id: character.id) {
+                            await environment.selectCharacter(character)
+                        }
+                }
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
-                            showsFileImporter = true
+                            selectedTab = .create
                         } label: {
-                            Label("가져오기", systemImage: "square.and.arrow.down")
+                            Label("생성", systemImage: "plus")
                         }
                     }
                 }
@@ -54,14 +88,15 @@ struct IOSRootView: View {
             .tag(Tab.library)
 
             NavigationStack {
-                ChatView(viewModel: environment.chatViewModel)
-                    .navigationTitle("채팅")
-                    .navigationBarTitleDisplayMode(.inline)
+                IOSCreateView {
+                    showsFileImporter = true
+                }
+                .navigationTitle("생성")
             }
             .tabItem {
-                Label("채팅", systemImage: "bubble.left.and.bubble.right")
+                Label("생성", systemImage: "plus.circle.fill")
             }
-            .tag(Tab.chat)
+            .tag(Tab.create)
 
             NavigationStack {
                 VStack(spacing: 0) {
@@ -80,6 +115,7 @@ struct IOSRootView: View {
             }
             .tag(Tab.settings)
         }
+        .lorepiaTabBarBehavior()
         .fileImporter(
             isPresented: $showsFileImporter,
             allowedContentTypes: [.data],
@@ -136,5 +172,269 @@ struct IOSRootView: View {
             }
         }
         .accessibilityIdentifier("lorepia-root")
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func lorepiaTabBarBehavior() -> some View {
+        if #available(iOS 26.0, *) {
+            tabBarMinimizeBehavior(.onScrollDown)
+        } else {
+            self
+        }
+    }
+}
+
+private struct IOSHomeView: View {
+    @ObservedObject var viewModel: LibraryViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let onOpenLibrary: () -> Void
+    let onCreate: () -> Void
+    let onOpenChat: (LibraryCharacter) -> Void
+
+    var body: some View {
+        Group {
+            if viewModel.characters.isEmpty {
+                ContentUnavailableView {
+                    Label("첫 이야기를 시작해 보세요", systemImage: "sparkles")
+                } description: {
+                    Text("캐릭터를 만들거나 파일에서 가져오면 여기에서 바로 이야기를 이어갈 수 있습니다.")
+                } actions: {
+                    ViewThatFits(in: .horizontal) {
+                        HStack {
+                            Button("캐릭터 생성", action: onCreate)
+                                .buttonStyle(.borderedProminent)
+                            Button("서재 보기", action: onOpenLibrary)
+                                .buttonStyle(.bordered)
+                        }
+
+                        VStack {
+                            Button("캐릭터 생성", action: onCreate)
+                                .buttonStyle(.borderedProminent)
+                            Button("서재 보기", action: onOpenLibrary)
+                                .buttonStyle(.bordered)
+                        }
+                    }
+                }
+            } else {
+                List {
+                    Section("이야기 이어가기") {
+                        ForEach(viewModel.characters.prefix(5)) { character in
+                            Button {
+                                onOpenChat(character)
+                            } label: {
+                                IOSCharacterRow(character: character)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("이 캐릭터와의 채팅을 엽니다")
+                        }
+                    }
+
+                    Section {
+                        Button(action: onCreate) {
+                            Label("새 캐릭터 만들기", systemImage: "plus.circle")
+                        }
+                        Button(action: onOpenLibrary) {
+                            Label("서재 전체 보기", systemImage: "books.vertical")
+                        }
+                    } footer: {
+                        Text("\(viewModel.characters.count)명의 캐릭터가 로컬 서재에 있습니다.")
+                    }
+                }
+                .listStyle(.plain)
+                .refreshable {
+                    await viewModel.refresh()
+                }
+            }
+        }
+        .animation(
+            reduceMotion ? nil : .smooth(duration: 0.24),
+            value: viewModel.characters.isEmpty
+        )
+        .accessibilityIdentifier("home-screen")
+    }
+}
+
+private struct IOSCharacterRow: View {
+    let character: LibraryCharacter
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .body) private var avatarSize: CGFloat = 44
+
+    var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: LorepiaSpacing.compact) {
+                    HStack(spacing: LorepiaSpacing.compact) {
+                        avatar
+                        Text(character.name)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        Spacer(minLength: LorepiaSpacing.compact)
+                        Image(systemName: "chevron.right")
+                            .foregroundStyle(.tertiary)
+                    }
+                    summary
+                }
+            } else {
+                HStack(spacing: LorepiaSpacing.standard) {
+                    avatar
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(character.name)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        summary
+                    }
+                    Spacer(minLength: LorepiaSpacing.compact)
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+
+    private var avatar: some View {
+        Image(systemName: character.symbolName)
+            .font(.title2)
+            .frame(
+                width: max(44, min(avatarSize, 64)),
+                height: max(44, min(avatarSize, 64))
+            )
+            .background(.tint.opacity(0.12), in: Circle())
+            .accessibilityHidden(true)
+    }
+
+    private var summary: some View {
+        Text(character.summary)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 2)
+            .multilineTextAlignment(.leading)
+    }
+}
+
+private struct IOSCreateView: View {
+    let onImport: () -> Void
+
+    var body: some View {
+        List {
+            Section("캐릭터 생성") {
+                IOSCreationModeRow(
+                    title: "직접 만들기",
+                    subtitle: "이름, 소개와 대화 설정을 직접 구성합니다.",
+                    systemImage: "slider.horizontal.3",
+                    status: "준비 중"
+                )
+                .accessibilityIdentifier("create-manual-mode")
+                IOSCreationModeRow(
+                    title: "AI와 함께 만들기",
+                    subtitle: "아이디어를 바탕으로 캐릭터 초안을 함께 작성합니다.",
+                    systemImage: "wand.and.stars",
+                    status: "준비 중"
+                )
+                .accessibilityIdentifier("create-ai-mode")
+            }
+
+            Section("가져오기") {
+                Button(action: onImport) {
+                    IOSCreationModeRow(
+                        title: "파일에서 가져오기",
+                        subtitle: "CCv3 JSON 또는 CHARX 파일을 검사한 뒤 서재에 저장합니다.",
+                        systemImage: "square.and.arrow.down",
+                        showsDisclosure: true
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("파일에서 가져오기")
+                .accessibilityHint("캐릭터 파일 선택기를 엽니다")
+                .accessibilityIdentifier("create-import-button")
+            }
+        }
+        .listStyle(.insetGrouped)
+        .accessibilityIdentifier("create-screen")
+    }
+}
+
+private struct IOSCreationModeRow: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
+    var status: String?
+    var showsDisclosure = false
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .body) private var iconSize: CGFloat = 44
+
+    var body: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: LorepiaSpacing.compact) {
+                    HStack(alignment: .top, spacing: LorepiaSpacing.compact) {
+                        icon
+                        Text(title)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if showsDisclosure {
+                            trailing
+                        }
+                    }
+                    Text(subtitle)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if status != nil {
+                        trailing
+                    }
+                }
+            } else {
+                HStack(alignment: .center, spacing: LorepiaSpacing.standard) {
+                    icon
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(title)
+                            .font(.headline)
+                            .foregroundStyle(.primary)
+                        Text(subtitle)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.leading)
+                    }
+                    Spacer(minLength: LorepiaSpacing.compact)
+                    trailing
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var icon: some View {
+        Image(systemName: systemImage)
+            .font(.title2)
+            .frame(
+                width: max(44, min(iconSize, 64)),
+                height: max(44, min(iconSize, 64))
+            )
+            .background(.tint.opacity(0.12), in: Circle())
+            .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private var trailing: some View {
+        if let status {
+            Text(status)
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+        } else if showsDisclosure {
+            Image(systemName: "chevron.right")
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
     }
 }

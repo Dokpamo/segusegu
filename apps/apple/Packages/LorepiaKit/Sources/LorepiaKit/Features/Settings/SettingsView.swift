@@ -89,22 +89,22 @@ public struct SettingsView: View {
                     }
                 }
 
-                HStack {
-                    Button("새 프로필") {
-                        viewModel.beginNewProfile()
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        newProfileButton
+                        Spacer()
+                        deleteProfileButton
+                        saveProfileButton
                     }
-                    Spacer()
-                    Button("프로필 삭제", role: .destructive) {
-                        Task {
-                            await viewModel.deleteEditingProfile()
-                        }
+
+                    VStack(spacing: LorepiaSpacing.compact) {
+                        newProfileButton
+                            .frame(maxWidth: .infinity)
+                        deleteProfileButton
+                            .frame(maxWidth: .infinity)
+                        saveProfileButton
+                            .frame(maxWidth: .infinity)
                     }
-                    Button("저장") {
-                        Task {
-                            await viewModel.saveProfile()
-                        }
-                    }
-                    .buttonStyle(.borderedProminent)
                 }
             }
 
@@ -142,5 +142,28 @@ public struct SettingsView: View {
                 ProgressView()
             }
         }
+    }
+
+    private var newProfileButton: some View {
+        Button("새 프로필") {
+            viewModel.beginNewProfile()
+        }
+    }
+
+    private var deleteProfileButton: some View {
+        Button("프로필 삭제", role: .destructive) {
+            Task {
+                await viewModel.deleteEditingProfile()
+            }
+        }
+    }
+
+    private var saveProfileButton: some View {
+        Button("저장") {
+            Task {
+                await viewModel.saveProfile()
+            }
+        }
+        .buttonStyle(.borderedProminent)
     }
 }
