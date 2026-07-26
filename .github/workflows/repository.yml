@@ -1,0 +1,38 @@
+name: repository
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: repository-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - uses: Swatinem/rust-cache@v2
+      - name: Repository policy
+        run: cargo xtask check repository
+      - name: Regenerate synthetic fixtures
+        run: |
+          cargo xtask testdata regenerate
+          git diff --exit-code -- testdata
+      - name: Markdown
+        run: npx --yes markdownlint-cli2@0.18.1 "**/*.md" "#target"
+      - name: Spelling
+        uses: crate-ci/typos@v1.48.0
+      - name: No private guide or license
+        run: |
+          test ! -e LorePia_new_multiplatform_repository_private_guide.md
+          test ! -e LICENSE
+          test ! -e LICENSE.md

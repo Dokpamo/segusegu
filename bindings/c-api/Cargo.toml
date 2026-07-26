@@ -1,0 +1,22 @@
+[package]
+name = "lorepia-c-api"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "lorepia_core"
+crate-type = ["cdylib", "staticlib", "rlib"]
+doc = false
+
+[dependencies]
+lorepia-engine = { package = "lorepia-core", path = "../../crates/core" }
+serde.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

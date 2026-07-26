@@ -1,0 +1,79 @@
+<Page
+    x:Class="Lorepia.App.Pages.ImportReviewPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer>
+        <StackPanel
+            MaxWidth="760"
+            Padding="32"
+            Spacing="20">
+            <StackPanel Spacing="6">
+                <TextBlock
+                    FontSize="28"
+                    FontWeight="SemiBold"
+                    Text="Import review" />
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="Windows selects and stages the file. Rust owns package inspection and final storage."
+                    TextWrapping="Wrap" />
+            </StackPanel>
+
+            <Border
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="20">
+                <Grid ColumnSpacing="16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <FontIcon
+                        FontSize="30"
+                        Glyph="&#xE8B7;"
+                        VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock
+                            FontWeight="SemiBold"
+                            Text="{x:Bind ViewModel.SelectedFileName, Mode=OneWay}" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind ViewModel.SelectedFileSize, Mode=OneWay}" />
+                        <TextBlock
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            Text="{x:Bind ViewModel.SelectedFilePath, Mode=OneWay}"
+                            TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <InfoBar
+                IsClosable="False"
+                IsOpen="True"
+                Message="{x:Bind ViewModel.ReviewStatus, Mode=OneWay}"
+                Severity="Informational"
+                Title="Import boundary" />
+
+            <ProgressRing
+                HorizontalAlignment="Left"
+                IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
+
+            <StackPanel
+                Orientation="Horizontal"
+                Spacing="8">
+                <Button
+                    Click="ChooseFile_Click"
+                    Content="Choose file"
+                    Style="{StaticResource AccentButtonStyle}" />
+                <Button
+                    Click="Cancel_Click"
+                    Content="Clear staged file"
+                    IsEnabled="{x:Bind ViewModel.HasSelection, Mode=OneWay}" />
+                <Button
+                    Content="Approve import"
+                    IsEnabled="False"
+                    ToolTipService.ToolTip="The frame ABI does not expose commit_import." />
+            </StackPanel>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

@@ -1,0 +1,14 @@
+[files]
+extend-exclude = [
+  "apps/android/gradlew",
+  "apps/android/gradlew.bat",
+  "apps/android/app/src/main/generated/**",
+  "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/Generated/**",
+  "apps/apple/**/*.pbxproj",
+]
+
+[default.extend-words]
+caf = "caf"
+Lorepia = "Lorepia"
+UniFFI = "UniFFI"
+WinUI = "WinUI"

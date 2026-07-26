@@ -1,0 +1,27 @@
+name: apple
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apple-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.0
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios,aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - name: Build Rust XCFramework and Apple apps
+        run: ./scripts/build-apple.sh
+      - name: Verify generated Swift has no drift
+        run: git diff --exit-code -- apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/Generated

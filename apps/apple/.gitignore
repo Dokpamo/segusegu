@@ -1,0 +1,7 @@
+.build/
+DerivedData/
+GeneratedArtifacts/
+*.xcframework
+*.dSYM
+xcuserdata/
+*.xcuserstate

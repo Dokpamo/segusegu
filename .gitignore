@@ -1,0 +1,55 @@
+# Private bootstrap material (never commit)
+/LorePia_new_multiplatform_repository_private_guide.md
+
+# Rust
+/target/
+**/*.rs.bk
+
+# Android / Gradle
+**/.gradle/
+**/build/
+/apps/android/local.properties
+*.apk
+*.aab
+
+# Apple / Xcode
+**/DerivedData/
+*.xcframework
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserstate
+
+# Windows / .NET
+/apps/windows/**/bin/
+/apps/windows/**/obj/
+*.dll
+*.lib
+*.pdb
+*.appx
+*.msix
+
+# Generated native binaries
+*.so
+*.a
+*.dylib
+
+# Local app data
+/lorepia-data/
+*.sqlite
+*.sqlite3
+/staging/
+/recovery/
+
+# Credentials and environment
+.env
+.env.*
+!.env.example
+*.p12
+*.pfx
+*.mobileprovision
+
+# Editor and OS files
+.DS_Store
+.idea/
+.vscode/
+*.swp

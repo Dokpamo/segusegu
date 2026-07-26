@@ -1,0 +1,42 @@
+<Window
+    x:Class="Lorepia.App.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <NavigationView
+        x:Name="RootNavigationView"
+        IsBackButtonVisible="Collapsed"
+        IsSettingsVisible="True"
+        Loaded="RootNavigationView_Loaded"
+        PaneDisplayMode="Auto"
+        SelectionChanged="RootNavigationView_SelectionChanged">
+        <NavigationView.MenuItems>
+            <NavigationViewItem
+                x:Name="LibraryItem"
+                Content="Library"
+                Icon="Library"
+                Tag="library" />
+            <NavigationViewItem
+                Content="Import review"
+                Icon="OpenFile"
+                Tag="import" />
+            <NavigationViewItem
+                Content="Chat"
+                Icon="Message"
+                Tag="chat" />
+        </NavigationView.MenuItems>
+        <NavigationView.PaneFooter>
+            <StackPanel Padding="12,8">
+                <TextBlock
+                    FontWeight="SemiBold"
+                    Text="{x:Bind ViewModel.CoreVersionLabel, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis" />
+                <TextBlock
+                    FontSize="12"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="{x:Bind ViewModel.HealthLabel, Mode=OneWay}"
+                    TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+        </NavigationView.PaneFooter>
+        <Frame x:Name="ContentFrame" />
+    </NavigationView>
+</Window>

@@ -1,0 +1,21 @@
+[package]
+name = "lorepia-cli"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "lorepia"
+path = "src/main.rs"
+
+[dependencies]
+clap.workspace = true
+lorepia-content = { path = "../../crates/content" }
+lorepia-core = { path = "../../crates/core" }
+lorepia-domain = { path = "../../crates/domain" }
+lorepia-storage = { path = "../../crates/storage" }
+serde_json.workspace = true
+
+[lints]
+workspace = true

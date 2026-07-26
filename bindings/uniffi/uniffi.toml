@@ -1,0 +1,10 @@
+[bindings.kotlin]
+package_name = "dev.lorepia.core"
+cdylib_name = "lorepia_uniffi"
+android = true
+kotlin_target_version = "2.1.0"
+
+[bindings.swift]
+module_name = "LorepiaCore"
+ffi_module_name = "LorepiaCoreFFI"
+generate_module_map = true

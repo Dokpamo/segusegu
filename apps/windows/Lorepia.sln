@@ -1,0 +1,61 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.10.34928.147
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lorepia.App", "Lorepia.App\Lorepia.App.csproj", "{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lorepia.Native", "Lorepia.Native\Lorepia.Native.csproj", "{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Lorepia.Native.Tests", "Lorepia.Native.Tests\Lorepia.Native.Tests.csproj", "{2E2A9C2C-5714-44D7-A83A-D45B0980C334}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Debug|ARM64 = Debug|ARM64
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+		Release|ARM64 = Release|ARM64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Debug|Any CPU.Build.0 = Debug|x64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Debug|x64.ActiveCfg = Debug|x64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Debug|x64.Build.0 = Debug|x64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Debug|ARM64.Build.0 = Debug|ARM64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Release|Any CPU.ActiveCfg = Release|x64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Release|Any CPU.Build.0 = Release|x64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Release|x64.ActiveCfg = Release|x64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Release|x64.Build.0 = Release|x64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Release|ARM64.ActiveCfg = Release|ARM64
+		{4D1C1D09-888E-4CC2-A99F-5EA7C5362F6D}.Release|ARM64.Build.0 = Release|ARM64
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Debug|x64.Build.0 = Debug|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Release|x64.ActiveCfg = Release|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Release|x64.Build.0 = Release|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{8EED42B2-3CF5-4E8A-BE9A-C4EB198A15E1}.Release|ARM64.Build.0 = Release|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Debug|x64.Build.0 = Debug|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Release|x64.ActiveCfg = Release|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Release|x64.Build.0 = Release|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{2E2A9C2C-5714-44D7-A83A-D45B0980C334}.Release|ARM64.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

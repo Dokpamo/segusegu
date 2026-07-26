@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>Lorepia.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64;ARM64</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <PlatformTarget>$(Platform)</PlatformTarget>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'x64'">win-x64</RuntimeIdentifier>
+    <RuntimeIdentifier Condition="'$(Platform)' == 'ARM64'">win-arm64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250205002" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Lorepia.Native\Lorepia.Native.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(LorepiaNativeDllPath)' != '' and Exists('$(LorepiaNativeDllPath)')">
+    <None
+      Include="$(LorepiaNativeDllPath)"
+      Link="lorepia_core.dll"
+      CopyToOutputDirectory="PreserveNewest"
+      CopyToPublishDirectory="PreserveNewest"
+      Visible="false" />
+  </ItemGroup>
+
+  <Target Name="ValidateLorepiaNativeDll" BeforeTargets="Build">
+    <Error
+      Condition="'$(RequireLorepiaNativeDll)' == 'true' and '$(LorepiaNativeDllPath)' == ''"
+      Text="LorepiaNativeDllPath is required for a runnable Windows build." />
+    <Error
+      Condition="'$(RequireLorepiaNativeDll)' == 'true' and !Exists('$(LorepiaNativeDllPath)')"
+      Text="LorePia native DLL not found at '$(LorepiaNativeDllPath)'." />
+    <Message
+      Condition="'$(LorepiaNativeDllPath)' != '' and Exists('$(LorepiaNativeDllPath)')"
+      Importance="high"
+      Text="LorePia native DLL: $(LorepiaNativeDllPath)" />
+  </Target>
+</Project>

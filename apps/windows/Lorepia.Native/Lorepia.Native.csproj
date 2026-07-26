@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Lorepia.Native</RootNamespace>
+    <AssemblyName>Lorepia.Native</AssemblyName>
+    <Description>Safe high-level .NET binding for the LorePia Rust C ABI.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Lorepia.Native.Tests" />
+  </ItemGroup>
+</Project>

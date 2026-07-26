@@ -1,0 +1,77 @@
+<Page
+    x:Class="Lorepia.App.Pages.ChatPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:viewModels="using:Lorepia.App.ViewModels">
+    <Grid Padding="32">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Spacing="6">
+            <TextBlock
+                FontSize="28"
+                FontWeight="SemiBold"
+                Text="Chat" />
+            <TextBlock
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="{x:Bind ViewModel.Status}"
+                TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <ListView
+                Margin="0,20"
+                ItemsSource="{x:Bind ViewModel.Messages}">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:ChatMessage">
+                        <StackPanel Padding="12" Spacing="4">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="{x:Bind Author}" />
+                            <TextBlock
+                                Text="{x:Bind Text}"
+                                TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <StackPanel
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="8">
+                <FontIcon
+                    HorizontalAlignment="Center"
+                    FontSize="38"
+                    Glyph="&#xE8BD;" />
+                <TextBlock
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="Open a conversation after the generation ABI is available." />
+            </StackPanel>
+        </Grid>
+
+        <Grid
+            Grid.Row="2"
+            ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox
+                AcceptsReturn="True"
+                IsEnabled="{x:Bind ViewModel.IsComposerEnabled}"
+                PlaceholderText="Message"
+                Text="{x:Bind ViewModel.Draft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                TextWrapping="Wrap" />
+            <Button
+                Grid.Column="1"
+                Content="Send"
+                IsEnabled="{x:Bind ViewModel.IsComposerEnabled}"
+                Style="{StaticResource AccentButtonStyle}"
+                VerticalAlignment="Bottom" />
+        </Grid>
+    </Grid>
+</Page>
