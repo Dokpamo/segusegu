@@ -165,6 +165,19 @@ public struct CoreConversationState: Equatable, Sendable {
     }
 }
 
+public struct CoreMessageActionGeneration: Equatable, Sendable {
+    public let branch: CoreConversationBranch
+    public let generationID: String
+
+    public init(
+        branch: CoreConversationBranch,
+        generationID: String
+    ) {
+        self.branch = branch
+        self.generationID = generationID
+    }
+}
+
 public struct ChatMessage: Identifiable, Equatable, Sendable {
     public enum Role: String, Equatable, Sendable {
         case system

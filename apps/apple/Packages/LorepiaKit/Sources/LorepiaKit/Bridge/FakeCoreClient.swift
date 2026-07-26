@@ -68,8 +68,8 @@ public actor FakeCoreClient: CoreClient {
     public func apiVersions() async throws -> CoreVersionInfo {
         CoreVersionInfo(
             coreVersion: reportedVersion,
-            coreAPIVersion: 3,
-            bindingAPIVersion: 3,
+            coreAPIVersion: 4,
+            bindingAPIVersion: 4,
             chatEventVersion: 2
         )
     }
@@ -366,6 +366,337 @@ public actor FakeCoreClient: CoreClient {
             mode: mode,
             text: text,
             providerProfileID: providerProfileID
+        )
+    }
+
+    public func editUserMessage(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        replacementText: String,
+        providerProfileID: String,
+        credential _: String?
+    ) async throws -> CoreMessageActionGeneration {
+        guard profiles.contains(where: { $0.id == providerProfileID }) else {
+            throw CoreClientFailure.invalidResponse("프로바이더 프로필이 없습니다.")
+        }
+        let context = try messageActionContext(
+            conversationID: conversationID,
+            branchID: branchID,
+            expectedHeadMessageID: expectedHeadMessageID
+        )
+        guard let messageIndex = context.messages.firstIndex(
+            where: {
+                $0.id == messageID
+                    && $0.role == .user
+                    && $0.status == .complete
+            }
+        ) else {
+            throw CoreClientFailure.invalidResponse("편집할 사용자 메시지가 없습니다.")
+        }
+        let text = replacementText.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard !text.isEmpty else {
+            throw CoreClientFailure.invalidResponse("메시지를 입력하세요.")
+        }
+
+        let original = context.messages[messageIndex]
+        var branchMessages = Array(context.messages.prefix(upTo: messageIndex))
+        let generationID = UUID().uuidString
+        let edited = ChatMessage(
+            conversationID: conversationID,
+            parentID: original.parentID,
+            role: .user,
+            text: text
+        )
+        let assistant = ChatMessage(
+            conversationID: conversationID,
+            parentID: edited.id,
+            role: .assistant,
+            text: "편집한 메시지에 대한 테스트용 합성 응답입니다.",
+            generationID: generationID
+        )
+        branchMessages.append(contentsOf: [edited, assistant])
+        let branch = installActionBranch(
+            conversationID: conversationID,
+            forkMessageID: original.parentID,
+            messages: branchMessages
+        )
+        enqueueCompletedGeneration(
+            generationID: generationID,
+            conversationID: conversationID,
+            branchID: branch.id,
+            assistant: assistant
+        )
+        return CoreMessageActionGeneration(
+            branch: branch,
+            generationID: generationID
+        )
+    }
+
+    public func regenerateAssistantMessage(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        providerProfileID: String,
+        credential _: String?
+    ) async throws -> CoreMessageActionGeneration {
+        guard profiles.contains(where: { $0.id == providerProfileID }) else {
+            throw CoreClientFailure.invalidResponse("프로바이더 프로필이 없습니다.")
+        }
+        let context = try messageActionContext(
+            conversationID: conversationID,
+            branchID: branchID,
+            expectedHeadMessageID: expectedHeadMessageID
+        )
+        guard let messageIndex = context.messages.firstIndex(
+            where: {
+                $0.id == messageID
+                    && $0.role == .assistant
+                    && $0.status != .pending
+            }
+        ) else {
+            throw CoreClientFailure.invalidResponse("다시 생성할 응답이 없습니다.")
+        }
+        let original = context.messages[messageIndex]
+        guard let sourceUserID = original.parentID,
+              let userIndex = context.messages.firstIndex(
+                  where: {
+                      $0.id == sourceUserID
+                          && $0.role == .user
+                          && $0.status == .complete
+                  }
+              )
+        else {
+            throw CoreClientFailure.invalidResponse(
+                "응답의 사용자 메시지를 찾을 수 없습니다."
+            )
+        }
+        let sourceUser = context.messages[userIndex]
+
+        var branchMessages = Array(context.messages.prefix(upTo: userIndex))
+        let generationID = UUID().uuidString
+        let copiedUser = ChatMessage(
+            conversationID: conversationID,
+            parentID: sourceUser.parentID,
+            role: .user,
+            text: sourceUser.text
+        )
+        let assistant = ChatMessage(
+            conversationID: conversationID,
+            parentID: copiedUser.id,
+            role: .assistant,
+            text: "다시 생성한 테스트용 합성 응답입니다.",
+            generationID: generationID
+        )
+        branchMessages.append(contentsOf: [copiedUser, assistant])
+        let branch = installActionBranch(
+            conversationID: conversationID,
+            forkMessageID: sourceUser.parentID,
+            messages: branchMessages
+        )
+        enqueueCompletedGeneration(
+            generationID: generationID,
+            conversationID: conversationID,
+            branchID: branch.id,
+            assistant: assistant
+        )
+        return CoreMessageActionGeneration(
+            branch: branch,
+            generationID: generationID
+        )
+    }
+
+    public func removeMessageFromBranch(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String
+    ) async throws -> CoreConversationBranch {
+        let context = try messageActionContext(
+            conversationID: conversationID,
+            branchID: branchID,
+            expectedHeadMessageID: expectedHeadMessageID
+        )
+        guard let messageIndex = context.messages.firstIndex(
+            where: {
+                $0.id == messageID
+                    && $0.status != .pending
+                    && ($0.role == .user || $0.role == .assistant)
+            }
+        ) else {
+            throw CoreClientFailure.invalidResponse("삭제할 메시지가 없습니다.")
+        }
+
+        let remainingMessages = Array(
+            context.messages.prefix(upTo: messageIndex)
+        )
+        let timestamp = Self.timestamp()
+        let updatedBranch = CoreConversationBranch(
+            id: context.branch.id,
+            conversationID: context.branch.conversationID,
+            title: context.branch.title,
+            forkMessageID: context.branch.forkMessageID,
+            headMessageID: remainingMessages.last?.id,
+            createdAt: context.branch.createdAt,
+            updatedAt: timestamp
+        )
+        branchesByConversation[conversationID]?[context.branchIndex] =
+            updatedBranch
+        messagesByBranch[branchID] = remainingMessages
+        if let state = statesByConversation[conversationID],
+           state.activeBranchID == branchID
+        {
+            statesByConversation[conversationID] = CoreConversationState(
+                conversationID: conversationID,
+                activeBranchID: branchID,
+                selectedMode: state.selectedMode,
+                updatedAt: timestamp
+            )
+            messagesByConversation[conversationID] = remainingMessages
+        }
+        touchConversation(conversationID: conversationID, timestamp: timestamp)
+        return updatedBranch
+    }
+
+    private func messageActionContext(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?
+    ) throws -> (
+        branchIndex: Int,
+        branch: CoreConversationBranch,
+        messages: [ChatMessage]
+    ) {
+        guard let branchIndex = branchesByConversation[conversationID]?.firstIndex(
+            where: { $0.id == branchID }
+        ), let branch = branchesByConversation[conversationID]?[branchIndex]
+        else {
+            throw CoreClientFailure.invalidResponse("대화 분기가 없습니다.")
+        }
+        guard branch.headMessageID == expectedHeadMessageID else {
+            throw CoreClientFailure.invalidResponse(
+                "다른 기기나 흐름에서 대화가 먼저 변경되었습니다."
+            )
+        }
+        guard statesByConversation[conversationID]?.activeBranchID == branchID else {
+            throw CoreClientFailure.invalidResponse(
+                "현재 선택된 대화 흐름이 변경되었습니다."
+            )
+        }
+        let messages = messagesByBranch[branchID] ?? []
+        if let headMessageID = branch.headMessageID,
+           messages.first(where: { $0.id == headMessageID })?.status == .pending
+        {
+            throw CoreClientFailure.invalidResponse(
+                "응답 생성 중에는 메시지를 변경할 수 없습니다."
+            )
+        }
+        return (
+            branchIndex,
+            branch,
+            messages
+        )
+    }
+
+    private func installActionBranch(
+        conversationID: String,
+        forkMessageID: String?,
+        messages: [ChatMessage]
+    ) -> CoreConversationBranch {
+        let timestamp = Self.timestamp()
+        let branch = CoreConversationBranch(
+            id: UUID().uuidString,
+            conversationID: conversationID,
+            title: nil,
+            forkMessageID: forkMessageID,
+            headMessageID: messages.last?.id,
+            createdAt: timestamp,
+            updatedAt: timestamp
+        )
+        branchesByConversation[conversationID, default: []].append(branch)
+        messagesByBranch[branch.id] = messages
+        if let state = statesByConversation[conversationID] {
+            statesByConversation[conversationID] = CoreConversationState(
+                conversationID: conversationID,
+                activeBranchID: branch.id,
+                selectedMode: state.selectedMode,
+                updatedAt: timestamp
+            )
+        }
+        messagesByConversation[conversationID] = messages
+        touchConversation(conversationID: conversationID, timestamp: timestamp)
+        return branch
+    }
+
+    private func enqueueCompletedGeneration(
+        generationID: String,
+        conversationID: String,
+        branchID: String,
+        assistant: ChatMessage
+    ) {
+        events.append(contentsOf: [
+            ChatEvent(
+                eventVersion: 2,
+                generationID: generationID,
+                conversationID: conversationID,
+                branchID: branchID,
+                assistantMessageID: assistant.id,
+                sequence: 1,
+                kind: "generation_started"
+            ),
+            ChatEvent(
+                eventVersion: 2,
+                generationID: generationID,
+                conversationID: conversationID,
+                branchID: branchID,
+                assistantMessageID: assistant.id,
+                sequence: 2,
+                kind: "text_delta",
+                text: assistant.text
+            ),
+            ChatEvent(
+                eventVersion: 2,
+                generationID: generationID,
+                conversationID: conversationID,
+                branchID: branchID,
+                assistantMessageID: assistant.id,
+                sequence: 3,
+                kind: "message_committed",
+                messageID: assistant.id,
+                messageStatus: "complete"
+            ),
+            ChatEvent(
+                eventVersion: 2,
+                generationID: generationID,
+                conversationID: conversationID,
+                branchID: branchID,
+                assistantMessageID: assistant.id,
+                sequence: 4,
+                kind: "generation_finished"
+            ),
+        ])
+    }
+
+    private func touchConversation(
+        conversationID: String,
+        timestamp: String
+    ) {
+        guard let conversationIndex = conversations.firstIndex(
+            where: { $0.id == conversationID }
+        ) else {
+            return
+        }
+        let conversation = conversations[conversationIndex]
+        conversations[conversationIndex] = CoreConversation(
+            id: conversation.id,
+            characterID: conversation.characterID,
+            title: conversation.title,
+            createdAt: conversation.createdAt,
+            updatedAt: timestamp
         )
     }
 
@@ -705,6 +1036,35 @@ public actor UnavailableCoreClient: CoreClient {
         providerProfileID _: String,
         credential _: String?
     ) async throws -> String {
+        try unavailable()
+    }
+    public func editUserMessage(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        messageID _: String,
+        replacementText _: String,
+        providerProfileID _: String,
+        credential _: String?
+    ) async throws -> CoreMessageActionGeneration {
+        try unavailable()
+    }
+    public func regenerateAssistantMessage(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        messageID _: String,
+        providerProfileID _: String,
+        credential _: String?
+    ) async throws -> CoreMessageActionGeneration {
+        try unavailable()
+    }
+    public func removeMessageFromBranch(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        messageID _: String
+    ) async throws -> CoreConversationBranch {
         try unavailable()
     }
     public func cancelGeneration(generationID _: String) async throws { throw failure }

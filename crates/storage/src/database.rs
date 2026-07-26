@@ -29,6 +29,18 @@ pub struct DatabaseStats {
     pub pending_imports: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MessageGenerationAction {
+    EditUser,
+    RegenerateAssistant,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MessageGenerationActionContext {
+    pub fork_message_id: Option<MessageId>,
+    pub user_text: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StagedAssetImport {
     pub staged_path: PathBuf,
@@ -744,6 +756,100 @@ impl Storage {
             .map_err(storage_db_error)
     }
 
+    pub fn prepare_message_generation_action(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        target_message_id: &MessageId,
+        action: MessageGenerationAction,
+    ) -> CoreResult<MessageGenerationActionContext> {
+        let connection = self.connection()?;
+        load_message_generation_action_context(
+            &connection,
+            conversation_id,
+            branch_id,
+            expected_head,
+            target_message_id,
+            action,
+        )
+    }
+
+    pub fn list_recent_message_lineage_for_prompt(
+        &self,
+        conversation_id: &ConversationId,
+        head_message_id: Option<&MessageId>,
+        max_messages: usize,
+        max_message_bytes: usize,
+        max_message_chars: usize,
+    ) -> CoreResult<Vec<Message>> {
+        if head_message_id.is_none()
+            || max_messages == 0
+            || max_message_bytes == 0
+            || max_message_chars == 0
+        {
+            return Ok(Vec::new());
+        }
+        let max_messages = i64::try_from(max_messages)
+            .map_err(|_| CoreError::invalid("message limit exceeds SQLite integer range"))?;
+        let max_message_bytes = i64::try_from(max_message_bytes)
+            .map_err(|_| CoreError::invalid("byte limit exceeds SQLite integer range"))?;
+        let max_message_chars = i64::try_from(max_message_chars)
+            .map_err(|_| CoreError::invalid("character limit exceeds SQLite integer range"))?;
+        let connection = self.connection()?;
+        let mut statement = connection
+            .prepare(
+                "WITH RECURSIVE lineage(
+                   id, conversation_id, parent_id, role, content, status,
+                   generation_id, created_at, depth
+                 ) AS (
+                   SELECT id, conversation_id, parent_id, role, content, status,
+                          generation_id, created_at, 0
+                   FROM messages
+                   WHERE conversation_id = ?1 AND id = ?2
+                   UNION ALL
+                   SELECT parent.id, parent.conversation_id, parent.parent_id,
+                          parent.role, parent.content, parent.status,
+                          parent.generation_id, parent.created_at, lineage.depth + 1
+                   FROM messages AS parent
+                   JOIN lineage
+                     ON parent.conversation_id = lineage.conversation_id
+                    AND parent.id = lineage.parent_id
+                   WHERE lineage.depth < 511
+                 ),
+                 selected AS (
+                   SELECT *
+                   FROM lineage
+                   WHERE role != 'system'
+                     AND status != 'pending'
+                     AND (status = 'complete' OR length(content) > 0)
+                     AND length(CAST(content AS BLOB)) <= ?4
+                     AND length(content) <= ?5
+                   ORDER BY depth
+                   LIMIT ?3
+                 )
+                 SELECT id, conversation_id, parent_id, role, content, status,
+                        generation_id, created_at
+                 FROM selected
+                 ORDER BY depth DESC",
+            )
+            .map_err(storage_db_error)?;
+        let rows = statement
+            .query_map(
+                params![
+                    conversation_id.0,
+                    head_message_id.map(|message_id| message_id.0.as_str()),
+                    max_messages,
+                    max_message_bytes,
+                    max_message_chars
+                ],
+                map_message,
+            )
+            .map_err(storage_db_error)?;
+        rows.collect::<Result<Vec<_>, _>>()
+            .map_err(storage_db_error)
+    }
+
     /// Loads the newest eligible suffix from one selected message lineage.
     pub fn list_recent_branch_messages_for_prompt(
         &self,
@@ -910,6 +1016,200 @@ impl Storage {
             )
             .map_err(storage_db_error)?;
         transaction.commit().map_err(storage_db_error)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn append_message_generation_action(
+        &self,
+        source_branch_id: &ConversationBranchId,
+        expected_source_head: Option<&MessageId>,
+        target_message_id: &MessageId,
+        action: MessageGenerationAction,
+        branch: &ConversationBranch,
+        user: &Message,
+        assistant: &Message,
+        generation: &GenerationRecord,
+    ) -> CoreResult<()> {
+        validate_generation_append(
+            &branch.id,
+            branch.fork_message_id.as_ref(),
+            user,
+            assistant,
+            generation,
+        )?;
+        if branch.conversation_id != user.conversation_id
+            || branch.head_message_id.as_ref() != Some(&assistant.id)
+            || branch.fork_message_id != user.parent_id
+        {
+            return Err(CoreError::invalid(
+                "message action branch does not own the appended generation",
+            ));
+        }
+
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction().map_err(storage_db_error)?;
+        let context = load_message_generation_action_context(
+            &transaction,
+            &user.conversation_id,
+            source_branch_id,
+            expected_source_head,
+            target_message_id,
+            action,
+        )?;
+        if context.fork_message_id != branch.fork_message_id
+            || (action == MessageGenerationAction::RegenerateAssistant
+                && context.user_text != user.content)
+        {
+            return Err(stale_branch_error());
+        }
+
+        insert_message(&transaction, user)?;
+        insert_message(&transaction, assistant)?;
+        transaction
+            .execute(
+                "INSERT INTO conversation_branches
+                 (id, conversation_id, title, fork_message_id, head_message_id,
+                  created_at, updated_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    branch.id.0,
+                    branch.conversation_id.0,
+                    branch.title,
+                    branch
+                        .fork_message_id
+                        .as_ref()
+                        .map(|message_id| message_id.0.as_str()),
+                    branch
+                        .head_message_id
+                        .as_ref()
+                        .map(|message_id| message_id.0.as_str()),
+                    branch.created_at.to_rfc3339(),
+                    branch.updated_at.to_rfc3339()
+                ],
+            )
+            .map_err(storage_db_error)?;
+        insert_generation(&transaction, generation)?;
+        let now = Utc::now().to_rfc3339();
+        let changed = transaction
+            .execute(
+                "UPDATE conversation_state
+                 SET active_branch_id = ?3, updated_at = ?4
+                 WHERE conversation_id = ?1
+                   AND active_branch_id = ?2",
+                params![user.conversation_id.0, source_branch_id.0, branch.id.0, now],
+            )
+            .map_err(storage_db_error)?;
+        if changed != 1 {
+            return Err(stale_branch_error());
+        }
+        transaction
+            .execute(
+                "UPDATE conversations SET updated_at = ?2 WHERE id = ?1",
+                params![user.conversation_id.0, now],
+            )
+            .map_err(storage_db_error)?;
+        transaction.commit().map_err(storage_db_error)
+    }
+
+    pub fn remove_message_from_branch(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        target_message_id: &MessageId,
+    ) -> CoreResult<ConversationBranch> {
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction().map_err(storage_db_error)?;
+        let target = load_branch_action_target(
+            &transaction,
+            conversation_id,
+            branch_id,
+            expected_head,
+            target_message_id,
+        )?;
+        if target.status == MessageStatus::Pending {
+            return Err(active_generation_action_error());
+        }
+        if !matches!(target.role, MessageRole::User | MessageRole::Assistant) {
+            return Err(CoreError::invalid(
+                "only user or assistant messages can be removed from a branch",
+            ));
+        }
+        if let Some(new_head) = target.parent_id.as_ref() {
+            let status = transaction
+                .query_row(
+                    "SELECT status
+                     FROM messages
+                     WHERE conversation_id = ?1 AND id = ?2",
+                    params![conversation_id.0, new_head.0],
+                    |row| row.get::<_, String>(0),
+                )
+                .optional()
+                .map_err(storage_db_error)?
+                .ok_or_else(|| {
+                    CoreError::new(
+                        CoreErrorCode::StorageCorrupted,
+                        "message action parent was not found",
+                        false,
+                    )
+                })?;
+            if str_to_status(&status, 0).map_err(storage_db_error)? == MessageStatus::Pending {
+                return Err(active_generation_action_error());
+            }
+        }
+
+        let now = Utc::now().to_rfc3339();
+        let changed = transaction
+            .execute(
+                "UPDATE conversation_branches
+                 SET head_message_id = ?3, updated_at = ?4
+                 WHERE id = ?1
+                   AND conversation_id = ?2
+                   AND (
+                     (head_message_id IS NULL AND ?5 IS NULL)
+                     OR head_message_id = ?5
+                   )",
+                params![
+                    branch_id.0,
+                    conversation_id.0,
+                    target
+                        .parent_id
+                        .as_ref()
+                        .map(|message_id| message_id.0.as_str()),
+                    now,
+                    expected_head.map(|message_id| message_id.0.as_str())
+                ],
+            )
+            .map_err(storage_db_error)?;
+        if changed != 1 {
+            return Err(stale_branch_error());
+        }
+        transaction
+            .execute(
+                "UPDATE conversation_state
+                 SET updated_at = ?3
+                 WHERE conversation_id = ?1 AND active_branch_id = ?2",
+                params![conversation_id.0, branch_id.0, now],
+            )
+            .map_err(storage_db_error)?;
+        transaction
+            .execute(
+                "UPDATE conversations SET updated_at = ?2 WHERE id = ?1",
+                params![conversation_id.0, now],
+            )
+            .map_err(storage_db_error)?;
+        let branch = transaction
+            .query_row(
+                "SELECT id, conversation_id, title, fork_message_id, head_message_id,
+                        created_at, updated_at
+                 FROM conversation_branches
+                 WHERE id = ?1 AND conversation_id = ?2",
+                params![branch_id.0, conversation_id.0],
+                map_conversation_branch,
+            )
+            .map_err(storage_db_error)?;
+        transaction.commit().map_err(storage_db_error)?;
+        Ok(branch)
     }
 
     pub fn finalize_generation(
@@ -1736,6 +2036,210 @@ fn validate_generation_append(
     Ok(())
 }
 
+fn load_message_generation_action_context(
+    connection: &Connection,
+    conversation_id: &ConversationId,
+    branch_id: &ConversationBranchId,
+    expected_head: Option<&MessageId>,
+    target_message_id: &MessageId,
+    action: MessageGenerationAction,
+) -> CoreResult<MessageGenerationActionContext> {
+    let target = load_branch_action_target(
+        connection,
+        conversation_id,
+        branch_id,
+        expected_head,
+        target_message_id,
+    )?;
+    match action {
+        MessageGenerationAction::EditUser => {
+            if target.role != MessageRole::User || target.status != MessageStatus::Complete {
+                return Err(CoreError::invalid(
+                    "only a complete user message can be edited",
+                ));
+            }
+            Ok(MessageGenerationActionContext {
+                fork_message_id: target.parent_id,
+                user_text: target.content,
+            })
+        }
+        MessageGenerationAction::RegenerateAssistant => {
+            if target.role != MessageRole::Assistant {
+                return Err(CoreError::invalid(
+                    "only an assistant message can be regenerated",
+                ));
+            }
+            if target.status == MessageStatus::Pending {
+                return Err(active_generation_action_error());
+            }
+            let user_message_id = target.parent_id.ok_or_else(|| {
+                CoreError::new(
+                    CoreErrorCode::StorageCorrupted,
+                    "assistant message is missing its user parent",
+                    false,
+                )
+            })?;
+            let user = connection
+                .query_row(
+                    "SELECT id, conversation_id, parent_id, role, content, status,
+                            generation_id, created_at
+                     FROM messages
+                     WHERE conversation_id = ?1 AND id = ?2",
+                    params![conversation_id.0, user_message_id.0],
+                    map_message,
+                )
+                .optional()
+                .map_err(storage_db_error)?
+                .ok_or_else(|| {
+                    CoreError::new(
+                        CoreErrorCode::StorageCorrupted,
+                        "assistant message user parent was not found",
+                        false,
+                    )
+                })?;
+            if user.role != MessageRole::User || user.status != MessageStatus::Complete {
+                return Err(CoreError::new(
+                    CoreErrorCode::StorageCorrupted,
+                    "assistant message parent is not a complete user message",
+                    false,
+                ));
+            }
+            Ok(MessageGenerationActionContext {
+                fork_message_id: user.parent_id,
+                user_text: user.content,
+            })
+        }
+    }
+}
+
+fn load_branch_action_target(
+    connection: &Connection,
+    conversation_id: &ConversationId,
+    branch_id: &ConversationBranchId,
+    expected_head: Option<&MessageId>,
+    target_message_id: &MessageId,
+) -> CoreResult<Message> {
+    validate_branch_action_snapshot(connection, conversation_id, branch_id, expected_head)?;
+
+    connection
+        .query_row(
+            "WITH RECURSIVE lineage(
+               id, conversation_id, parent_id, role, content, status,
+               generation_id, created_at
+             ) AS (
+               SELECT messages.id, messages.conversation_id, messages.parent_id,
+                      messages.role, messages.content, messages.status,
+                      messages.generation_id, messages.created_at
+               FROM conversation_branches
+               JOIN messages
+                 ON messages.conversation_id = conversation_branches.conversation_id
+                AND messages.id = conversation_branches.head_message_id
+               WHERE conversation_branches.id = ?1
+               UNION
+               SELECT parent.id, parent.conversation_id, parent.parent_id,
+                      parent.role, parent.content, parent.status,
+                      parent.generation_id, parent.created_at
+               FROM messages AS parent
+               JOIN lineage
+                 ON parent.conversation_id = lineage.conversation_id
+                AND parent.id = lineage.parent_id
+             )
+             SELECT id, conversation_id, parent_id, role, content, status,
+                    generation_id, created_at
+             FROM lineage
+             WHERE id = ?2
+             LIMIT 1",
+            params![branch_id.0, target_message_id.0],
+            map_message,
+        )
+        .optional()
+        .map_err(storage_db_error)?
+        .ok_or_else(|| {
+            CoreError::new(
+                CoreErrorCode::NotFound,
+                "message was not found in the selected branch",
+                false,
+            )
+        })
+}
+
+fn validate_branch_action_snapshot(
+    connection: &Connection,
+    conversation_id: &ConversationId,
+    branch_id: &ConversationBranchId,
+    expected_head: Option<&MessageId>,
+) -> CoreResult<()> {
+    let branch = connection
+        .query_row(
+            "SELECT branches.conversation_id, branches.head_message_id,
+                    state.active_branch_id
+             FROM conversation_branches AS branches
+             JOIN conversation_state AS state
+               ON state.conversation_id = branches.conversation_id
+             WHERE branches.id = ?1",
+            [&branch_id.0],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(storage_db_error)?
+        .ok_or_else(|| {
+            CoreError::new(
+                CoreErrorCode::NotFound,
+                "conversation branch was not found",
+                false,
+            )
+        })?;
+    if branch.0 != conversation_id.0 {
+        return Err(CoreError::new(
+            CoreErrorCode::NotFound,
+            "conversation branch was not found in the conversation",
+            false,
+        ));
+    }
+    if branch.1.as_deref() != expected_head.map(|message_id| message_id.0.as_str())
+        || branch.2 != branch_id.0
+    {
+        return Err(stale_branch_error());
+    }
+    if let Some(head_message_id) = branch.1.as_deref() {
+        let status = connection
+            .query_row(
+                "SELECT status
+                 FROM messages
+                 WHERE conversation_id = ?1 AND id = ?2",
+                params![conversation_id.0, head_message_id],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(storage_db_error)?
+            .ok_or_else(|| {
+                CoreError::new(
+                    CoreErrorCode::StorageCorrupted,
+                    "conversation branch head was not found",
+                    false,
+                )
+            })?;
+        if str_to_status(&status, 0).map_err(storage_db_error)? == MessageStatus::Pending {
+            return Err(active_generation_action_error());
+        }
+    }
+    Ok(())
+}
+
+fn active_generation_action_error() -> CoreError {
+    CoreError::new(
+        CoreErrorCode::InvalidInput,
+        "message actions are unavailable while the branch is generating",
+        true,
+    )
+}
+
 fn insert_message(transaction: &rusqlite::Transaction<'_>, message: &Message) -> CoreResult<()> {
     transaction
         .execute(
@@ -1880,7 +2384,7 @@ fn persist_terminal_assistant(
 fn stale_branch_error() -> CoreError {
     CoreError::new(
         CoreErrorCode::InvalidInput,
-        "conversation branch head changed; refresh before sending",
+        "conversation branch head changed; refresh before retrying",
         true,
     )
 }
@@ -2425,6 +2929,283 @@ mod tests {
     use tempfile::{NamedTempFile, tempdir};
 
     use super::*;
+
+    fn append_complete_generation(
+        storage: &Storage,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        user_text: &str,
+        assistant_text: &str,
+    ) -> (Message, Message) {
+        let user = Message::user_after(conversation_id.clone(), expected_head.cloned(), user_text);
+        let generation_id = GenerationId::new();
+        let pending = Message::pending_assistant(
+            conversation_id.clone(),
+            user.id.clone(),
+            generation_id.clone(),
+        );
+        let generation = GenerationRecord {
+            id: generation_id,
+            conversation_id: conversation_id.clone(),
+            branch_id: branch_id.clone(),
+            user_message_id: user.id.clone(),
+            assistant_message_id: Some(pending.id.clone()),
+            mode: ConversationMode::Chat,
+            model: "synthetic".to_owned(),
+            status: GenerationStatus::Running,
+            input_tokens: None,
+            output_tokens: None,
+            error_code: None,
+            started_at: pending.created_at,
+            finished_at: None,
+        };
+        storage
+            .append_generation(branch_id, expected_head, &user, &pending, &generation)
+            .expect("append generation");
+        let mut assistant = pending;
+        assistant.content = assistant_text.to_owned();
+        assistant.status = MessageStatus::Complete;
+        storage
+            .finalize_generation(&assistant, None, None, true)
+            .expect("finalize generation");
+        (user, assistant)
+    }
+
+    fn imported_storage() -> (
+        tempfile::TempDir,
+        Storage,
+        Conversation,
+        ConversationBranchId,
+    ) {
+        let root = tempdir().expect("temp root");
+        let mut staged = NamedTempFile::new_in(root.path()).expect("staging");
+        staged.write_all(b"character").expect("source");
+        let character = Character::new("Segu", "Guide", hex::encode(Sha256::digest(b"character")));
+        let storage = Storage::open(root.path()).expect("open storage");
+        storage
+            .commit_character_import(
+                staged.path(),
+                &character,
+                9,
+                &Uuid::new_v4().to_string(),
+                &[],
+            )
+            .expect("commit import");
+        let conversation = Conversation::new(&character.id, &character.name);
+        let (_, state) = storage
+            .save_conversation_with_mode(&conversation, ConversationMode::Chat)
+            .expect("save conversation");
+        (root, storage, conversation, state.active_branch_id)
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn message_actions_preserve_rows_and_guard_branch_snapshots() {
+        let (_root, storage, conversation, source_branch_id) = imported_storage();
+        let (original_user, original_assistant) = append_complete_generation(
+            &storage,
+            &conversation.id,
+            &source_branch_id,
+            None,
+            "original",
+            "original response",
+        );
+        let context = storage
+            .prepare_message_generation_action(
+                &conversation.id,
+                &source_branch_id,
+                Some(&original_assistant.id),
+                &original_user.id,
+                MessageGenerationAction::EditUser,
+            )
+            .expect("prepare edit");
+        assert!(context.fork_message_id.is_none());
+        assert_eq!(context.user_text, "original");
+
+        let edited_user = Message::user(conversation.id.clone(), "edited");
+        let action_generation_id = GenerationId::new();
+        let pending = Message::pending_assistant(
+            conversation.id.clone(),
+            edited_user.id.clone(),
+            action_generation_id.clone(),
+        );
+        let now = Utc::now();
+        let action_branch = ConversationBranch {
+            id: ConversationBranchId::new(),
+            conversation_id: conversation.id.clone(),
+            title: None,
+            fork_message_id: None,
+            head_message_id: Some(pending.id.clone()),
+            created_at: now,
+            updated_at: now,
+        };
+        let generation = GenerationRecord {
+            id: action_generation_id,
+            conversation_id: conversation.id.clone(),
+            branch_id: action_branch.id.clone(),
+            user_message_id: edited_user.id.clone(),
+            assistant_message_id: Some(pending.id.clone()),
+            mode: ConversationMode::Chat,
+            model: "synthetic".to_owned(),
+            status: GenerationStatus::Running,
+            input_tokens: None,
+            output_tokens: None,
+            error_code: None,
+            started_at: pending.created_at,
+            finished_at: None,
+        };
+        storage
+            .append_message_generation_action(
+                &source_branch_id,
+                Some(&original_assistant.id),
+                &original_user.id,
+                MessageGenerationAction::EditUser,
+                &action_branch,
+                &edited_user,
+                &pending,
+                &generation,
+            )
+            .expect("append edit branch");
+        assert_eq!(
+            storage
+                .get_conversation_state(&conversation.id)
+                .expect("state")
+                .active_branch_id,
+            action_branch.id
+        );
+        assert_eq!(
+            storage
+                .list_branch_messages(&source_branch_id)
+                .expect("source lineage")
+                .iter()
+                .map(|message| message.content.as_str())
+                .collect::<Vec<_>>(),
+            ["original", "original response"]
+        );
+
+        let pending_error = storage
+            .remove_message_from_branch(
+                &conversation.id,
+                &action_branch.id,
+                Some(&pending.id),
+                &pending.id,
+            )
+            .expect_err("pending branch must reject removal");
+        assert_eq!(pending_error.code, CoreErrorCode::InvalidInput);
+        assert!(pending_error.recoverable);
+
+        let mut terminal = pending.clone();
+        terminal.content = "edited response".to_owned();
+        terminal.status = MessageStatus::Complete;
+        storage
+            .finalize_generation(&terminal, None, None, true)
+            .expect("finalize edited response");
+        let message_count = storage
+            .list_messages(&conversation.id)
+            .expect("all rows")
+            .len();
+        let rewound = storage
+            .remove_message_from_branch(
+                &conversation.id,
+                &action_branch.id,
+                Some(&terminal.id),
+                &terminal.id,
+            )
+            .expect("rewind assistant");
+        assert_eq!(rewound.head_message_id, Some(edited_user.id.clone()));
+        assert_eq!(
+            storage
+                .list_branch_messages(&action_branch.id)
+                .expect("rewound lineage"),
+            vec![edited_user]
+        );
+        assert_eq!(
+            storage
+                .list_messages(&conversation.id)
+                .expect("preserved rows")
+                .len(),
+            message_count,
+            "logical removal must not delete immutable message rows"
+        );
+
+        let stale = storage
+            .remove_message_from_branch(
+                &conversation.id,
+                &action_branch.id,
+                Some(&terminal.id),
+                &original_user.id,
+            )
+            .expect_err("stale head");
+        assert_eq!(stale.code, CoreErrorCode::InvalidInput);
+        assert!(stale.recoverable);
+    }
+
+    #[test]
+    fn message_action_lineage_validation_is_deep_and_cycle_safe() {
+        let (_root, storage, conversation, branch_id) = imported_storage();
+        let (first_message_id, last_message_id) = {
+            let mut connection = storage.connection().expect("connection");
+            let transaction = connection.transaction().expect("transaction");
+            let mut parent_id = None;
+            let mut first_message_id = None;
+            let mut last_message_id = None;
+            for index in 0..4_105 {
+                let message = Message::user_after(
+                    conversation.id.clone(),
+                    parent_id.clone(),
+                    format!("message {index}"),
+                );
+                first_message_id.get_or_insert_with(|| message.id.clone());
+                parent_id = Some(message.id.clone());
+                last_message_id = Some(message.id.clone());
+                insert_message(&transaction, &message).expect("insert deep message");
+            }
+            let last_message_id = last_message_id.expect("last message");
+            transaction
+                .execute(
+                    "UPDATE conversation_branches
+                     SET head_message_id = ?2
+                     WHERE id = ?1",
+                    params![branch_id.0, last_message_id.0],
+                )
+                .expect("update branch head");
+            transaction.commit().expect("commit deep lineage");
+            (first_message_id.expect("first message"), last_message_id)
+        };
+
+        let context = storage
+            .prepare_message_generation_action(
+                &conversation.id,
+                &branch_id,
+                Some(&last_message_id),
+                &first_message_id,
+                MessageGenerationAction::EditUser,
+            )
+            .expect("find a visible message beyond the former depth cutoff");
+        assert!(context.fork_message_id.is_none());
+
+        storage
+            .connection()
+            .expect("connection")
+            .execute(
+                "UPDATE messages
+                 SET parent_id = ?2
+                 WHERE conversation_id = ?1 AND id = ?3",
+                params![conversation.id.0, last_message_id.0, first_message_id.0],
+            )
+            .expect("create synthetic corrupted cycle");
+        let error = storage
+            .prepare_message_generation_action(
+                &conversation.id,
+                &branch_id,
+                Some(&last_message_id),
+                &MessageId("missing-from-cycle".to_owned()),
+                MessageGenerationAction::EditUser,
+            )
+            .expect_err("cycle-safe lookup must terminate");
+        assert_eq!(error.code, CoreErrorCode::NotFound);
+    }
 
     #[test]
     fn persists_character_and_settings_across_reopen() {

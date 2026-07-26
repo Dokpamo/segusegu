@@ -64,6 +64,30 @@ final class ChatBranchControlsTests: XCTestCase {
         )
     }
 
+    func testMessageActionsMatchRoleSemantics() {
+        XCTAssertEqual(
+            ChatMessageActionPresentation.actions(for: .user),
+            [.edit, .copy, .branch, .delete]
+        )
+        XCTAssertEqual(
+            ChatMessageActionPresentation.actions(for: .assistant),
+            [.copy, .regenerate, .branch, .delete]
+        )
+        XCTAssertTrue(
+            ChatMessageActionPresentation.actions(for: .system).isEmpty
+        )
+        XCTAssertTrue(
+            ChatMessageActionPresentation.actions(for: .notice).isEmpty
+        )
+        XCTAssertEqual(
+            Set(ChatMessageAction.allCases.map(\.systemImage)).count,
+            ChatMessageAction.allCases.count
+        )
+        XCTAssertTrue(
+            ChatMessageAction.allCases.allSatisfy { !$0.title.isEmpty }
+        )
+    }
+
     private var syntheticBranches: [ChatBranchOption] {
         [
             ChatBranchOption(

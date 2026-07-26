@@ -408,6 +408,147 @@ final class FeatureViewModelTests: XCTestCase {
         )
     }
 
+    func testChatEditingUserMessageCreatesAndSelectsANewBranch() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setCharacter(character)
+        viewModel.draft = "원래 질문"
+        await viewModel.submitMessage()
+        let originalBranchID = try XCTUnwrap(viewModel.activeBranchID)
+        let userMessageID = try XCTUnwrap(
+            viewModel.messages.first(where: { $0.role == .user })?.id
+        )
+
+        let edited = await viewModel.editUserMessage(
+            messageID: userMessageID,
+            replacementText: "수정한 질문"
+        )
+
+        XCTAssertTrue(edited)
+        XCTAssertNotEqual(viewModel.activeBranchID, originalBranchID)
+        XCTAssertEqual(
+            viewModel.messages.map(\.role),
+            [.user, .assistant]
+        )
+        XCTAssertEqual(viewModel.messages.first?.text, "수정한 질문")
+        XCTAssertTrue(
+            viewModel.messages.last?.text.contains("편집한 메시지") == true
+        )
+        XCTAssertEqual(viewModel.branches.count, 2)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testChatEditFailureKeepsARecoverableConfigurationMessage() async throws {
+        let client = FakeCoreClient(profiles: [])
+        let character = LibraryCharacter.previewCharacters[0]
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setCharacter(character)
+        let conversationID = try XCTUnwrap(viewModel.conversation?.id)
+        let user = ChatMessage(
+            id: "editable-user",
+            conversationID: conversationID,
+            role: .user,
+            text: "원래 질문",
+            status: .complete
+        )
+        let assistant = ChatMessage(
+            id: "editable-assistant",
+            conversationID: conversationID,
+            role: .assistant,
+            text: "원래 응답",
+            status: .complete,
+            generationID: "editable-generation"
+        )
+        await client.replaceMessagesForTesting(
+            conversationID: conversationID,
+            messages: [user, assistant]
+        )
+        await viewModel.refreshMessages()
+
+        let edited = await viewModel.editUserMessage(
+            messageID: user.id,
+            replacementText: "잃어버리면 안 되는 수정문"
+        )
+
+        XCTAssertFalse(edited)
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            "설정에서 사용할 프로바이더 프로필을 선택하세요."
+        )
+        XCTAssertEqual(viewModel.messages.first?.text, "원래 질문")
+    }
+
+    func testChatRegeneratingAssistantCreatesAndSelectsANewBranch() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setCharacter(character)
+        viewModel.draft = "다시 답해줘"
+        await viewModel.submitMessage()
+        let originalBranchID = try XCTUnwrap(viewModel.activeBranchID)
+        let originalAssistant = try XCTUnwrap(
+            viewModel.messages.first(where: { $0.role == .assistant })
+        )
+
+        await viewModel.regenerateAssistantMessage(
+            messageID: originalAssistant.id
+        )
+
+        XCTAssertNotEqual(viewModel.activeBranchID, originalBranchID)
+        XCTAssertEqual(
+            viewModel.messages.map(\.role),
+            [.user, .assistant]
+        )
+        XCTAssertNotEqual(viewModel.messages.last?.id, originalAssistant.id)
+        XCTAssertTrue(
+            viewModel.messages.last?.text.contains("다시 생성한") == true
+        )
+        XCTAssertEqual(viewModel.branches.count, 2)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testChatRemovingMessageRewindsTheCurrentBranch() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setCharacter(character)
+        viewModel.draft = "삭제 테스트"
+        await viewModel.submitMessage()
+        let branchID = try XCTUnwrap(viewModel.activeBranchID)
+        let assistantID = try XCTUnwrap(
+            viewModel.messages.last(where: { $0.role == .assistant })?.id
+        )
+
+        await viewModel.removeMessage(messageID: assistantID)
+
+        XCTAssertEqual(viewModel.activeBranchID, branchID)
+        XCTAssertEqual(viewModel.messages.map(\.role), [.user])
+        XCTAssertEqual(viewModel.branches.count, 1)
+        XCTAssertEqual(viewModel.branches.first?.headMessageID, viewModel.messages.last?.id)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
     func testChatIgnoresV2EventsFromInactiveBranch() async throws {
         let client = FakeCoreClient()
         let character = LibraryCharacter.previewCharacters[0]

@@ -42,6 +42,210 @@ extension ConversationMode: Identifiable {
     }
 }
 
+public enum ChatRoomSettingsTriggerStyle: Equatable, Sendable {
+    case toolbar
+    case modeChip
+}
+
+public struct ChatRoomSettingsTrigger: View {
+    private let mode: ConversationMode
+    private let style: ChatRoomSettingsTriggerStyle
+    private let isEnabled: Bool
+    private let action: () -> Void
+
+    public init(
+        mode: ConversationMode,
+        style: ChatRoomSettingsTriggerStyle,
+        isEnabled: Bool = true,
+        action: @escaping () -> Void
+    ) {
+        self.mode = mode
+        self.style = style
+        self.isEnabled = isEnabled
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(action: action) {
+            switch style {
+            case .toolbar:
+                Image(systemName: "ellipsis")
+                    .frame(minWidth: 44, minHeight: 44)
+            case .modeChip:
+                Label(mode.title, systemImage: mode.systemImage)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .padding(.horizontal, 11)
+                    .frame(minHeight: 44)
+                    .chatCompactControlSurface(isInteractive: isEnabled)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(
+            style == .toolbar ? "대화 설정" : "\(mode.title) 모드"
+        )
+        .accessibilityValue(mode.title)
+        .accessibilityHint("응답 모드와 대화 분기를 설정합니다")
+        .accessibilityIdentifier(
+            style == .toolbar
+                ? "chat-room-settings-trigger-toolbar"
+                : "chat-room-settings-trigger-mode"
+        )
+    }
+}
+
+public struct ChatRoomSettingsSheet: View {
+    private let mode: ConversationMode
+    private let branches: [ChatBranchOption]
+    private let selectedBranchID: String?
+    private let isEnabled: Bool
+    private let errorMessage: String?
+    private let onModeChange: (ConversationMode) -> Void
+    private let onSelectBranch: (String) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedMode: ConversationMode
+
+    public init(
+        mode: ConversationMode,
+        branches: [ChatBranchOption],
+        selectedBranchID: String?,
+        isEnabled: Bool = true,
+        errorMessage: String? = nil,
+        onModeChange: @escaping (ConversationMode) -> Void,
+        onSelectBranch: @escaping (String) -> Void
+    ) {
+        self.mode = mode
+        self.branches = branches
+        self.selectedBranchID = selectedBranchID
+        self.isEnabled = isEnabled
+        self.errorMessage = errorMessage
+        self.onModeChange = onModeChange
+        self.onSelectBranch = onSelectBranch
+        _selectedMode = State(initialValue: mode)
+    }
+
+    public var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Picker(
+                        "응답 모드",
+                        selection: $selectedMode
+                    ) {
+                        ForEach(ConversationMode.allCases) { mode in
+                            Label(mode.title, systemImage: mode.systemImage)
+                                .tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(!isEnabled)
+
+                    Text(selectedMode.detail)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } header: {
+                    Text("응답 방식")
+                }
+
+                Section("대화 흐름") {
+                    if branches.isEmpty {
+                        Label(
+                            "아직 분기가 없습니다",
+                            systemImage: "arrow.triangle.branch"
+                        )
+                        .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(branches) { branch in
+                            branchRow(branch)
+                        }
+                    }
+                }
+
+                if let errorMessage, !errorMessage.isEmpty {
+                    Section {
+                        Label(
+                            errorMessage,
+                            systemImage: "exclamationmark.circle"
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                        .accessibilityIdentifier(
+                            "chat-room-settings-error"
+                        )
+                    }
+                }
+            }
+            .chatBranchListStyle()
+            .navigationTitle("대화 설정")
+            .chatBranchNavigationTitleDisplayMode()
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("완료") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .chatBranchSheetPresentation()
+        .onChange(of: mode) { _, newMode in
+            selectedMode = newMode
+        }
+        .onChange(of: selectedMode) { previousMode, newMode in
+            if previousMode != newMode {
+                onModeChange(newMode)
+            }
+        }
+        .accessibilityIdentifier("chat-room-settings-sheet")
+    }
+
+    private func branchRow(_ branch: ChatBranchOption) -> some View {
+        let isCurrent = branch.id == selectedBranchID
+        return Button {
+            guard !isCurrent else {
+                return
+            }
+            onSelectBranch(branch.id)
+        } label: {
+            HStack(spacing: LorepiaSpacing.standard) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(branch.title)
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+
+                    if let subtitle = branch.subtitle, !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                }
+
+                Spacer(minLength: LorepiaSpacing.compact)
+
+                if isCurrent {
+                    Image(systemName: "checkmark")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.tint)
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .accessibilityLabel(branch.title)
+        .accessibilityValue(isCurrent ? "현재 흐름" : "")
+        .accessibilityHint(
+            isCurrent
+                ? "현재 선택된 대화 흐름입니다"
+                : "이 대화 흐름으로 전환합니다"
+        )
+    }
+}
+
 /// A toolbar button that presents the system branch-selection sheet.
 ///
 /// Place this control in a native `ToolbarItem`. Selection is reported through
@@ -331,6 +535,26 @@ private extension View {
             .presentationDragIndicator(.visible)
 #else
         self
+#endif
+    }
+
+    @ViewBuilder
+    func chatCompactControlSurface(isInteractive: Bool) -> some View {
+#if os(iOS)
+#if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            glassEffect(
+                .regular.interactive(isInteractive),
+                in: Capsule()
+            )
+        } else {
+            background(.regularMaterial, in: Capsule())
+        }
+#else
+        background(.regularMaterial, in: Capsule())
+#endif
+#else
+        background(.regularMaterial, in: Capsule())
 #endif
     }
 }

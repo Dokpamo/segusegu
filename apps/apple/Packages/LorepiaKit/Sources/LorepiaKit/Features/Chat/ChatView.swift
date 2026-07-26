@@ -1,5 +1,11 @@
 import SwiftUI
 
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
+
 public struct ChatView: View {
     @ObservedObject private var viewModel: ChatViewModel
 
@@ -15,6 +21,11 @@ public struct ChatView: View {
     @State private var followsLatest = true
     @State private var isNearBottom = true
     @State private var lastBottomObservation: ChatBottomObservation?
+    @State private var isRoomSettingsPresented = false
+    @State private var editingMessage: ChatMessage?
+    @State private var deletingMessage: ChatMessage?
+    @State private var copiedMessageID: String?
+    @State private var copyFeedback = 0
 
     public init(viewModel: ChatViewModel) {
         self.viewModel = viewModel
@@ -52,14 +63,12 @@ public struct ChatView: View {
 
             if viewModel.conversation != nil {
                 ToolbarItem(placement: .primaryAction) {
-                    ChatBranchToolbarControl(
-                        branches: viewModel.branchOptions,
-                        selectedBranchID: viewModel.activeBranchID,
-                        isEnabled: viewModel.canManageBranches
-                    ) { branchID in
-                        Task {
-                            await viewModel.selectBranch(id: branchID)
-                        }
+                    ChatRoomSettingsTrigger(
+                        mode: viewModel.mode,
+                        style: .toolbar,
+                        isEnabled: viewModel.conversation != nil
+                    ) {
+                        isRoomSettingsPresented = true
                     }
                 }
             }
@@ -79,7 +88,61 @@ public struct ChatView: View {
                 }
             }
         }
+        .sheet(isPresented: $isRoomSettingsPresented) {
+            ChatRoomSettingsSheet(
+                mode: viewModel.mode,
+                branches: viewModel.branchOptions,
+                selectedBranchID: viewModel.activeBranchID,
+                isEnabled: viewModel.canManageBranches,
+                errorMessage: viewModel.errorMessage
+            ) { mode in
+                Task {
+                    await viewModel.setMode(mode)
+                }
+            } onSelectBranch: { branchID in
+                Task {
+                    await viewModel.selectBranch(id: branchID)
+                }
+            }
+        }
+        .sheet(item: $editingMessage) { message in
+            ChatMessageEditSheet(
+                messageID: message.id,
+                text: message.text,
+                isEnabled: viewModel.canMutateMessage(message)
+            ) { messageID, text in
+                await viewModel.editUserMessage(
+                    messageID: messageID,
+                    replacementText: text
+                )
+            }
+        }
+        .confirmationDialog(
+            "이 메시지부터 삭제할까요?",
+            isPresented: Binding(
+                get: { deletingMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        deletingMessage = nil
+                    }
+                }
+            ),
+            presenting: deletingMessage
+        ) { message in
+            Button("현재 흐름에서 삭제", role: .destructive) {
+                Task {
+                    await viewModel.removeMessage(messageID: message.id)
+                }
+                deletingMessage = nil
+            }
+            Button("취소", role: .cancel) {
+                deletingMessage = nil
+            }
+        } message: { _ in
+            Text("이 메시지와 이후 대화를 현재 흐름에서 제거합니다. 다른 분기에는 영향이 없습니다.")
+        }
         .chatDetailPlatformChrome()
+        .chatCopyFeedback(trigger: copyFeedback)
         .task {
             await viewModel.resumeEventPolling()
         }
@@ -141,18 +204,65 @@ public struct ChatView: View {
                                 .transition(.opacity)
                             }
 
-                            ChatBubble(
-                                message: message,
-                                maximumWidth: maximumBubbleWidth(
-                                    in: geometry.size.width
-                                ),
-                                storyMaximumWidth: maximumStoryWidth(
-                                    in: geometry.size.width
-                                ),
-                                mode: viewModel.mode,
-                                joinsPrevious: joinsPrevious,
-                                joinsNext: joinsNext
-                            )
+                            VStack(spacing: 0) {
+                                ChatBubble(
+                                    message: message,
+                                    maximumWidth: maximumBubbleWidth(
+                                        in: geometry.size.width
+                                    ),
+                                    storyMaximumWidth: maximumStoryWidth(
+                                        in: geometry.size.width
+                                    ),
+                                    mode: viewModel.mode,
+                                    joinsPrevious: joinsPrevious,
+                                    joinsNext: joinsNext
+                                )
+                                .contentShape(Rectangle())
+                                .chatMessageContextMenu(
+                                    message: message,
+                                    isMutationEnabled:
+                                        viewModel.canMutateMessage(message)
+                                ) { action in
+                                    handleMessageAction(
+                                        action,
+                                        for: message
+                                    )
+                                }
+
+                                if !ChatMessageActionPresentation.actions(
+                                    for: message.role
+                                ).isEmpty {
+                                    ChatMessageActionRow(
+                                        message: message,
+                                        isMutationEnabled:
+                                            viewModel.canMutateMessage(message),
+                                        isCopied:
+                                            copiedMessageID == message.id
+                                    ) { action in
+                                        handleMessageAction(
+                                            action,
+                                            for: message
+                                        )
+                                    }
+                                    .frame(
+                                        maxWidth: messageActionMaximumWidth(
+                                            for: message,
+                                            in: geometry.size.width
+                                        ),
+                                        alignment:
+                                            message.role == .user
+                                                ? .trailing
+                                                : .leading
+                                    )
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        alignment:
+                                            messageActionContainerAlignment(
+                                                for: message
+                                            )
+                                    )
+                                }
+                            }
                             .padding(
                                 .top,
                                 separatorKind != nil
@@ -160,16 +270,6 @@ public struct ChatView: View {
                                     : (joinsPrevious ? 2 : 10)
                             )
                             .transition(messageTransition(for: message))
-                            .chatBranchContextMenu(
-                                messageID: message.id,
-                                isEnabled: viewModel.canManageBranches
-                            ) { messageID in
-                                Task {
-                                    await viewModel.createBranch(
-                                        afterMessageID: messageID
-                                    )
-                                }
-                            }
                             .id(message.id)
                         }
 
@@ -208,7 +308,7 @@ public struct ChatView: View {
                     .animation(
                         reduceMotion
                             ? nil
-                            : .snappy(duration: 0.26, extraBounce: 0.02),
+                            : .spring(duration: 0.42, bounce: 0.16),
                         value: viewModel.messages.count
                     )
                 }
@@ -335,22 +435,121 @@ public struct ChatView: View {
 
     private var composerArea: some View {
         VStack(spacing: 0) {
-            ChatComposerModeControl(
-                selection: Binding(
-                    get: {
-                        viewModel.mode
-                    },
-                    set: { mode in
-                        Task {
-                            await viewModel.setMode(mode)
-                        }
-                    }
-                ),
-                isEnabled: viewModel.canManageBranches
-            )
+            HStack {
+                ChatRoomSettingsTrigger(
+                    mode: viewModel.mode,
+                    style: .modeChip,
+                    isEnabled: viewModel.conversation != nil
+                ) {
+                    isRoomSettingsPresented = true
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, listInset)
+            .padding(.top, 4)
 
             composer
         }
+    }
+
+    private func handleMessageAction(
+        _ action: ChatMessageAction,
+        for message: ChatMessage
+    ) {
+        switch action {
+        case .edit:
+            guard message.role == .user,
+                  viewModel.canMutateMessage(message)
+            else {
+                return
+            }
+            editingMessage = message
+        case .copy:
+            copyToClipboard(
+                message.text,
+                messageID: message.id
+            )
+        case .regenerate:
+            guard message.role == .assistant,
+                  viewModel.canMutateMessage(message)
+            else {
+                return
+            }
+            Task {
+                await viewModel.regenerateAssistantMessage(
+                    messageID: message.id
+                )
+            }
+        case .branch:
+            guard viewModel.canMutateMessage(message) else {
+                return
+            }
+            Task {
+                await viewModel.createBranch(afterMessageID: message.id)
+            }
+        case .delete:
+            guard viewModel.canMutateMessage(message) else {
+                return
+            }
+            deletingMessage = message
+        }
+    }
+
+    private func copyToClipboard(
+        _ text: String,
+        messageID: String
+    ) {
+#if os(iOS)
+        UIPasteboard.general.string = text
+        UIAccessibility.post(
+            notification: .announcement,
+            argument: "메시지를 복사했습니다"
+        )
+#elseif os(macOS)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+#endif
+        copyFeedback &+= 1
+        let feedbackToken = copyFeedback
+        withAnimation(
+            reduceMotion ? nil : .smooth(duration: 0.2)
+        ) {
+            copiedMessageID = messageID
+        }
+        Task {
+            try? await Task.sleep(for: .seconds(1.4))
+            guard copyFeedback == feedbackToken else {
+                return
+            }
+            withAnimation(
+                reduceMotion ? nil : .smooth(duration: 0.2)
+            ) {
+                copiedMessageID = nil
+            }
+        }
+    }
+
+    private func messageActionMaximumWidth(
+        for message: ChatMessage,
+        in containerWidth: CGFloat
+    ) -> CGFloat {
+        if viewModel.mode == .story, message.role == .assistant {
+            return maximumStoryWidth(in: containerWidth)
+        }
+        return maximumBubbleWidth(in: containerWidth)
+    }
+
+    private func messageActionContainerAlignment(
+        for message: ChatMessage
+    ) -> Alignment {
+        if message.role == .user {
+            return .trailing
+        }
+        if viewModel.mode == .story, message.role == .assistant {
+            return .center
+        }
+        return .leading
     }
 
     private var composerPlaceholder: String {
@@ -427,16 +626,16 @@ public struct ChatView: View {
             return .opacity
         }
 
-        let insertion: AnyTransition = switch message.role {
-        case .user:
-            .scale(scale: 0.92, anchor: .bottomTrailing)
-                .combined(with: .opacity)
-        case .assistant:
-            .scale(scale: 0.97, anchor: .bottomLeading)
-                .combined(with: .opacity)
-        case .system, .notice:
-            .opacity
-        }
+        let insertion = AnyTransition.modifier(
+            active: ChatMessageInsertionModifier(
+                role: message.role,
+                isActive: true
+            ),
+            identity: ChatMessageInsertionModifier(
+                role: message.role,
+                isActive: false
+            )
+        )
         return .asymmetric(insertion: insertion, removal: .opacity)
     }
 
@@ -460,7 +659,7 @@ public struct ChatView: View {
         animated: Bool
     ) {
         if animated {
-            withAnimation(.snappy(duration: 0.26, extraBounce: 0.02)) {
+            withAnimation(.spring(duration: 0.38, bounce: 0.08)) {
                 proxy.scrollTo(ChatScrollAnchor.bottom, anchor: .bottom)
             }
         } else {
@@ -479,6 +678,25 @@ private func chatOutgoingColor(
     contrast == .increased
         ? Color(red: 0, green: 0.30, blue: 0.72)
         : .accentColor
+}
+
+private func chatIncomingColor(
+    for contrast: ColorSchemeContrast
+) -> Color {
+#if os(iOS)
+    Color(
+        uiColor:
+            contrast == .increased
+                ? .systemGray3
+                : .systemGray5
+    )
+#elseif os(macOS)
+    contrast == .increased
+        ? Color(nsColor: .separatorColor)
+        : Color(nsColor: .controlBackgroundColor)
+#else
+    Color.secondary.opacity(contrast == .increased ? 0.22 : 0.12)
+#endif
 }
 
 private struct ChatToolbarIdentity: View {
@@ -536,6 +754,8 @@ private struct ChatComposer: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @FocusState private var isFocused: Bool
+    @State private var sendFeedback = 0
 
     let placeholder: String
     let isEnabled: Bool
@@ -556,15 +776,16 @@ private struct ChatComposer: View {
             )
             .lineLimit(1 ... 5)
             .submitLabel(.send)
+            .focused($isFocused)
             .padding(.leading, fieldPadding)
             .padding(.vertical, verticalInset)
             .disabled(!isEnabled)
-            .onSubmit(onSubmit)
+            .onSubmit(submit)
 
-            Button(action: onSubmit) {
+            Button(action: submit) {
                 sendLabel
             }
-            .buttonStyle(.plain)
+            .buttonStyle(ChatComposerSendButtonStyle())
             .disabled(!canSubmit)
             .accessibilityLabel("메시지 보내기")
         }
@@ -576,11 +797,20 @@ private struct ChatComposer: View {
                     Color.primary.opacity(
                         colorSchemeContrast == .increased
                             ? 0.24
-                            : (isEnabled ? 0.09 : 0.05)
+                            : (
+                                isFocused && isEnabled
+                                    ? 0.16
+                                    : (isEnabled ? 0.08 : 0.04)
+                            )
                     ),
                     lineWidth: colorSchemeContrast == .increased ? 1 : 0.5
                 )
         }
+        .animation(
+            reduceMotion ? nil : .smooth(duration: 0.2),
+            value: isFocused
+        )
+        .chatSendFeedback(trigger: sendFeedback)
         .padding(.horizontal, horizontalInset)
         .padding(.vertical, verticalInset)
     }
@@ -612,6 +842,10 @@ private struct ChatComposer: View {
                         colorSchemeContrast == .increased ? 0.64 : 0.38
                     )
             )
+            .chatSendSymbolEffect(
+                trigger: sendFeedback,
+                reduceMotion: reduceMotion
+            )
             .frame(width: 36, height: 36)
             .background(
                 canSubmit
@@ -635,6 +869,14 @@ private struct ChatComposer: View {
     private var outgoingColor: Color {
         chatOutgoingColor(for: colorSchemeContrast)
     }
+
+    private func submit() {
+        guard canSubmit else {
+            return
+        }
+        sendFeedback &+= 1
+        onSubmit()
+    }
 }
 
 private struct ChatBubble: View {
@@ -645,11 +887,10 @@ private struct ChatBubble: View {
     let joinsPrevious: Bool
     let joinsNext: Bool
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
-    @ScaledMetric(relativeTo: .body) private var scaledHorizontalPadding = 14
-    @ScaledMetric(relativeTo: .body) private var scaledVerticalPadding = 10
+    @ScaledMetric(relativeTo: .body) private var scaledHorizontalPadding = 13
+    @ScaledMetric(relativeTo: .body) private var scaledVerticalPadding = 8
     @ScaledMetric(relativeTo: .body) private var scaledStoryLineSpacing = 5
     @ScaledMetric(relativeTo: .body) private var scaledStoryVerticalPadding = 7
 
@@ -659,16 +900,10 @@ private struct ChatBubble: View {
                 notice
             } else if isStoryProse {
                 storyProse
-                    .transition(presentationTransition)
             } else {
                 bubble
-                    .transition(presentationTransition)
             }
         }
-        .animation(
-            reduceMotion ? nil : .easeInOut(duration: 0.2),
-            value: isStoryProse
-        )
     }
 
     private var isStoryProse: Bool {
@@ -770,7 +1005,7 @@ private struct ChatBubble: View {
     private var backgroundStyle: Color {
         message.role == .user
             ? chatOutgoingColor(for: colorSchemeContrast)
-            : Color.secondary.opacity(0.14)
+            : chatIncomingColor(for: colorSchemeContrast)
     }
 
     private var statusText: String {
@@ -803,15 +1038,6 @@ private struct ChatBubble: View {
         return "\(speaker): \(message.text)\(status)"
     }
 
-    private var presentationTransition: AnyTransition {
-        if reduceMotion {
-            return .identity
-        }
-
-        return .opacity.combined(
-            with: .scale(scale: 0.985, anchor: .top)
-        )
-    }
 }
 
 private struct ChatTimeSeparator: View {
@@ -837,28 +1063,18 @@ private struct ChatBubbleShape: Shape {
             return Path()
         }
 
-        let showsTail = !joinsNext
-        let tailWidth = showsTail
-            ? min(max(rect.width * 0.035, 4), 7)
-            : 0
-        let bodyRect = CGRect(
-            x: isOutgoing ? rect.minX : rect.minX + tailWidth,
-            y: rect.minY,
-            width: max(rect.width - tailWidth, 0),
-            height: rect.height
-        )
-        let largeRadius = min(max(bodyRect.height * 0.38, 14), 20)
+        let largeRadius = min(max(rect.height * 0.46, 15), 20)
         let joinedRadius = min(max(largeRadius * 0.34, 5), 7)
-        let tailRadius = min(max(largeRadius * 0.25, 4), 6)
+        let terminalRadius = min(max(largeRadius * 0.46, 7), 9)
 
         let shape: UnevenRoundedRectangle
         if isOutgoing {
             shape = UnevenRoundedRectangle(
                 topLeadingRadius: largeRadius,
                 bottomLeadingRadius: largeRadius,
-                bottomTrailingRadius: showsTail
-                    ? tailRadius
-                    : (joinsNext ? joinedRadius : largeRadius),
+                bottomTrailingRadius: joinsNext
+                    ? joinedRadius
+                    : terminalRadius,
                 topTrailingRadius: joinsPrevious
                     ? joinedRadius
                     : largeRadius,
@@ -869,89 +1085,92 @@ private struct ChatBubbleShape: Shape {
                 topLeadingRadius: joinsPrevious
                     ? joinedRadius
                     : largeRadius,
-                bottomLeadingRadius: showsTail
-                    ? tailRadius
-                    : (joinsNext ? joinedRadius : largeRadius),
+                bottomLeadingRadius: joinsNext
+                    ? joinedRadius
+                    : terminalRadius,
                 bottomTrailingRadius: largeRadius,
                 topTrailingRadius: largeRadius,
                 style: .continuous
             )
         }
 
-        var path = shape.path(in: bodyRect)
-        guard showsTail else {
-            return path
-        }
+        return shape.path(in: rect)
+    }
+}
 
-        var tail = Path()
-        if isOutgoing {
-            tail.move(
-                to: CGPoint(
-                    x: bodyRect.maxX - tailWidth * 0.55,
-                    y: bodyRect.maxY - largeRadius * 0.72
-                )
+private struct ChatMessageInsertionModifier: ViewModifier {
+    let role: ChatMessage.Role
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isActive ? 0 : 1)
+            .blur(radius: isActive ? 2.5 : 0)
+            .scaleEffect(
+                isActive ? scale : 1,
+                anchor: anchor
             )
-            tail.addCurve(
-                to: CGPoint(x: rect.maxX, y: rect.maxY - 1),
-                control1: CGPoint(
-                    x: bodyRect.maxX + tailWidth * 0.2,
-                    y: bodyRect.maxY - largeRadius * 0.42
-                ),
-                control2: CGPoint(
-                    x: rect.maxX - tailWidth * 0.15,
-                    y: rect.maxY - 2
-                )
+            .offset(
+                x: isActive ? horizontalOffset : 0,
+                y: isActive ? verticalOffset : 0
             )
-            tail.addCurve(
-                to: CGPoint(
-                    x: bodyRect.maxX - tailWidth * 1.25,
-                    y: bodyRect.maxY - 1
-                ),
-                control1: CGPoint(
-                    x: rect.maxX - tailWidth * 0.45,
-                    y: rect.maxY
-                ),
-                control2: CGPoint(
-                    x: bodyRect.maxX - tailWidth * 0.5,
-                    y: bodyRect.maxY
-                )
-            )
-        } else {
-            tail.move(
-                to: CGPoint(
-                    x: bodyRect.minX + tailWidth * 1.25,
-                    y: bodyRect.maxY - 1
-                )
-            )
-            tail.addCurve(
-                to: CGPoint(x: rect.minX, y: rect.maxY - 1),
-                control1: CGPoint(
-                    x: bodyRect.minX + tailWidth * 0.5,
-                    y: bodyRect.maxY
-                ),
-                control2: CGPoint(
-                    x: rect.minX + tailWidth * 0.45,
-                    y: rect.maxY
-                )
-            )
-            tail.addCurve(
-                to: CGPoint(
-                    x: bodyRect.minX + tailWidth * 0.55,
-                    y: bodyRect.maxY - largeRadius * 0.72
-                ),
-                control1: CGPoint(
-                    x: rect.minX + tailWidth * 0.15,
-                    y: rect.maxY - 2
-                ),
-                control2: CGPoint(
-                    x: bodyRect.minX - tailWidth * 0.2,
-                    y: bodyRect.maxY - largeRadius * 0.42
-                )
-            )
+    }
+
+    private var anchor: UnitPoint {
+        role == .user ? .bottomTrailing : .bottomLeading
+    }
+
+    private var scale: CGFloat {
+        switch role {
+        case .user:
+            0.82
+        case .assistant:
+            0.92
+        case .system, .notice:
+            0.98
         }
-        tail.closeSubpath()
-        path.addPath(tail)
-        return path
+    }
+
+    private var horizontalOffset: CGFloat {
+        switch role {
+        case .user:
+            14
+        case .assistant:
+            -8
+        case .system, .notice:
+            0
+        }
+    }
+
+    private var verticalOffset: CGFloat {
+        switch role {
+        case .user:
+            24
+        case .assistant:
+            14
+        case .system, .notice:
+            6
+        }
+    }
+}
+
+private struct ChatComposerSendButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(
+                reduceMotion
+                    ? 1
+                    : (configuration.isPressed ? 0.86 : 1)
+            )
+            .opacity(configuration.isPressed ? 0.82 : 1)
+            .animation(
+                reduceMotion
+                    ? nil
+                    : .spring(duration: 0.18, bounce: 0.24),
+                value: configuration.isPressed
+            )
     }
 }
 
@@ -1045,6 +1264,47 @@ private extension View {
 #endif
 #else
         background(.regularMaterial, in: Capsule())
+#endif
+    }
+
+    @ViewBuilder
+    func chatSendSymbolEffect(
+        trigger: Int,
+        reduceMotion: Bool
+    ) -> some View {
+#if compiler(>=5.9)
+        if reduceMotion {
+            self
+        } else {
+            symbolEffect(
+                .bounce,
+                options: .nonRepeating,
+                value: trigger
+            )
+        }
+#else
+        self
+#endif
+    }
+
+    @ViewBuilder
+    func chatSendFeedback(trigger: Int) -> some View {
+#if os(iOS)
+        sensoryFeedback(
+            .impact(weight: .light, intensity: 0.65),
+            trigger: trigger
+        )
+#else
+        self
+#endif
+    }
+
+    @ViewBuilder
+    func chatCopyFeedback(trigger: Int) -> some View {
+#if os(iOS)
+        sensoryFeedback(.success, trigger: trigger)
+#else
+        self
 #endif
     }
 }

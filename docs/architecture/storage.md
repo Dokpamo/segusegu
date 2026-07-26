@@ -41,6 +41,13 @@ transaction that inserts the user message, pending assistant message, and
 generation. Branch rows point at their current head while messages retain their
 parent, so common ancestors are shared and sibling histories remain isolated.
 
+Edit and regeneration publish a new branch, replacement user message, pending
+assistant message, generation record, and active-branch selection in one
+transaction after revalidating the source lineage and expected head. Logical
+message removal updates only the selected branch head with the same compare-and-
+swap guard. It never deletes shared message rows, and therefore cannot corrupt a
+sibling branch that still reaches them.
+
 A file and SQLite cannot share one transaction, so the import journal records
 source and asset hashes for deterministic cleanup after an interrupted
 cross-resource commit. An inspection is removed from the in-memory review map

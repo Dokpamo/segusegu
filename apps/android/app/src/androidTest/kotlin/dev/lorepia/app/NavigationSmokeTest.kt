@@ -92,8 +92,8 @@ private class InstrumentedFakeCoreClient : CoreClient {
 
     override suspend fun versionInfo(): CoreVersionInfo = CoreVersionInfo(
         coreVersion = health.coreVersion,
-        coreApiVersion = 3u,
-        bindingApiVersion = 3u,
+        coreApiVersion = 4u,
+        bindingApiVersion = 4u,
         chatEventVersion = 2u,
     )
 

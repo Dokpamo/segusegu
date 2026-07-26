@@ -325,6 +325,133 @@ public final class ChatViewModel: ObservableObject {
         }
     }
 
+    public func canMutateMessage(_ message: ChatMessage) -> Bool {
+        canManageBranches
+            && message.status != .pending
+            && (message.role == .user || message.role == .assistant)
+            && messages.contains(where: { $0.id == message.id })
+    }
+
+    @discardableResult
+    public func editUserMessage(
+        messageID: String,
+        replacementText: String
+    ) async -> Bool {
+        let text = replacementText.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard !text.isEmpty,
+              let conversation,
+              let activeBranch,
+              let message = messages.first(where: {
+                  $0.id == messageID && $0.role == .user
+              }),
+              canMutateMessage(message)
+        else {
+            return false
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let provider = try await selectedProviderAccess()
+            guard self.conversation?.id == conversation.id,
+                  self.activeBranchID == activeBranch.id
+            else {
+                return false
+            }
+            let result = try await client.editUserMessage(
+                conversationID: conversation.id,
+                branchID: activeBranch.id,
+                expectedHeadMessageID: activeBranch.headMessageID,
+                messageID: messageID,
+                replacementText: text,
+                providerProfileID: provider.profileID,
+                credential: provider.credential
+            )
+            try await restoreAfterMessageAction(
+                conversationID: conversation.id,
+                branchID: result.branch.id,
+                generationID: result.generationID
+            )
+            errorMessage = nil
+            startPolling()
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    public func regenerateAssistantMessage(messageID: String) async {
+        guard let conversation,
+              let activeBranch,
+              let message = messages.first(where: {
+                  $0.id == messageID && $0.role == .assistant
+              }),
+              canMutateMessage(message)
+        else {
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let provider = try await selectedProviderAccess()
+            guard self.conversation?.id == conversation.id,
+                  self.activeBranchID == activeBranch.id
+            else {
+                return
+            }
+            let result = try await client.regenerateAssistantMessage(
+                conversationID: conversation.id,
+                branchID: activeBranch.id,
+                expectedHeadMessageID: activeBranch.headMessageID,
+                messageID: messageID,
+                providerProfileID: provider.profileID,
+                credential: provider.credential
+            )
+            try await restoreAfterMessageAction(
+                conversationID: conversation.id,
+                branchID: result.branch.id,
+                generationID: result.generationID
+            )
+            errorMessage = nil
+            startPolling()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    public func removeMessage(messageID: String) async {
+        guard let conversation,
+              let activeBranch,
+              let message = messages.first(where: { $0.id == messageID }),
+              canMutateMessage(message)
+        else {
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let branch = try await client.removeMessageFromBranch(
+                conversationID: conversation.id,
+                branchID: activeBranch.id,
+                expectedHeadMessageID: activeBranch.headMessageID,
+                messageID: messageID
+            )
+            try await restoreAfterMessageAction(
+                conversationID: conversation.id,
+                branchID: branch.id,
+                generationID: nil
+            )
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     public func submitMessage() async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty,
@@ -648,6 +775,59 @@ public final class ChatViewModel: ObservableObject {
     public func pauseEventPolling() {
         pollingTask?.cancel()
         pollingTask = nil
+    }
+
+    private var activeBranch: CoreConversationBranch? {
+        guard let activeBranchID else {
+            return nil
+        }
+        return branches.first { $0.id == activeBranchID }
+    }
+
+    private func selectedProviderAccess() async throws -> (
+        profileID: String,
+        credential: String?
+    ) {
+        let settings = try await client.getSettings()
+        guard let profileID = settings.selectedProviderProfileID else {
+            throw CoreClientFailure.configurationRequired(
+                "설정에서 사용할 프로바이더 프로필을 선택하세요."
+            )
+        }
+        let credential = try await credentialStore.credential(for: profileID)
+        return (profileID, credential)
+    }
+
+    private func restoreAfterMessageAction(
+        conversationID: String,
+        branchID: String,
+        generationID: String?
+    ) async throws {
+        async let stateTask = client.getConversationState(
+            conversationID: conversationID
+        )
+        async let branchesTask = client.listConversationBranches(
+            conversationID: conversationID
+        )
+        async let messagesTask = client.listBranchMessages(branchID: branchID)
+        let (state, loadedBranches, restoredMessages) = try await (
+            stateTask,
+            branchesTask,
+            messagesTask
+        )
+        guard conversation?.id == conversationID else {
+            return
+        }
+        branches = loadedBranches
+        activeBranchID = state.activeBranchID
+        mode = state.selectedMode
+        messages = restoredMessages
+        activeGenerationID = generationID
+        if let generationID {
+            latestSequenceByGeneration[generationID] = 0
+        }
+        reconcileGenerationState(from: restoredMessages)
+        idlePollsSinceReconciliation = 0
     }
 
     private var coreIsAvailable: Bool {

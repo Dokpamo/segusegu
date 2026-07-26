@@ -15,7 +15,7 @@ pub use content::{
 };
 pub use conversation::{
     Conversation, ConversationBranch, ConversationBranchId, ConversationId, ConversationMode,
-    ConversationState,
+    ConversationState, MessageActionGeneration,
 };
 pub use error::{CoreError, CoreErrorCode, CoreResult};
 pub use health::HealthReport;

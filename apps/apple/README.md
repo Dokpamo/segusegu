@@ -28,8 +28,10 @@ The implemented native vertical slices are:
   removes its partial staging file.
 - Conversation restore by character, persisted message reload, send,
   streaming delta polling, dropped-event recovery, generation and sequence
-  filtering, and cancel. Empty-poll intervals and view resume reconcile
-  against persisted messages.
+  filtering, and cancel. Chat and story mode plus branch selection live in the
+  native room-settings sheet. User and assistant messages expose compact,
+  always-visible copy, edit or regenerate, branch, and logical-delete actions.
+  Empty-poll intervals and view resume reconcile against persisted messages.
 - Provider profile create, update, delete, and selected-provider settings.
 - API credentials stored only in Keychain. Credentials are not placed in the
   Rust database or application logs.
@@ -39,12 +41,13 @@ identifier, media type, byte count, and unsupported optional CCv3 field names
 returned by Rust. Swift does not receive a Rust staging path or raw preview
 bytes.
 
-The `CoreClient` adapter maps the complete UniFFI v2 surface: version metadata,
+The `CoreClient` adapter maps the complete UniFFI v4 surface: version metadata,
 health, characters, import inspection, commit and discard, conversations,
-messages, send, cancel, event batches, provider profiles, settings, and
-database statistics. A production build without the UniFFI binary shows an
-explicit unavailable-core state. `FakeCoreClient` is selected explicitly by
-tests and previews; it is not a production fallback.
+messages, branch-safe edit/regeneration/removal, send, cancel, event batches,
+provider profiles, settings, and database statistics. A production build
+without the UniFFI binary shows an explicit unavailable-core state.
+`FakeCoreClient` is selected explicitly by tests and previews; it is not a
+production fallback.
 
 This repository intentionally has no open-source license. Its source and
 generated bindings do not grant permission to copy, redistribute, or

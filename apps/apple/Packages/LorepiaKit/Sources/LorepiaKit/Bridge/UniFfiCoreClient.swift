@@ -221,6 +221,68 @@ public actor UniFfiCoreClient: CoreClient {
         )
     }
 
+    public func editUserMessage(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        replacementText: String,
+        providerProfileID: String,
+        credential: String?
+    ) async throws -> CoreMessageActionGeneration {
+        let result = try core.editUserMessage(
+            conversationId: conversationID,
+            branchId: branchID,
+            expectedHead: expectedHeadMessageID,
+            messageId: messageID,
+            replacementText: replacementText,
+            providerProfileId: providerProfileID,
+            credential: credential
+        )
+        return CoreMessageActionGeneration(
+            branch: Self.mapConversationBranch(result.branch),
+            generationID: result.generationId
+        )
+    }
+
+    public func regenerateAssistantMessage(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        providerProfileID: String,
+        credential: String?
+    ) async throws -> CoreMessageActionGeneration {
+        let result = try core.regenerateAssistantMessage(
+            conversationId: conversationID,
+            branchId: branchID,
+            expectedHead: expectedHeadMessageID,
+            messageId: messageID,
+            providerProfileId: providerProfileID,
+            credential: credential
+        )
+        return CoreMessageActionGeneration(
+            branch: Self.mapConversationBranch(result.branch),
+            generationID: result.generationId
+        )
+    }
+
+    public func removeMessageFromBranch(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String
+    ) async throws -> CoreConversationBranch {
+        try Self.mapConversationBranch(
+            core.removeMessageFromBranch(
+                conversationId: conversationID,
+                branchId: branchID,
+                expectedHead: expectedHeadMessageID,
+                messageId: messageID
+            )
+        )
+    }
+
     public func cancelGeneration(generationID: String) async throws {
         try core.cancelGeneration(generationId: generationID)
     }
@@ -478,6 +540,35 @@ public actor UniFfiCoreClient: CoreClient {
         providerProfileID _: String,
         credential _: String?
     ) async throws -> String {
+        try unavailable()
+    }
+    public func editUserMessage(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        messageID _: String,
+        replacementText _: String,
+        providerProfileID _: String,
+        credential _: String?
+    ) async throws -> CoreMessageActionGeneration {
+        try unavailable()
+    }
+    public func regenerateAssistantMessage(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        messageID _: String,
+        providerProfileID _: String,
+        credential _: String?
+    ) async throws -> CoreMessageActionGeneration {
+        try unavailable()
+    }
+    public func removeMessageFromBranch(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        messageID _: String
+    ) async throws -> CoreConversationBranch {
         try unavailable()
     }
     public func cancelGeneration(generationID _: String) async throws {

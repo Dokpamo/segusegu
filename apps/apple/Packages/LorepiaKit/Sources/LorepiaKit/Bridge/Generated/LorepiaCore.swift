@@ -513,6 +513,8 @@ public protocol LorepiaCoreProtocol: AnyObject, Sendable {
     
     func discardImport(inspectionId: String) throws 
     
+    func editUserMessage(conversationId: String, branchId: String, expectedHead: String?, messageId: String, replacementText: String, providerProfileId: String, credential: String?) throws  -> FfiMessageActionGeneration
+    
     func getCharacter(characterId: String) throws  -> FfiCharacter
     
     func getConversation(conversationId: String) throws  -> FfiConversation
@@ -545,6 +547,10 @@ public protocol LorepiaCoreProtocol: AnyObject, Sendable {
      * Drains up to `max_events` without blocking a platform UI thread.
      */
     func pollEvents(maxEvents: UInt32) throws  -> FfiEventBatch
+    
+    func regenerateAssistantMessage(conversationId: String, branchId: String, expectedHead: String?, messageId: String, providerProfileId: String, credential: String?) throws  -> FfiMessageActionGeneration
+    
+    func removeMessageFromBranch(conversationId: String, branchId: String, expectedHead: String?, messageId: String) throws  -> FfiConversationBranch
     
     func selectConversationBranch(conversationId: String, branchId: String) throws  -> FfiConversationState
     
@@ -675,6 +681,20 @@ open func discardImport(inspectionId: String)throws   {try rustCallWithError(Ffi
 }
 }
     
+open func editUserMessage(conversationId: String, branchId: String, expectedHead: String?, messageId: String, replacementText: String, providerProfileId: String, credential: String?)throws  -> FfiMessageActionGeneration  {
+    return try  FfiConverterTypeFfiMessageActionGeneration_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_edit_user_message(self.uniffiClonePointer(),
+        FfiConverterString.lower(conversationId),
+        FfiConverterString.lower(branchId),
+        FfiConverterOptionString.lower(expectedHead),
+        FfiConverterString.lower(messageId),
+        FfiConverterString.lower(replacementText),
+        FfiConverterString.lower(providerProfileId),
+        FfiConverterOptionString.lower(credential),$0
+    )
+})
+}
+    
 open func getCharacter(characterId: String)throws  -> FfiCharacter  {
     return try  FfiConverterTypeFfiCharacter_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
     uniffi_lorepia_uniffi_fn_method_lorepiacore_get_character(self.uniffiClonePointer(),
@@ -789,6 +809,30 @@ open func pollEvents(maxEvents: UInt32)throws  -> FfiEventBatch  {
     return try  FfiConverterTypeFfiEventBatch_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
     uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_events(self.uniffiClonePointer(),
         FfiConverterUInt32.lower(maxEvents),$0
+    )
+})
+}
+    
+open func regenerateAssistantMessage(conversationId: String, branchId: String, expectedHead: String?, messageId: String, providerProfileId: String, credential: String?)throws  -> FfiMessageActionGeneration  {
+    return try  FfiConverterTypeFfiMessageActionGeneration_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_regenerate_assistant_message(self.uniffiClonePointer(),
+        FfiConverterString.lower(conversationId),
+        FfiConverterString.lower(branchId),
+        FfiConverterOptionString.lower(expectedHead),
+        FfiConverterString.lower(messageId),
+        FfiConverterString.lower(providerProfileId),
+        FfiConverterOptionString.lower(credential),$0
+    )
+})
+}
+    
+open func removeMessageFromBranch(conversationId: String, branchId: String, expectedHead: String?, messageId: String)throws  -> FfiConversationBranch  {
+    return try  FfiConverterTypeFfiConversationBranch_lift(try rustCallWithError(FfiConverterTypeFfiError_lift) {
+    uniffi_lorepia_uniffi_fn_method_lorepiacore_remove_message_from_branch(self.uniffiClonePointer(),
+        FfiConverterString.lower(conversationId),
+        FfiConverterString.lower(branchId),
+        FfiConverterOptionString.lower(expectedHead),
+        FfiConverterString.lower(messageId),$0
     )
 })
 }
@@ -2312,6 +2356,76 @@ public func FfiConverterTypeFfiMessage_lower(_ value: FfiMessage) -> RustBuffer 
 }
 
 
+public struct FfiMessageActionGeneration {
+    public var branch: FfiConversationBranch
+    public var generationId: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(branch: FfiConversationBranch, generationId: String) {
+        self.branch = branch
+        self.generationId = generationId
+    }
+}
+
+#if compiler(>=6)
+extension FfiMessageActionGeneration: Sendable {}
+#endif
+
+
+extension FfiMessageActionGeneration: Equatable, Hashable {
+    public static func ==(lhs: FfiMessageActionGeneration, rhs: FfiMessageActionGeneration) -> Bool {
+        if lhs.branch != rhs.branch {
+            return false
+        }
+        if lhs.generationId != rhs.generationId {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(branch)
+        hasher.combine(generationId)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeFfiMessageActionGeneration: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> FfiMessageActionGeneration {
+        return
+            try FfiMessageActionGeneration(
+                branch: FfiConverterTypeFfiConversationBranch.read(from: &buf), 
+                generationId: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: FfiMessageActionGeneration, into buf: inout [UInt8]) {
+        FfiConverterTypeFfiConversationBranch.write(value.branch, into: &buf)
+        FfiConverterString.write(value.generationId, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiMessageActionGeneration_lift(_ buf: RustBuffer) throws -> FfiMessageActionGeneration {
+    return try FfiConverterTypeFfiMessageActionGeneration.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeFfiMessageActionGeneration_lower(_ value: FfiMessageActionGeneration) -> RustBuffer {
+    return FfiConverterTypeFfiMessageActionGeneration.lower(value)
+}
+
+
 public struct FfiProviderProfile {
     public var id: String
     public var displayName: String
@@ -2899,6 +3013,9 @@ private let initializationResult: InitializationResult = {
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_discard_import() != 58614) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_edit_user_message() != 1681) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_character() != 14947) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -2942,6 +3059,12 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_events() != 26212) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_regenerate_assistant_message() != 55399) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_remove_message_from_branch() != 43222) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_lorepia_uniffi_checksum_method_lorepiacore_select_conversation_branch() != 62171) {

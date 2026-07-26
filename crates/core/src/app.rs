@@ -8,6 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use chrono::Utc;
 use lorepia_chat::{
     ChatEvent, ChatEventKind, GenerationFailure, GenerationOutcome, MAX_HISTORY_MESSAGE_BYTES,
     MAX_HISTORY_MESSAGE_CHARS, MAX_PROMPT_MESSAGES, PromptPlanner, run_generation,
@@ -17,10 +18,11 @@ use lorepia_domain::{
     AppSettings, Character, Conversation, ConversationBranch, ConversationBranchId, ConversationId,
     ConversationMode, ConversationState, CoreError, CoreErrorCode, CoreResult, GenerationId,
     GenerationRecord, GenerationRequest, GenerationStatus, HealthReport, ImportInspection,
-    ImportLimits, InspectionId, Message, MessageId, MessageStatus, ProviderProfile,
+    ImportLimits, InspectionId, Message, MessageActionGeneration, MessageId, MessageStatus,
+    ProviderProfile,
 };
 use lorepia_providers::{OpenAiCompatibleProvider, Provider};
-use lorepia_storage::{DatabaseStats, StagedAssetImport, Storage};
+use lorepia_storage::{DatabaseStats, MessageGenerationAction, StagedAssetImport, Storage};
 use tokio::{
     runtime::{Builder, Handle},
     sync::{broadcast, mpsc, watch},
@@ -93,6 +95,52 @@ struct GenerationTask {
     credential: Option<String>,
     cancel_receiver: watch::Receiver<bool>,
     preserve_partial: bool,
+}
+
+struct GenerationLaunchPermit {
+    generation_id: GenerationId,
+    active_generations: Arc<GenerationRegistry>,
+    cancel_receiver: Option<watch::Receiver<bool>>,
+    preserve_partial: bool,
+}
+
+impl GenerationLaunchPermit {
+    #[allow(clippy::too_many_arguments)]
+    fn into_task(
+        mut self,
+        storage: Arc<Storage>,
+        event_bus: broadcast::Sender<ChatEvent>,
+        branch_id: ConversationBranchId,
+        request: GenerationRequest,
+        assistant: Message,
+        provider: Arc<dyn Provider>,
+        credential: Option<String>,
+    ) -> GenerationTask {
+        let cancel_receiver = self
+            .cancel_receiver
+            .take()
+            .expect("generation launch permit can be consumed only once");
+        GenerationTask {
+            storage,
+            active_generations: Arc::clone(&self.active_generations),
+            event_bus,
+            branch_id,
+            request,
+            assistant,
+            provider,
+            credential,
+            cancel_receiver,
+            preserve_partial: self.preserve_partial,
+        }
+    }
+}
+
+impl Drop for GenerationLaunchPermit {
+    fn drop(&mut self) {
+        if self.cancel_receiver.is_some() {
+            self.active_generations.remove(&self.generation_id);
+        }
+    }
 }
 
 impl RuntimeControl {
@@ -553,6 +601,84 @@ impl Core {
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub fn edit_user_message(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        message_id: &MessageId,
+        replacement_text: &str,
+        provider_profile_id: &str,
+        credential: Option<String>,
+    ) -> CoreResult<MessageActionGeneration> {
+        let profile = self
+            .inner
+            .storage
+            .get_provider_profile(provider_profile_id)?;
+        let provider = Arc::new(OpenAiCompatibleProvider::new(
+            &profile.base_url,
+            Duration::from_secs(u64::from(profile.timeout_seconds.max(1))),
+        )?);
+        self.start_message_generation_action_with_provider(
+            conversation_id,
+            branch_id,
+            expected_head,
+            message_id,
+            MessageGenerationAction::EditUser,
+            Some(replacement_text),
+            profile.model,
+            credential,
+            provider,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn regenerate_assistant_message(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        message_id: &MessageId,
+        provider_profile_id: &str,
+        credential: Option<String>,
+    ) -> CoreResult<MessageActionGeneration> {
+        let profile = self
+            .inner
+            .storage
+            .get_provider_profile(provider_profile_id)?;
+        let provider = Arc::new(OpenAiCompatibleProvider::new(
+            &profile.base_url,
+            Duration::from_secs(u64::from(profile.timeout_seconds.max(1))),
+        )?);
+        self.start_message_generation_action_with_provider(
+            conversation_id,
+            branch_id,
+            expected_head,
+            message_id,
+            MessageGenerationAction::RegenerateAssistant,
+            None,
+            profile.model,
+            credential,
+            provider,
+        )
+    }
+
+    pub fn remove_message_from_branch(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        message_id: &MessageId,
+    ) -> CoreResult<ConversationBranch> {
+        self.inner.storage.remove_message_from_branch(
+            conversation_id,
+            branch_id,
+            expected_head,
+            message_id,
+        )
+    }
+
     pub fn cancel_generation(&self, generation_id: &GenerationId) -> CoreResult<()> {
         self.inner.active_generations.cancel(generation_id)
     }
@@ -688,16 +814,7 @@ impl Core {
         credential: Option<String>,
         provider: Arc<dyn Provider>,
     ) -> CoreResult<GenerationId> {
-        let text = text.trim();
-        if text.is_empty() {
-            return Err(CoreError::invalid("message text cannot be empty"));
-        }
-        validate_bounded_text(
-            "message text",
-            text,
-            MAX_USER_MESSAGE_BYTES,
-            MAX_USER_MESSAGE_CHARS,
-        )?;
+        let text = validate_user_message_text(text)?;
         let conversation = self.inner.storage.get_conversation(conversation_id)?;
         let character = self
             .inner
@@ -750,6 +867,7 @@ impl Core {
             started_at: assistant_message.created_at,
             finished_at: None,
         };
+        let launch = self.prepare_generation_launch(&generation_id)?;
         self.inner.storage.append_generation(
             branch_id,
             expected_head,
@@ -757,7 +875,182 @@ impl Core {
             &assistant_message,
             &generation,
         )?;
-        let preserve_partial_generations = self
+        Ok(self.start_generation_task(
+            launch,
+            branch_id.clone(),
+            request,
+            assistant_message,
+            provider,
+            credential,
+        ))
+    }
+
+    #[cfg(test)]
+    #[allow(clippy::too_many_arguments)]
+    fn edit_user_message_with_provider(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        message_id: &MessageId,
+        replacement_text: &str,
+        model: String,
+        credential: Option<String>,
+        provider: Arc<dyn Provider>,
+    ) -> CoreResult<MessageActionGeneration> {
+        self.start_message_generation_action_with_provider(
+            conversation_id,
+            branch_id,
+            expected_head,
+            message_id,
+            MessageGenerationAction::EditUser,
+            Some(replacement_text),
+            model,
+            credential,
+            provider,
+        )
+    }
+
+    #[cfg(test)]
+    #[allow(clippy::too_many_arguments)]
+    fn regenerate_assistant_message_with_provider(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        message_id: &MessageId,
+        model: String,
+        credential: Option<String>,
+        provider: Arc<dyn Provider>,
+    ) -> CoreResult<MessageActionGeneration> {
+        self.start_message_generation_action_with_provider(
+            conversation_id,
+            branch_id,
+            expected_head,
+            message_id,
+            MessageGenerationAction::RegenerateAssistant,
+            None,
+            model,
+            credential,
+            provider,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn start_message_generation_action_with_provider(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        message_id: &MessageId,
+        action: MessageGenerationAction,
+        replacement_text: Option<&str>,
+        model: String,
+        credential: Option<String>,
+        provider: Arc<dyn Provider>,
+    ) -> CoreResult<MessageActionGeneration> {
+        let replacement_text = validate_action_replacement(action, replacement_text)?;
+
+        let conversation = self.inner.storage.get_conversation(conversation_id)?;
+        let character = self
+            .inner
+            .storage
+            .get_character(&conversation.character_id)?;
+        let state = self.inner.storage.get_conversation_state(conversation_id)?;
+        let context = self.inner.storage.prepare_message_generation_action(
+            conversation_id,
+            branch_id,
+            expected_head,
+            message_id,
+            action,
+        )?;
+        let text = match replacement_text {
+            Some(text) => text,
+            None => validate_user_message_text(&context.user_text)?,
+        };
+        let user_message = Message::user_after(
+            conversation_id.clone(),
+            context.fork_message_id.clone(),
+            text,
+        );
+        let mut history = self.inner.storage.list_recent_message_lineage_for_prompt(
+            conversation_id,
+            context.fork_message_id.as_ref(),
+            MAX_PROMPT_MESSAGES.saturating_sub(2),
+            MAX_HISTORY_MESSAGE_BYTES,
+            MAX_HISTORY_MESSAGE_CHARS,
+        )?;
+        history.push(user_message.clone());
+        let request = PromptPlanner::plan_with_mode(
+            &character,
+            conversation_id.clone(),
+            state.selected_mode,
+            &history,
+            model.clone(),
+            1.0,
+            Some(CORE_MAX_OUTPUT_TOKENS),
+        )?;
+        let generation_id = request.generation_id.clone();
+        let assistant_message = Message::pending_assistant(
+            conversation_id.clone(),
+            user_message.id.clone(),
+            generation_id.clone(),
+        );
+        let now = Utc::now();
+        let branch = ConversationBranch {
+            id: ConversationBranchId::new(),
+            conversation_id: conversation_id.clone(),
+            title: None,
+            fork_message_id: context.fork_message_id,
+            head_message_id: Some(assistant_message.id.clone()),
+            created_at: now,
+            updated_at: now,
+        };
+        let generation = GenerationRecord {
+            id: generation_id.clone(),
+            conversation_id: conversation_id.clone(),
+            branch_id: branch.id.clone(),
+            user_message_id: user_message.id.clone(),
+            assistant_message_id: Some(assistant_message.id.clone()),
+            mode: state.selected_mode,
+            model,
+            status: GenerationStatus::Running,
+            input_tokens: None,
+            output_tokens: None,
+            error_code: None,
+            started_at: assistant_message.created_at,
+            finished_at: None,
+        };
+        let launch = self.prepare_generation_launch(&generation_id)?;
+        self.inner.storage.append_message_generation_action(
+            branch_id,
+            expected_head,
+            message_id,
+            action,
+            &branch,
+            &user_message,
+            &assistant_message,
+            &generation,
+        )?;
+        self.start_generation_task(
+            launch,
+            branch.id.clone(),
+            request,
+            assistant_message,
+            provider,
+            credential,
+        );
+        Ok(MessageActionGeneration {
+            branch,
+            generation_id,
+        })
+    }
+
+    fn prepare_generation_launch(
+        &self,
+        generation_id: &GenerationId,
+    ) -> CoreResult<GenerationLaunchPermit> {
+        let preserve_partial = self
             .inner
             .storage
             .load_settings()?
@@ -766,21 +1059,36 @@ impl Core {
         self.inner
             .active_generations
             .register(generation_id.clone(), cancel_sender)?;
-
-        let task = GenerationTask {
-            storage: Arc::clone(&self.inner.storage),
+        Ok(GenerationLaunchPermit {
+            generation_id: generation_id.clone(),
             active_generations: Arc::clone(&self.inner.active_generations),
-            event_bus: self.inner.event_bus.clone(),
-            branch_id: branch_id.clone(),
+            cancel_receiver: Some(cancel_receiver),
+            preserve_partial,
+        })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn start_generation_task(
+        &self,
+        launch: GenerationLaunchPermit,
+        branch_id: ConversationBranchId,
+        request: GenerationRequest,
+        assistant_message: Message,
+        provider: Arc<dyn Provider>,
+        credential: Option<String>,
+    ) -> GenerationId {
+        let generation_id = request.generation_id.clone();
+        let task = launch.into_task(
+            Arc::clone(&self.inner.storage),
+            self.inner.event_bus.clone(),
+            branch_id,
             request,
-            assistant: assistant_message,
+            assistant_message,
             provider,
             credential,
-            cancel_receiver,
-            preserve_partial: preserve_partial_generations,
-        };
+        );
         self.inner.runtime.spawn(execute_generation_task(task));
-        Ok(generation_id)
+        generation_id
     }
 
     fn active_generation_count(&self) -> usize {
@@ -1027,6 +1335,33 @@ fn validate_bounded_text(
         )));
     }
     Ok(())
+}
+
+fn validate_action_replacement(
+    action: MessageGenerationAction,
+    replacement_text: Option<&str>,
+) -> CoreResult<Option<&str>> {
+    match replacement_text {
+        Some(text) => validate_user_message_text(text).map(Some),
+        None if action == MessageGenerationAction::EditUser => {
+            Err(CoreError::invalid("message text cannot be empty"))
+        }
+        None => Ok(None),
+    }
+}
+
+fn validate_user_message_text(value: &str) -> CoreResult<&str> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(CoreError::invalid("message text cannot be empty"));
+    }
+    validate_bounded_text(
+        "message text",
+        trimmed,
+        MAX_USER_MESSAGE_BYTES,
+        MAX_USER_MESSAGE_CHARS,
+    )?;
+    Ok(trimmed)
 }
 
 fn directory_is_writable(path: &Path) -> bool {
@@ -1289,6 +1624,16 @@ mod tests {
         let inspection = core.inspect_import(card.path()).expect("inspect");
         let character = core.commit_import(&inspection.id).expect("commit");
         (root, core, character)
+    }
+
+    fn poison_generation_registry(core: &Core) {
+        let registry = Arc::clone(&core.inner.active_generations);
+        let result = thread::spawn(move || {
+            let _guard = registry.active.lock().expect("registry lock");
+            panic!("synthetic generation registry failure");
+        })
+        .join();
+        assert!(result.is_err(), "registry poison thread must panic");
     }
 
     fn wait_for_partial(core: &Core, conversation_id: &ConversationId, expected: &str) -> Message {
@@ -1935,6 +2280,504 @@ mod tests {
                 .expect("active branch messages"),
             forked
         );
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn message_actions_fork_immutable_lineage_and_rewind_without_deleting_rows() {
+        let (root, core, character) = imported_core();
+        let conversation = core
+            .create_conversation(&character.id, "메시지 액션", ConversationMode::Chat)
+            .expect("conversation");
+        core.send_message_with_provider(
+            &conversation.id,
+            "원본 질문",
+            "static".to_owned(),
+            None,
+            Arc::new(StaticProvider::new("원본 답변")),
+        )
+        .expect("initial generation");
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let original = loop {
+            let messages = core.list_messages(&conversation.id).expect("messages");
+            if messages.len() == 2 && messages[1].status == MessageStatus::Complete {
+                break messages;
+            }
+            assert!(Instant::now() < deadline, "initial generation timed out");
+            thread::sleep(Duration::from_millis(10));
+        };
+        let source_branch_id = core
+            .get_conversation_state(&conversation.id)
+            .expect("source state")
+            .active_branch_id;
+        core.set_conversation_mode(&conversation.id, ConversationMode::Story)
+            .expect("story mode");
+
+        let (edit_provider, edited_prompt) = CapturingProvider::new("수정 답변");
+        let edited = core
+            .edit_user_message_with_provider(
+                &conversation.id,
+                &source_branch_id,
+                Some(&original[1].id),
+                &original[0].id,
+                "수정 질문",
+                "edited-model".to_owned(),
+                None,
+                edit_provider,
+            )
+            .expect("edit user");
+        let edited_request = edited_prompt
+            .recv_timeout(Duration::from_secs(2))
+            .expect("edited prompt");
+        assert!(
+            edited_request
+                .first()
+                .is_some_and(|message| message.contains("Story mode:"))
+        );
+        assert!(edited_request.iter().any(|message| message == "수정 질문"));
+        assert!(!edited_request.iter().any(|message| message == "원본 질문"));
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let edited_messages = loop {
+            let messages = core
+                .list_branch_messages(&edited.branch.id)
+                .expect("edited branch");
+            if messages.len() == 2 && messages[1].status == MessageStatus::Complete {
+                break messages;
+            }
+            assert!(Instant::now() < deadline, "edited generation timed out");
+            thread::sleep(Duration::from_millis(10));
+        };
+        assert_eq!(
+            edited_messages
+                .iter()
+                .map(|message| message.content.as_str())
+                .collect::<Vec<_>>(),
+            ["수정 질문", "수정 답변"]
+        );
+        assert_eq!(
+            core.get_conversation_state(&conversation.id)
+                .expect("edited state")
+                .active_branch_id,
+            edited.branch.id
+        );
+        assert_eq!(
+            core.inner
+                .storage
+                .get_generation(&edited.generation_id)
+                .expect("edited generation")
+                .mode,
+            ConversationMode::Story
+        );
+        assert_eq!(
+            core.list_branch_messages(&source_branch_id)
+                .expect("original branch"),
+            original
+        );
+
+        core.select_conversation_branch(&conversation.id, &source_branch_id)
+            .expect("select original");
+        let (regenerate_provider, regenerated_prompt) = CapturingProvider::new("새 답변");
+        let regenerated = core
+            .regenerate_assistant_message_with_provider(
+                &conversation.id,
+                &source_branch_id,
+                Some(&original[1].id),
+                &original[1].id,
+                "regenerated-model".to_owned(),
+                None,
+                regenerate_provider,
+            )
+            .expect("regenerate assistant");
+        let regenerated_request = regenerated_prompt
+            .recv_timeout(Duration::from_secs(2))
+            .expect("regenerated prompt");
+        assert!(
+            regenerated_request
+                .iter()
+                .any(|message| message == "원본 질문")
+        );
+        assert!(
+            !regenerated_request
+                .iter()
+                .any(|message| message == "원본 답변")
+        );
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let regenerated_messages = loop {
+            let messages = core
+                .list_branch_messages(&regenerated.branch.id)
+                .expect("regenerated branch");
+            if messages.len() == 2 && messages[1].status == MessageStatus::Complete {
+                break messages;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "regenerated generation timed out"
+            );
+            thread::sleep(Duration::from_millis(10));
+        };
+        assert_eq!(regenerated_messages[0].content, "원본 질문");
+        assert_ne!(regenerated_messages[0].id, original[0].id);
+        assert_eq!(regenerated_messages[1].content, "새 답변");
+        assert_eq!(
+            core.list_branch_messages(&source_branch_id)
+                .expect("preserved original"),
+            original
+        );
+
+        let rows_before_remove = core.database_stats().expect("stats").messages;
+        let rewound = core
+            .remove_message_from_branch(
+                &conversation.id,
+                &regenerated.branch.id,
+                Some(&regenerated_messages[1].id),
+                &regenerated_messages[1].id,
+            )
+            .expect("remove regenerated assistant");
+        assert_eq!(
+            rewound.head_message_id,
+            Some(regenerated_messages[0].id.clone())
+        );
+        assert_eq!(
+            core.list_branch_messages(&regenerated.branch.id)
+                .expect("rewound branch"),
+            vec![regenerated_messages[0].clone()]
+        );
+        assert_eq!(
+            core.database_stats().expect("stats").messages,
+            rows_before_remove,
+            "logical removal must preserve immutable message rows"
+        );
+
+        drop(core);
+        let reopened = Core::open(CoreConfig::new(root.path())).expect("reopen");
+        assert_eq!(
+            reopened
+                .get_conversation_state(&conversation.id)
+                .expect("restored state")
+                .active_branch_id,
+            regenerated.branch.id
+        );
+        assert_eq!(
+            reopened
+                .list_branch_messages(&source_branch_id)
+                .expect("restored original"),
+            original
+        );
+        assert_eq!(
+            reopened.database_stats().expect("restored stats").messages,
+            rows_before_remove
+        );
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn message_actions_reject_wrong_roles_stale_context_foreign_rooms_and_pending_heads() {
+        let (_root, core, character) = imported_core();
+        let conversation = core
+            .create_conversation(&character.id, "거절 테스트", ConversationMode::Chat)
+            .expect("conversation");
+        core.send_message_with_provider(
+            &conversation.id,
+            "질문",
+            "static".to_owned(),
+            None,
+            Arc::new(StaticProvider::new("답변")),
+        )
+        .expect("initial generation");
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let messages = loop {
+            let messages = core.list_messages(&conversation.id).expect("messages");
+            if messages.len() == 2 && messages[1].status == MessageStatus::Complete {
+                break messages;
+            }
+            assert!(Instant::now() < deadline, "initial generation timed out");
+            thread::sleep(Duration::from_millis(10));
+        };
+        let branch_id = core
+            .get_conversation_state(&conversation.id)
+            .expect("state")
+            .active_branch_id;
+
+        let edit_assistant = core
+            .edit_user_message_with_provider(
+                &conversation.id,
+                &branch_id,
+                Some(&messages[1].id),
+                &messages[1].id,
+                "잘못된 편집",
+                "unused".to_owned(),
+                None,
+                Arc::new(StaticProvider::new("unused")),
+            )
+            .expect_err("assistant cannot be edited");
+        assert_eq!(edit_assistant.code, CoreErrorCode::InvalidInput);
+        let regenerate_user = core
+            .regenerate_assistant_message_with_provider(
+                &conversation.id,
+                &branch_id,
+                Some(&messages[1].id),
+                &messages[0].id,
+                "unused".to_owned(),
+                None,
+                Arc::new(StaticProvider::new("unused")),
+            )
+            .expect_err("user cannot be regenerated");
+        assert_eq!(regenerate_user.code, CoreErrorCode::InvalidInput);
+
+        let stale = core
+            .remove_message_from_branch(
+                &conversation.id,
+                &branch_id,
+                Some(&messages[0].id),
+                &messages[1].id,
+            )
+            .expect_err("stale expected head");
+        assert_eq!(stale.code, CoreErrorCode::InvalidInput);
+        assert!(stale.recoverable);
+
+        let foreign = core
+            .create_conversation(&character.id, "다른 방", ConversationMode::Chat)
+            .expect("foreign conversation");
+        let foreign_error = core
+            .remove_message_from_branch(
+                &foreign.id,
+                &branch_id,
+                Some(&messages[1].id),
+                &messages[1].id,
+            )
+            .expect_err("foreign conversation");
+        assert_eq!(foreign_error.code, CoreErrorCode::NotFound);
+
+        let (stalling, started) = StallingProvider::new("생성 중");
+        core.send_message_to_branch_with_provider(
+            &conversation.id,
+            &branch_id,
+            Some(&messages[1].id),
+            ConversationMode::Chat,
+            "다음 질문",
+            "stalling".to_owned(),
+            None,
+            stalling,
+        )
+        .expect("pending generation");
+        started
+            .recv_timeout(Duration::from_secs(2))
+            .expect("provider started");
+        let pending_head = core
+            .list_branch_messages(&branch_id)
+            .expect("pending lineage")
+            .last()
+            .expect("pending assistant")
+            .id
+            .clone();
+        let pending_error = core
+            .remove_message_from_branch(
+                &conversation.id,
+                &branch_id,
+                Some(&pending_head),
+                &pending_head,
+            )
+            .expect_err("pending generation");
+        assert_eq!(pending_error.code, CoreErrorCode::InvalidInput);
+        assert!(pending_error.recoverable);
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn generation_launch_preflight_prevents_failed_sends_and_actions_from_mutating_storage() {
+        let (_send_root, send_core, send_character) = imported_core();
+        let send_conversation = send_core
+            .create_conversation(&send_character.id, "전송 preflight", ConversationMode::Chat)
+            .expect("send conversation");
+        let send_state = send_core
+            .get_conversation_state(&send_conversation.id)
+            .expect("send state");
+        poison_generation_registry(&send_core);
+        let send_error = send_core
+            .send_message_with_provider(
+                &send_conversation.id,
+                "저장되면 안 됨",
+                "unused".to_owned(),
+                None,
+                Arc::new(StaticProvider::new("unused")),
+            )
+            .expect_err("launch preflight must fail");
+        assert_eq!(send_error.code, CoreErrorCode::Internal);
+        assert!(
+            send_core
+                .list_messages(&send_conversation.id)
+                .expect("send messages")
+                .is_empty()
+        );
+        assert!(
+            send_core
+                .inner
+                .storage
+                .get_conversation_branch(&send_state.active_branch_id)
+                .expect("send branch")
+                .head_message_id
+                .is_none()
+        );
+
+        let (_action_root, action_core, action_character) = imported_core();
+        let action_conversation = action_core
+            .create_conversation(
+                &action_character.id,
+                "액션 preflight",
+                ConversationMode::Chat,
+            )
+            .expect("action conversation");
+        action_core
+            .send_message_with_provider(
+                &action_conversation.id,
+                "원본",
+                "static".to_owned(),
+                None,
+                Arc::new(StaticProvider::new("답변")),
+            )
+            .expect("initial generation");
+        let deadline = Instant::now() + Duration::from_secs(2);
+        let original = loop {
+            let messages = action_core
+                .list_messages(&action_conversation.id)
+                .expect("action messages");
+            if messages.len() == 2 && messages[1].status == MessageStatus::Complete {
+                break messages;
+            }
+            assert!(Instant::now() < deadline, "initial generation timed out");
+            thread::sleep(Duration::from_millis(10));
+        };
+        let action_state = action_core
+            .get_conversation_state(&action_conversation.id)
+            .expect("action state");
+        let branch_count = action_core
+            .list_conversation_branches(&action_conversation.id)
+            .expect("action branches")
+            .len();
+        let message_count = action_core.database_stats().expect("action stats").messages;
+        poison_generation_registry(&action_core);
+        let action_error = action_core
+            .edit_user_message_with_provider(
+                &action_conversation.id,
+                &action_state.active_branch_id,
+                Some(&original[1].id),
+                &original[0].id,
+                "수정본",
+                "unused".to_owned(),
+                None,
+                Arc::new(StaticProvider::new("unused")),
+            )
+            .expect_err("action launch preflight must fail");
+        assert_eq!(action_error.code, CoreErrorCode::Internal);
+        assert_eq!(
+            action_core
+                .get_conversation_state(&action_conversation.id)
+                .expect("unchanged action state")
+                .active_branch_id,
+            action_state.active_branch_id
+        );
+        assert_eq!(
+            action_core
+                .list_conversation_branches(&action_conversation.id)
+                .expect("unchanged action branches")
+                .len(),
+            branch_count
+        );
+        assert_eq!(
+            action_core
+                .database_stats()
+                .expect("unchanged stats")
+                .messages,
+            message_count
+        );
+        assert_eq!(
+            action_core
+                .list_messages(&action_conversation.id)
+                .expect("unchanged action messages"),
+            original
+        );
+    }
+
+    #[test]
+    fn regenerate_revalidates_copied_user_text_before_creating_a_branch() {
+        let (_root, core, character) = imported_core();
+        for (index, invalid_text) in ["   ".to_owned(), "x".repeat(MAX_USER_MESSAGE_BYTES + 1)]
+            .into_iter()
+            .enumerate()
+        {
+            let conversation = core
+                .create_conversation(
+                    &character.id,
+                    format!("비정상 원본 {index}"),
+                    ConversationMode::Chat,
+                )
+                .expect("conversation");
+            let state = core
+                .get_conversation_state(&conversation.id)
+                .expect("state");
+            let user = Message::user(conversation.id.clone(), invalid_text);
+            let generation_id = GenerationId::new();
+            let pending = Message::pending_assistant(
+                conversation.id.clone(),
+                user.id.clone(),
+                generation_id.clone(),
+            );
+            let generation = GenerationRecord {
+                id: generation_id,
+                conversation_id: conversation.id.clone(),
+                branch_id: state.active_branch_id.clone(),
+                user_message_id: user.id.clone(),
+                assistant_message_id: Some(pending.id.clone()),
+                mode: ConversationMode::Chat,
+                model: "synthetic".to_owned(),
+                status: GenerationStatus::Running,
+                input_tokens: None,
+                output_tokens: None,
+                error_code: None,
+                started_at: pending.created_at,
+                finished_at: None,
+            };
+            core.inner
+                .storage
+                .append_generation(&state.active_branch_id, None, &user, &pending, &generation)
+                .expect("append abnormal legacy generation");
+            let mut assistant = pending;
+            assistant.content = "legacy response".to_owned();
+            assistant.status = MessageStatus::Complete;
+            core.inner
+                .storage
+                .finalize_generation(&assistant, None, None, true)
+                .expect("finalize abnormal legacy generation");
+
+            let branches_before = core
+                .list_conversation_branches(&conversation.id)
+                .expect("branches before");
+            let messages_before = core
+                .list_messages(&conversation.id)
+                .expect("messages before");
+            let error = core
+                .regenerate_assistant_message_with_provider(
+                    &conversation.id,
+                    &state.active_branch_id,
+                    Some(&assistant.id),
+                    &assistant.id,
+                    "unused".to_owned(),
+                    None,
+                    Arc::new(StaticProvider::new("unused")),
+                )
+                .expect_err("invalid copied user text");
+            assert_eq!(error.code, CoreErrorCode::InvalidInput);
+            assert_eq!(
+                core.list_conversation_branches(&conversation.id)
+                    .expect("unchanged branches"),
+                branches_before
+            );
+            assert_eq!(
+                core.list_messages(&conversation.id)
+                    .expect("unchanged messages"),
+                messages_before
+            );
+        }
     }
 
     #[test]

@@ -39,6 +39,7 @@ public enum CoreClientFailure: Error, Equatable, Sendable {
     case bindingsUnavailable
     case startupFailed(String)
     case invalidResponse(String)
+    case configurationRequired(String)
 }
 
 extension CoreClientFailure: LocalizedError {
@@ -50,6 +51,8 @@ extension CoreClientFailure: LocalizedError {
             "Rust 코어를 열지 못했습니다: \(message)"
         case let .invalidResponse(message):
             "Rust 코어 응답을 해석할 수 없습니다: \(message)"
+        case let .configurationRequired(message):
+            message
         }
     }
 }
@@ -108,6 +111,29 @@ public protocol CoreClient: Sendable {
         providerProfileID: String,
         credential: String?
     ) async throws -> String
+    func editUserMessage(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        replacementText: String,
+        providerProfileID: String,
+        credential: String?
+    ) async throws -> CoreMessageActionGeneration
+    func regenerateAssistantMessage(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        providerProfileID: String,
+        credential: String?
+    ) async throws -> CoreMessageActionGeneration
+    func removeMessageFromBranch(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String
+    ) async throws -> CoreConversationBranch
     func cancelGeneration(generationID: String) async throws
     func pollEvents(maxEvents: UInt32) async throws -> ChatEventBatch
     func listProviderProfiles() async throws -> [ProviderProfile]

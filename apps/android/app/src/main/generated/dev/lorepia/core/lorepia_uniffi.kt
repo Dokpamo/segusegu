@@ -778,6 +778,12 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
+
+
+
+
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -811,6 +817,8 @@ fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_provider_profile(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_discard_import(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_edit_user_message(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_character(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_conversation(
@@ -840,6 +848,10 @@ fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_profiles(
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_open_conversation(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_events(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_regenerate_assistant_message(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_remove_message_from_branch(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_select_conversation_branch(
 ): Short
@@ -924,6 +936,8 @@ fun uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_provider_profile(`ptr`: P
 ): Unit
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_discard_import(`ptr`: Pointer,`inspectionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_edit_user_message(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,`replacementText`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_character(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_conversation(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
@@ -953,6 +967,10 @@ fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_profiles(`ptr`: Po
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_open_conversation(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_events(`ptr`: Pointer,`maxEvents`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_regenerate_assistant_message(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_remove_message_from_branch(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_select_conversation_branch(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -1123,6 +1141,9 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_discard_import() != 58614.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_edit_user_message() != 1681.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_character() != 14947.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1166,6 +1187,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_events() != 26212.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_regenerate_assistant_message() != 55399.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_remove_message_from_branch() != 43222.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_select_conversation_branch() != 62171.toShort()) {
@@ -1573,6 +1600,8 @@ public interface LorepiaCoreInterface {
     
     fun `discardImport`(`inspectionId`: kotlin.String)
     
+    fun `editUserMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `replacementText`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration
+    
     fun `getCharacter`(`characterId`: kotlin.String): FfiCharacter
     
     fun `getConversation`(`conversationId`: kotlin.String): FfiConversation
@@ -1605,6 +1634,10 @@ public interface LorepiaCoreInterface {
      * Drains up to `max_events` without blocking a platform UI thread.
      */
     fun `pollEvents`(`maxEvents`: kotlin.UInt): FfiEventBatch
+    
+    fun `regenerateAssistantMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration
+    
+    fun `removeMessageFromBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String): FfiConversationBranch
     
     fun `selectConversationBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String): FfiConversationState
     
@@ -1789,6 +1822,19 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
 }
     }
     
+    
+
+    
+    @Throws(FfiException::class)override fun `editUserMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `replacementText`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration {
+            return FfiConverterTypeFfiMessageActionGeneration.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_edit_user_message(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`messageId`),FfiConverterString.lower(`replacementText`),FfiConverterString.lower(`providerProfileId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -1983,6 +2029,32 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_events(
         it, FfiConverterUInt.lower(`maxEvents`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `regenerateAssistantMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration {
+            return FfiConverterTypeFfiMessageActionGeneration.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_regenerate_assistant_message(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`messageId`),FfiConverterString.lower(`providerProfileId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `removeMessageFromBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String): FfiConversationBranch {
+            return FfiConverterTypeFfiConversationBranch.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_remove_message_from_branch(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`messageId`),_status)
 }
     }
     )
@@ -2774,6 +2846,38 @@ public object FfiConverterTypeFfiMessage: FfiConverterRustBuffer<FfiMessage> {
             FfiConverterString.write(value.`status`, buf)
             FfiConverterOptionalString.write(value.`generationId`, buf)
             FfiConverterString.write(value.`createdAt`, buf)
+    }
+}
+
+
+
+data class FfiMessageActionGeneration (
+    var `branch`: FfiConversationBranch, 
+    var `generationId`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiMessageActionGeneration: FfiConverterRustBuffer<FfiMessageActionGeneration> {
+    override fun read(buf: ByteBuffer): FfiMessageActionGeneration {
+        return FfiMessageActionGeneration(
+            FfiConverterTypeFfiConversationBranch.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiMessageActionGeneration) = (
+            FfiConverterTypeFfiConversationBranch.allocationSize(value.`branch`) +
+            FfiConverterString.allocationSize(value.`generationId`)
+    )
+
+    override fun write(value: FfiMessageActionGeneration, buf: ByteBuffer) {
+            FfiConverterTypeFfiConversationBranch.write(value.`branch`, buf)
+            FfiConverterString.write(value.`generationId`, buf)
     }
 }
 

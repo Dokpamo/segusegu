@@ -19,6 +19,17 @@ room control later cannot reinterpret an in-flight or restored request. Chat
 mode requests concise character dialogue, while story mode requests scene-led
 prose and dialogue without taking control of the user's choices.
 
+Message actions preserve that immutable lineage. Editing a complete user
+message creates and selects a new branch from its parent, then appends the
+replacement user message and a new pending response. Regenerating an assistant
+response creates and selects a new branch from the source user's parent, copies
+the user text into a new message, and starts a new response. The original branch
+and its message records do not change. Removing a user or assistant message is
+a logical operation: it rewinds the selected branch head to the target's parent,
+so the target and its later suffix disappear only from that branch. All three
+operations require the active branch and its expected head to still match and
+are rejected while that branch has a pending generation.
+
 Core applies finite request and response budgets before anything reaches a
 provider or the message database:
 

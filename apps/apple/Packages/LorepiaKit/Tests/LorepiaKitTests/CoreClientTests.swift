@@ -8,7 +8,7 @@ import Darwin
 
 @MainActor
 final class CoreClientTests: XCTestCase {
-    func testFakeClientReportsVersionHealthAndV3Defaults() async throws {
+    func testFakeClientReportsVersionHealthAndV4Defaults() async throws {
         let client = FakeCoreClient(version: "test-core/1")
 
         let version = try await client.version()
@@ -20,8 +20,8 @@ final class CoreClientTests: XCTestCase {
         let settings = try await client.getSettings()
 
         XCTAssertEqual(version, "test-core/1")
-        XCTAssertEqual(versions.coreAPIVersion, 3)
-        XCTAssertEqual(versions.bindingAPIVersion, 3)
+        XCTAssertEqual(versions.coreAPIVersion, 4)
+        XCTAssertEqual(versions.bindingAPIVersion, 4)
         XCTAssertEqual(versions.chatEventVersion, 2)
         XCTAssertEqual(character.id, characters[0].id)
         XCTAssertEqual(health.coreVersion, "test-core/1")
@@ -94,7 +94,7 @@ final class CoreClientTests: XCTestCase {
     #endif
 
     #if LOREPIA_UNIFFI_GENERATED
-    func testGeneratedBindingsOpenTheRealCoreAndExposeV3Surface() async throws {
+    func testGeneratedBindingsOpenTheRealCoreAndExposeV4Surface() async throws {
         let dataRoot = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         defer { try? FileManager.default.removeItem(at: dataRoot) }
@@ -113,8 +113,8 @@ final class CoreClientTests: XCTestCase {
         let stats = try await selection.client.databaseStats()
 
         XCTAssertFalse(version.isEmpty)
-        XCTAssertEqual(versions.coreAPIVersion, 3)
-        XCTAssertEqual(versions.bindingAPIVersion, 3)
+        XCTAssertEqual(versions.coreAPIVersion, 4)
+        XCTAssertEqual(versions.bindingAPIVersion, 4)
         XCTAssertEqual(versions.chatEventVersion, 2)
         XCTAssertEqual(health.coreVersion, version)
         XCTAssertTrue(health.databaseOpen)
@@ -254,8 +254,8 @@ final class CoreClientTests: XCTestCase {
         let settings = try await selection.client.getSettings()
         let events = try await selection.client.pollEvents(maxEvents: 8)
         XCTAssertEqual(version, versions.coreVersion)
-        XCTAssertEqual(versions.coreAPIVersion, 3)
-        XCTAssertEqual(versions.bindingAPIVersion, 3)
+        XCTAssertEqual(versions.coreAPIVersion, 4)
+        XCTAssertEqual(versions.bindingAPIVersion, 4)
         XCTAssertEqual(versions.chatEventVersion, 2)
         XCTAssertTrue(characters.isEmpty)
         XCTAssertTrue(conversations.isEmpty)

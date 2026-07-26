@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::MessageId;
+use crate::{GenerationId, MessageId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ConversationId(pub String);
@@ -82,6 +82,16 @@ pub struct ConversationState {
     pub active_branch_id: ConversationBranchId,
     pub selected_mode: ConversationMode,
     pub updated_at: DateTime<Utc>,
+}
+
+/// A new immutable conversation branch together with the generation it started.
+///
+/// Editing or regenerating never rewrites an existing message. Instead, the
+/// operation forks a branch and appends a fresh user/assistant generation pair.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MessageActionGeneration {
+    pub branch: ConversationBranch,
+    pub generation_id: GenerationId,
 }
 
 impl Conversation {

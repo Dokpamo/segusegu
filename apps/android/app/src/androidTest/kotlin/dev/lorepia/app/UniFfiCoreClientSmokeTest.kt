@@ -82,8 +82,8 @@ class UniFfiCoreClientSmokeTest {
         try {
             val versions = core.versionInfo()
             assertEquals(core.coreVersion(), versions.coreVersion)
-            assertEquals(3u, versions.coreApiVersion)
-            assertEquals(3u, versions.bindingApiVersion)
+            assertEquals(4u, versions.coreApiVersion)
+            assertEquals(4u, versions.bindingApiVersion)
             assertEquals(2u, versions.chatEventVersion)
             assertTrue(core.listCharacters().isEmpty())
             assertTrue(core.listConversations().isEmpty())

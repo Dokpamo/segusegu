@@ -132,4 +132,66 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(app.tabBars.buttons["홈"].waitForExistence(timeout: 5))
         XCTAssertTrue(character.waitForExistence(timeout: 5))
     }
+
+    @MainActor
+    func testChatShowsRoomSettingsAndDirectMessageActions() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-native-navigation-ui-test"]
+        app.launch()
+
+        let character = app.staticTexts["미리보기 안내자"].firstMatch
+        XCTAssertTrue(character.waitForExistence(timeout: 10))
+        character.tap()
+
+        let settings = app.buttons[
+            "chat-room-settings-trigger-toolbar"
+        ]
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+        settings.tap()
+        XCTAssertTrue(
+            app.navigationBars["대화 설정"].waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(app.buttons["채팅"].exists)
+        XCTAssertTrue(app.buttons["스토리"].exists)
+        app.buttons["완료"].tap()
+
+        let composer = app.textFields["메시지"]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        composer.tap()
+        composer.typeText("직접 액션 확인")
+        app.buttons["메시지 보내기"].tap()
+
+        let edit = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "chat-message-action-edit-user-"
+            )
+        ).firstMatch
+        let regenerate = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "chat-message-action-regenerate-assistant-"
+            )
+        ).firstMatch
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        XCTAssertTrue(edit.isHittable)
+        XCTAssertTrue(regenerate.waitForExistence(timeout: 5))
+        XCTAssertTrue(regenerate.isHittable)
+
+        let copy = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "chat-message-action-copy-user-"
+            )
+        ).firstMatch
+        XCTAssertTrue(copy.isHittable)
+        copy.tap()
+        XCTAssertTrue(app.buttons["복사됨"].waitForExistence(timeout: 2))
+
+        edit.tap()
+        XCTAssertTrue(
+            app.navigationBars["메시지 편집"].waitForExistence(timeout: 5)
+        )
+        app.buttons["취소"].tap()
+    }
 }
