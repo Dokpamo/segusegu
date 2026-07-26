@@ -69,8 +69,33 @@ fi
 mac_pid=$!
 for _attempt in $(seq 1 60); do
   if ! kill -0 "$mac_pid" 2>/dev/null; then
+    set +e
     wait "$mac_pid"
-    exit 0
+    mac_status=$?
+    set -e
+    if [[ "$mac_status" -ne 0 ]]; then
+      sleep 2
+      diagnostic_root="$HOME/Library/Logs/DiagnosticReports"
+      if [[ -d "$diagnostic_root" ]]; then
+        crash_report="$(
+          find "$diagnostic_root" \
+            -maxdepth 1 \
+            -type f \
+            \( -name 'LorePia*.ips' -o -name 'LorePia*.crash' \) \
+            -mmin -5 \
+            -print |
+            sort |
+            tail -n 1
+        )"
+        if [[ -n "$crash_report" ]]; then
+          {
+            printf '\n--- macOS crash report: %s ---\n' "$crash_report"
+            sed -n '1,320p' "$crash_report"
+          } >>"$repo_root/apple-macos-smoke.log"
+        fi
+      fi
+    fi
+    exit "$mac_status"
   fi
   sleep 1
 done
