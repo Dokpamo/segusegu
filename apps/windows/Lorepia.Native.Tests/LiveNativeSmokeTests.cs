@@ -154,6 +154,13 @@ public sealed class LiveNativeSmokeTests
                         Model = "synthetic",
                         TimeoutSeconds = 5,
                     });
+                client.UpdateSettings(new AppSettings
+                {
+                    PreservePartialGenerations = true,
+                    SelectedProviderProfileId = cancellationProfile.Id,
+                });
+                Assert.True(
+                    client.GetSettings().PreservePartialGenerations);
                 var cancellationId = client.SendMessage(
                     cancellationConversation.Id,
                     "중지해",

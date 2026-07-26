@@ -16,7 +16,8 @@ if [[ ! -x "$sdkmanager" || ! -x "$avdmanager" ]]; then
   exit 1
 fi
 
-system_image="system-images;android-35;google_apis;x86_64"
+expected_api_level="36"
+system_image="system-images;android-${expected_api_level};google_apis;x86_64"
 "$sdkmanager" "platform-tools" "emulator" "$system_image"
 
 export ANDROID_AVD_HOME
@@ -54,6 +55,13 @@ if [[ "$booted" != "1" ]]; then
   echo "Android emulator did not finish booting." >&2
   exit 1
 fi
+
+actual_api_level="$("$android_sdk/platform-tools/adb" shell getprop ro.build.version.sdk 2>/dev/null | tr -d '\r')"
+if [[ "$actual_api_level" != "$expected_api_level" ]]; then
+  echo "Expected Android API $expected_api_level, got '$actual_api_level'." >&2
+  exit 1
+fi
+echo "Android emulator API: $actual_api_level"
 
 "$android_sdk/platform-tools/adb" shell settings put global window_animation_scale 0
 "$android_sdk/platform-tools/adb" shell settings put global transition_animation_scale 0
