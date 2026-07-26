@@ -1031,6 +1031,7 @@ private extension View {
     @ViewBuilder
     func chatComposerSurface(isInteractive: Bool) -> some View {
 #if os(iOS)
+#if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             glassEffect(
                 .regular.interactive(isInteractive),
@@ -1039,6 +1040,9 @@ private extension View {
         } else {
             background(.regularMaterial, in: Capsule())
         }
+#else
+        background(.regularMaterial, in: Capsule())
+#endif
 #else
         background(.regularMaterial, in: Capsule())
 #endif

@@ -205,11 +205,15 @@ struct IOSRootView: View {
 private extension View {
     @ViewBuilder
     func lorepiaTabBarBehavior() -> some View {
+#if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             tabBarMinimizeBehavior(.onScrollDown)
         } else {
             self
         }
+#else
+        self
+#endif
     }
 }
 
