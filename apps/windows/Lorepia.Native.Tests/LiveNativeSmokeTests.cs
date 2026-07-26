@@ -117,7 +117,12 @@ public sealed class LiveNativeSmokeTests
                     }
                 }
 
-                Assert.True(finished);
+                Assert.True(
+                    finished,
+                    $"Expected a finished generation, received: {string.Join(
+                        ", ",
+                        events.Select(chatEvent =>
+                            $"{chatEvent.Type}:{chatEvent.ErrorCode}:{chatEvent.ErrorMessage}"))}");
                 Assert.Equal(
                     ChatEventType.GenerationStarted,
                     events.First().Type);
@@ -227,6 +232,128 @@ public sealed class LiveNativeSmokeTests
         }
     }
 
+    private static async Task ReadCompleteHttpRequestAsync(
+        NetworkStream stream)
+    {
+        const int maximumHeaderBytes = 64 * 1024;
+        const int maximumRequestBytes = 4 * 1024 * 1024;
+        using var timeout = new CancellationTokenSource(
+            TimeSpan.FromSeconds(10));
+        using var request = new MemoryStream(capacity: 128 * 1024);
+        var buffer = new byte[16 * 1024];
+        int? expectedRequestLength = null;
+
+        while (true)
+        {
+            var read = await stream.ReadAsync(
+                buffer.AsMemory(),
+                timeout.Token);
+            if (read == 0)
+            {
+                throw new EndOfStreamException(
+                    "HTTP request ended before its declared body.");
+            }
+            if (request.Length + read > maximumRequestBytes)
+            {
+                throw new InvalidDataException(
+                    "HTTP request exceeded the test-server limit.");
+            }
+            request.Write(buffer, 0, read);
+
+            if (expectedRequestLength is null)
+            {
+                var bufferedLength = checked((int)request.Length);
+                var requestBytes = request.GetBuffer();
+                var headerEnd = FindHeaderEnd(
+                    requestBytes,
+                    bufferedLength);
+                if (headerEnd < 0)
+                {
+                    if (bufferedLength > maximumHeaderBytes)
+                    {
+                        throw new InvalidDataException(
+                            "HTTP headers exceeded the test-server limit.");
+                    }
+                    continue;
+                }
+                if (headerEnd > maximumHeaderBytes)
+                {
+                    throw new InvalidDataException(
+                        "HTTP headers exceeded the test-server limit.");
+                }
+
+                var contentLength = ParseContentLength(
+                    requestBytes,
+                    headerEnd);
+                expectedRequestLength = checked(
+                    headerEnd + 4 + contentLength);
+                if (expectedRequestLength > maximumRequestBytes)
+                {
+                    throw new InvalidDataException(
+                        "HTTP request exceeded the test-server limit.");
+                }
+            }
+
+            if (request.Length >= expectedRequestLength.Value)
+            {
+                return;
+            }
+        }
+    }
+
+    private static int FindHeaderEnd(
+        byte[] request,
+        int requestLength)
+    {
+        for (var index = 0; index <= requestLength - 4; index += 1)
+        {
+            if (request[index] == '\r'
+                && request[index + 1] == '\n'
+                && request[index + 2] == '\r'
+                && request[index + 3] == '\n')
+            {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    private static int ParseContentLength(
+        byte[] request,
+        int headerEnd)
+    {
+        var headers = Encoding.ASCII.GetString(
+            request,
+            0,
+            headerEnd);
+        foreach (var line in headers.Split(
+                     "\r\n",
+                     StringSplitOptions.None))
+        {
+            var separator = line.IndexOf(':');
+            if (separator < 0
+                || !line[..separator].Equals(
+                    "Content-Length",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (int.TryParse(
+                    line[(separator + 1)..].Trim(),
+                    out var contentLength)
+                && contentLength >= 0)
+            {
+                return contentLength;
+            }
+            throw new InvalidDataException(
+                "HTTP Content-Length was invalid.");
+        }
+
+        throw new InvalidDataException(
+            "HTTP request did not include Content-Length.");
+    }
+
     private sealed class StallingSseServer : IAsyncDisposable
     {
         private readonly TcpListener listener;
@@ -290,8 +417,7 @@ public sealed class LiveNativeSmokeTests
         {
             using var client = await listener.AcceptTcpClientAsync();
             await using var stream = client.GetStream();
-            var requestBuffer = new byte[16 * 1024];
-            _ = await stream.ReadAsync(requestBuffer);
+            await ReadCompleteHttpRequestAsync(stream);
 
             var escaped = System.Text.Json.JsonSerializer.Serialize(
                 responseText);
@@ -379,8 +505,7 @@ public sealed class LiveNativeSmokeTests
         {
             using var client = await listener.AcceptTcpClientAsync();
             await using var stream = client.GetStream();
-            var requestBuffer = new byte[16 * 1024];
-            _ = await stream.ReadAsync(requestBuffer);
+            await ReadCompleteHttpRequestAsync(stream);
 
             var escaped = System.Text.Json.JsonSerializer.Serialize(
                 responseText);
