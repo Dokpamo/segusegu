@@ -9,7 +9,7 @@ lifecycle = "2.9.1"
 navigation = "2.9.0"
 junit = "4.13.2"
 androidxJunit = "1.2.1"
-espresso = "3.6.1"
+espresso = "3.7.0"
 testRunner = "1.6.2"
 jna = "5.17.0"
 
