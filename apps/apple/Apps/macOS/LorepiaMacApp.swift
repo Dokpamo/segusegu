@@ -47,7 +47,13 @@ struct LorepiaMacApp: App {
                         do {
                             Self.traceLaunchSmoke("navigation smoke started")
                             let routes = try await navigationModel
-                                .runLaunchSmoke()
+                                .runLaunchSmoke(
+                                    settleDelay: .milliseconds(200)
+                                ) { destination in
+                                    Self.traceLaunchSmoke(
+                                        "rendered \(destination.rawValue)"
+                                    )
+                                }
                             Self.traceLaunchSmoke("navigation smoke completed")
                             try await environment.validateForLaunchSmoke()
                             Self.traceLaunchSmoke("core validation completed")

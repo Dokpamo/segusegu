@@ -65,7 +65,9 @@ if [[ ! -x "$mac_executable" ]]; then
   echo "Built macOS application was not found at $mac_executable." >&2
   exit 1
 fi
-"$mac_executable" --lorepia-ci-smoke >"$repo_root/apple-macos-smoke.log" 2>&1 &
+SWIFT_BACKTRACE=enable=yes \
+  "$mac_executable" --lorepia-ci-smoke \
+  >"$repo_root/apple-macos-smoke.log" 2>&1 &
 mac_pid=$!
 for _attempt in $(seq 1 60); do
   if ! kill -0 "$mac_pid" 2>/dev/null; then
@@ -74,19 +76,25 @@ for _attempt in $(seq 1 60); do
     mac_status=$?
     set -e
     if [[ "$mac_status" -ne 0 ]]; then
-      sleep 2
       diagnostic_root="$HOME/Library/Logs/DiagnosticReports"
       if [[ -d "$diagnostic_root" ]]; then
-        crash_report="$(
-          find "$diagnostic_root" \
-            -maxdepth 1 \
-            -type f \
-            \( -name 'LorePia*.ips' -o -name 'LorePia*.crash' \) \
-            -mmin -5 \
-            -print |
-            sort |
-            tail -n 1
-        )"
+        crash_report=""
+        for _diagnostic_attempt in $(seq 1 15); do
+          crash_report="$(
+            find "$diagnostic_root" \
+              -maxdepth 1 \
+              -type f \
+              \( -name 'LorePia*.ips' -o -name 'LorePia*.crash' \) \
+              -mmin -5 \
+              -print |
+              sort |
+              tail -n 1
+          )"
+          if [[ -n "$crash_report" ]]; then
+            break
+          fi
+          sleep 1
+        done
         if [[ -n "$crash_report" ]]; then
           {
             printf '\n--- macOS crash report: %s ---\n' "$crash_report"
@@ -94,6 +102,15 @@ for _attempt in $(seq 1 60); do
           } >>"$repo_root/apple-macos-smoke.log"
         fi
       fi
+      {
+        printf '\n--- macOS unified log ---\n'
+        /usr/bin/log show \
+          --last 3m \
+          --style compact \
+          --predicate 'process == "LorePia"' \
+          2>&1 ||
+          true
+      } >>"$repo_root/apple-macos-smoke.log"
     fi
     exit "$mac_status"
   fi

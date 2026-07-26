@@ -37,7 +37,9 @@ public final class MacRootNavigationModel: ObservableObject {
     /// detail to acknowledge rendering before advancing.
     @discardableResult
     public func runLaunchSmoke(
-        renderTimeout: Duration = .seconds(5)
+        renderTimeout: Duration = .seconds(5),
+        settleDelay: Duration = .zero,
+        onRendered: (@MainActor @Sendable (Destination) -> Void)? = nil
     ) async throws -> [Destination] {
         guard destination == .library else {
             throw MacRootNavigationSmokeError.unexpectedInitialDestination(
@@ -67,7 +69,10 @@ public final class MacRootNavigationModel: ObservableObject {
                 minimumAcknowledgements: requiredAcknowledgements,
                 timeout: renderTimeout
             )
+            onRendered?(next)
             visited.append(next)
+            await Task.yield()
+            try await Task.sleep(for: settleDelay)
         }
 
         guard visited == expected,
