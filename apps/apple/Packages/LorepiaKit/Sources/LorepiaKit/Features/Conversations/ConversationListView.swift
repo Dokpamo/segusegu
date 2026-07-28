@@ -20,39 +20,6 @@ public struct ConversationListView: View {
     }
 
     public var body: some View {
-        searchableContent
-            .sheet(isPresented: $showsNewConversation) {
-                NewConversationSheet(
-                    viewModel: viewModel,
-                    onCreated: onOpenConversation,
-                    onRequestCharacter: onRequestCharacter
-                )
-            }
-            .task {
-                await viewModel.refresh()
-            }
-    }
-
-    @ViewBuilder
-    private var searchableContent: some View {
-#if os(iOS)
-        VStack(spacing: 0) {
-            ConversationSearchField(text: $viewModel.query)
-                .padding(.horizontal, LorepiaSpacing.standard)
-                .padding(.vertical, LorepiaSpacing.compact)
-            content
-        }
-#else
-        content
-            .searchable(
-                text: $viewModel.query,
-                placement: .automatic,
-                prompt: Text("캐릭터, 대화 제목 또는 메시지 검색")
-            )
-#endif
-    }
-
-    private var content: some View {
         Group {
             switch contentState {
             case .loading:
@@ -73,7 +40,30 @@ public struct ConversationListView: View {
             reduceMotion ? nil : .easeInOut(duration: 0.18),
             value: contentState
         )
+        .searchable(
+            text: $viewModel.query,
+            placement: conversationSearchPlacement,
+            prompt: Text("캐릭터, 대화 제목 또는 메시지 검색")
+        )
+        .sheet(isPresented: $showsNewConversation) {
+            NewConversationSheet(
+                viewModel: viewModel,
+                onCreated: onOpenConversation,
+                onRequestCharacter: onRequestCharacter
+            )
+        }
+        .task {
+            await viewModel.refresh()
+        }
         .accessibilityIdentifier("conversation-list-screen")
+    }
+
+    private var conversationSearchPlacement: SearchFieldPlacement {
+#if os(iOS)
+        .navigationBarDrawer(displayMode: .automatic)
+#else
+        .automatic
+#endif
     }
 
     private var contentState: ConversationListContentState {
@@ -189,70 +179,6 @@ public struct ConversationListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
-
-#if os(iOS)
-private struct ConversationSearchField: View {
-    @Binding var text: String
-
-    private let prompt = "캐릭터, 대화 제목 또는 메시지 검색"
-
-    var body: some View {
-        HStack(spacing: LorepiaSpacing.compact) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-                .accessibilityHidden(true)
-
-            TextField(
-                "",
-                text: $text,
-                prompt: Text(prompt)
-                    .foregroundStyle(.secondary)
-            )
-            .textFieldStyle(.plain)
-            .foregroundStyle(.primary)
-            .frame(minHeight: 44)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .submitLabel(.search)
-            .accessibilityLabel("대화 검색")
-            .accessibilityIdentifier("conversation-search-field")
-
-            if !text.isEmpty {
-                Button {
-                    text = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("검색어 지우기")
-                .accessibilityIdentifier(
-                    "conversation-search-clear-button"
-                )
-            }
-        }
-        .padding(.leading, LorepiaSpacing.snug)
-        .padding(.trailing, text.isEmpty ? LorepiaSpacing.snug : 0)
-        .frame(minHeight: 44)
-        .background(
-            LorepiaColor.paperRaised,
-            in: RoundedRectangle(
-                cornerRadius: LorepiaRadius.field,
-                style: .continuous
-            )
-        )
-        .overlay {
-            RoundedRectangle(
-                cornerRadius: LorepiaRadius.field,
-                style: .continuous
-            )
-            .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-        }
-    }
-}
-#endif
 
 private enum ConversationListContentState: Hashable {
     case loading

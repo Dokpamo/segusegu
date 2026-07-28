@@ -520,7 +520,7 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
-    func testConversationSearchFiltersAndClears() {
+    func testConversationSearchFiltersWithNativeField() {
         let app = XCUIApplication()
         app.launchArguments = ["--lorepia-chat-bubble-showcase"]
         app.launch()
@@ -529,9 +529,13 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(chats.waitForExistence(timeout: 10))
         chats.tap()
 
-        let searchField = app.textFields["conversation-search-field"]
+        let searchField = app.searchFields.firstMatch
         XCTAssertTrue(searchField.waitForExistence(timeout: 5))
         XCTAssertTrue(searchField.isHittable)
+        XCTAssertEqual(
+            searchField.value as? String,
+            "캐릭터, 대화 제목 또는 메시지 검색"
+        )
 
         let morningRow = app.descendants(matching: .any)[
             "conversation-row-showcase-morning-walk"
@@ -552,19 +556,33 @@ final class IOSRootNavigationUITests: XCTestCase {
         searchField.typeText("마지막")
         XCTAssertTrue(lastSceneRow.waitForExistence(timeout: 5))
         XCTAssertTrue(morningRow.waitForNonExistence(timeout: 5))
+    }
 
-        let clearButton = app.buttons[
-            "conversation-search-clear-button"
+    @MainActor
+    func testConversationSearchDrawerHidesWhenScrolling() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--lorepia-chat-bubble-showcase",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityXXXL",
         ]
-        XCTAssertTrue(clearButton.waitForExistence(timeout: 5))
-        XCTAssertTrue(clearButton.isHittable)
-        XCTAssertGreaterThanOrEqual(clearButton.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(clearButton.frame.height, 44)
-        clearButton.tap()
+        app.launch()
 
-        XCTAssertTrue(morningRow.waitForExistence(timeout: 5))
-        XCTAssertTrue(lastSceneRow.waitForExistence(timeout: 5))
-        XCTAssertTrue(clearButton.waitForNonExistence(timeout: 5))
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 10))
+        chats.tap()
+
+        let searchField = app.searchFields.firstMatch
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        XCTAssertTrue(searchField.isHittable)
+
+        app.swipeUp()
+
+        let hiddenSearch = expectation(
+            for: NSPredicate(format: "hittable == false"),
+            evaluatedWith: searchField
+        )
+        wait(for: [hiddenSearch], timeout: 5)
     }
 
     @MainActor
