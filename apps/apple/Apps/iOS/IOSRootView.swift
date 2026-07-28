@@ -172,15 +172,18 @@ private struct IOSHomeView: View {
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
 
-                Button("추가하기", action: onAdd)
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .frame(minWidth: 120, minHeight: 44)
-                    .position(
-                        x: geometry.size.width / 2,
-                        y: geometry.size.height * 0.68
-                    )
-                    .accessibilityIdentifier("home-add-button")
+                Button(action: onAdd) {
+                    Text("추가하기")
+                        .frame(minWidth: 180)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                .frame(minHeight: 44)
+                .position(
+                    x: geometry.size.width / 2,
+                    y: geometry.size.height * 0.68
+                )
+                .accessibilityIdentifier("home-add-button")
             }
         }
     }

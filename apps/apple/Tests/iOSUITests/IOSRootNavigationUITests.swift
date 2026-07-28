@@ -419,8 +419,10 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(homeButtons.count, 1)
         XCTAssertEqual(homeButtons.first?.identifier, "home-add-button")
         XCTAssertEqual(add.label, "추가하기")
-        XCTAssertGreaterThanOrEqual(add.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(add.frame.width, 180)
         XCTAssertGreaterThanOrEqual(add.frame.height, 44)
+        XCTAssertEqual(add.frame.midX, window.frame.midX, accuracy: 2)
+        XCTAssertLessThanOrEqual(add.frame.width, window.frame.width - 32)
         XCTAssertGreaterThan(add.frame.midY, window.frame.midY)
         XCTAssertLessThan(add.frame.maxY, app.tabBars.firstMatch.frame.minY)
 
@@ -505,14 +507,64 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(homeButtons.count, 1)
         XCTAssertEqual(homeButtons.first?.identifier, "home-add-button")
         XCTAssertEqual(add.label, "추가하기")
-        XCTAssertGreaterThanOrEqual(add.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(add.frame.width, 180)
         XCTAssertGreaterThanOrEqual(add.frame.height, 44)
+        XCTAssertEqual(add.frame.midX, window.frame.midX, accuracy: 2)
+        XCTAssertLessThanOrEqual(add.frame.width, window.frame.width - 32)
         XCTAssertGreaterThan(add.frame.midY, window.frame.midY)
         XCTAssertLessThan(add.frame.maxY, app.tabBars.firstMatch.frame.minY)
 
         add.tap()
         XCTAssertTrue(app.tabBars.buttons["생성"].isSelected)
         assertBlankCreateScreen(in: app)
+    }
+
+    @MainActor
+    func testConversationSearchFiltersAndClears() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-chat-bubble-showcase"]
+        app.launch()
+
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 10))
+        chats.tap()
+
+        let searchField = app.textFields["conversation-search-field"]
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        XCTAssertTrue(searchField.isHittable)
+
+        let morningRow = app.descendants(matching: .any)[
+            "conversation-row-showcase-morning-walk"
+        ]
+        let lastSceneRow = app.descendants(matching: .any)[
+            "conversation-row-showcase-last-scene"
+        ]
+        XCTAssertTrue(morningRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(lastSceneRow.waitForExistence(timeout: 5))
+
+        let screenshot = XCUIScreen.main.screenshot()
+        let screenshotAttachment = XCTAttachment(screenshot: screenshot)
+        screenshotAttachment.name = "Conversation search"
+        screenshotAttachment.lifetime = .keepAlways
+        add(screenshotAttachment)
+
+        searchField.tap()
+        searchField.typeText("마지막")
+        XCTAssertTrue(lastSceneRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(morningRow.waitForNonExistence(timeout: 5))
+
+        let clearButton = app.buttons[
+            "conversation-search-clear-button"
+        ]
+        XCTAssertTrue(clearButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(clearButton.isHittable)
+        XCTAssertGreaterThanOrEqual(clearButton.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(clearButton.frame.height, 44)
+        clearButton.tap()
+
+        XCTAssertTrue(morningRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(lastSceneRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(clearButton.waitForNonExistence(timeout: 5))
     }
 
     @MainActor
@@ -577,7 +629,15 @@ final class IOSRootNavigationUITests: XCTestCase {
         }
         XCTAssertTrue(newestRowFrame.contains(titleFrame))
         XCTAssertTrue(newestRowFrame.contains(previewFrame))
-        XCTAssertEqual(titleFrame.minX, previewFrame.minX, accuracy: 3)
+        // Vision reports glyph-ink bounds, not the SwiftUI text container.
+        // Different Korean leading glyphs can vary by several pixels even
+        // when their layout origins are identical.
+        let ocrLeadingTolerance: CGFloat = 6
+        XCTAssertEqual(
+            titleFrame.minX,
+            previewFrame.minX,
+            accuracy: ocrLeadingTolerance
+        )
 
         guard let storyTitleFrame = recognizedFrame(
             of: "마지막 장면부터",
@@ -708,7 +768,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(
             storyTitleFrame.minX,
             storyPreviewFrame.minX,
-            accuracy: 3
+            accuracy: ocrLeadingTolerance
         )
         XCTAssertEqual(
             previewFrame.midY - titleFrame.midY,
@@ -742,7 +802,8 @@ final class IOSRootNavigationUITests: XCTestCase {
             storyRowFrame.midY,
             accuracy: 4
         )
-        XCTAssertGreaterThan(titleFrame.height, previewFrame.height)
+        // OCR bounds follow glyph shapes and cannot reliably compare adjacent
+        // 16pt and 15pt fonts; vertical ordering is the stable visual signal.
         XCTAssertLessThan(titleFrame.midY, previewFrame.midY)
 
         XCTAssertNil(
