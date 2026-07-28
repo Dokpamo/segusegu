@@ -12,6 +12,7 @@
 		3810B7313788DAAC05176FC8 /* IOSRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A45762D2D7B3E1DF310A20 /* IOSRootView.swift */; };
 		41722AF3C28BC6C878BD9C42 /* LorepiaKit in Frameworks */ = {isa = PBXBuildFile; productRef = B4F98EFF844DA48F3BD42DCA /* LorepiaKit */; };
 		59684055EF28F6E22B302AD9 /* LorepiaIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D200A9BA20E638B86090AFDE /* LorepiaIOSApp.swift */; };
+		8B99119D5827C87E46258EAD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3C7F2B15C8B231EE7AE6DE3E /* Assets.xcassets */; };
 		AD0B5392E47D4E66386CF441 /* IOSAppDirectories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AD0E6C48AEE69F698C6BE3F /* IOSAppDirectories.swift */; };
 		B61B03FF84E5FDB684FE7F0A /* LorepiaMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A968E2201C7BED416CAE67 /* LorepiaMacApp.swift */; };
 		E50F83384A2DBD3E7C1D93E5 /* LorepiaKit in Frameworks */ = {isa = PBXBuildFile; productRef = 14399F8D73907FD4C648F25E /* LorepiaKit */; };
@@ -33,6 +34,7 @@
 		1691DB10016F7816F6113AA6 /* LorepiaKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LorepiaKit; path = Packages/LorepiaKit; sourceTree = SOURCE_ROOT; };
 		1AE3E1A4207AC29C5A9008F0 /* LorepiaMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LorepiaMac.entitlements; sourceTree = "<group>"; };
 		2A35C7CBD006B3128DA4A902 /* MacAppDirectories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAppDirectories.swift; sourceTree = "<group>"; };
+		3C7F2B15C8B231EE7AE6DE3E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4B612B0C94ACE1ED2D771A39 /* LorepiaIOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LorepiaIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5DFB3C809D238012ED100246 /* LorepiaIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LorepiaIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6AD0E6C48AEE69F698C6BE3F /* IOSAppDirectories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSAppDirectories.swift; sourceTree = "<group>"; };
@@ -130,6 +132,7 @@
 		FC5871C11CD1AC8DB1381CA9 /* iOS */ = {
 			isa = PBXGroup;
 			children = (
+				3C7F2B15C8B231EE7AE6DE3E /* Assets.xcassets */,
 				6AD0E6C48AEE69F698C6BE3F /* IOSAppDirectories.swift */,
 				A6A45762D2D7B3E1DF310A20 /* IOSRootView.swift */,
 				D200A9BA20E638B86090AFDE /* LorepiaIOSApp.swift */,
@@ -145,6 +148,7 @@
 			buildConfigurationList = 91B8A30A0A6F9F0230CD7B7F /* Build configuration list for PBXNativeTarget "LorepiaIOS" */;
 			buildPhases = (
 				ECA20F8CDC9DC4F06D36C4BF /* Sources */,
+				7C97E1C20AAB4AEB1055516E /* Resources */,
 				75D604F88BAEDD40D0743668 /* Frameworks */,
 			);
 			buildRules = (
@@ -233,6 +237,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7C97E1C20AAB4AEB1055516E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8B99119D5827C87E46258EAD /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		4EAD815F7F6351FC80290B53 /* Sources */ = {
@@ -336,7 +351,7 @@
 		6E8D30D138B1B921470CBF24 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = LorePia;
@@ -393,7 +408,7 @@
 		DAF77DCF6FFBA07F4169FD2B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = "";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = LorePia;

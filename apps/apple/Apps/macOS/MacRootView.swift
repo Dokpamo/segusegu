@@ -37,16 +37,18 @@ private extension MacRootNavigationModel.Destination {
         }
     }
 
-    var symbol: String {
+    @MainActor
+    @ViewBuilder
+    var sidebarLabel: some View {
         switch self {
         case .library:
-            "books.vertical"
+            Label(title, systemImage: "books.vertical")
         case .chat:
-            "bubble.left.and.bubble.right"
+            Label(title, systemImage: "bubble.left.and.bubble.right")
         case .importReview:
-            "doc.badge.plus"
+            Label(title, systemImage: "doc.badge.plus")
         case .settings:
-            "gearshape"
+            LorepiaGlyphLabel(title, glyph: .settings, size: 16)
         }
     }
 }
@@ -80,7 +82,7 @@ struct MacRootView: View {
                     }
                 )
             ) { item in
-                Label(item.title, systemImage: item.symbol)
+                item.sidebarLabel
                     .tag(item)
             }
             .navigationTitle("LorePia")

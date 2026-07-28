@@ -69,11 +69,13 @@ public struct ChatRoomSettingsTrigger: View {
     public var body: some View {
         switch style {
         case .toolbar:
-            Button(
-                "대화 설정",
-                systemImage: "ellipsis",
-                action: action
-            )
+            Button(action: action) {
+                Label {
+                    Text("대화 설정")
+                } icon: {
+                    LorepiaGlyphView(.moreVertical, size: 18)
+                }
+            }
             .disabled(!isEnabled)
             .chatRoomSettingsAccessibility(
                 mode: mode,

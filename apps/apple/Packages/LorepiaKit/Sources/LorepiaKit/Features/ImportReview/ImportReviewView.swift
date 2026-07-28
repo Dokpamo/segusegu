@@ -107,7 +107,10 @@ public struct ImportReviewView: View {
                 }
 
                 VStack(alignment: .leading, spacing: LorepiaSpacing.compact) {
-                    Label("Rust 코어 검사 결과", systemImage: "checkmark.shield")
+                    LorepiaGlyphLabel(
+                        "Rust 코어 검사 결과",
+                        glyph: .shield
+                    )
                         .font(.headline)
                     Text(inspection.displayName)
                         .font(.title3)

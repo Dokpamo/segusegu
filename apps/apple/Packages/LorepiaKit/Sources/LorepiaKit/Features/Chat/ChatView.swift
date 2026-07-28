@@ -1066,7 +1066,6 @@ private struct ChatComposer: View {
     @Binding var measuredEditorHeight: CGFloat
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -1366,8 +1365,7 @@ private struct ChatComposer: View {
     }
 
     private var toolsControlLabel: some View {
-        Image(systemName: "plus")
-            .font(.system(size: 18, weight: .medium))
+        LorepiaGlyphView(.plus, size: 18)
             .frame(
                 width: ChatComposerMetrics.control,
                 height: ChatComposerMetrics.control
@@ -1605,23 +1603,28 @@ private struct ChatComposer: View {
     }
 
     private var sendLabel: some View {
-        Image(systemName: "arrow.up")
-            .font(
-                .system(
-                    size: min(max(scaledSendSymbol, 17), 20),
-                    weight: .semibold
+        ZStack {
+            Circle()
+                .fill(sendBackgroundStyle)
+                .frame(
+                    width: ChatComposerMetrics.control * 22 / 24,
+                    height: ChatComposerMetrics.control * 22 / 24
                 )
+
+            LorepiaGlyphView(
+                .send,
+                size: ChatComposerMetrics.control
             )
             .foregroundStyle(sendForegroundStyle)
-            .chatSendSymbolEffect(
-                trigger: sendFeedback,
-                reduceMotion: reduceMotion
-            )
+        }
             .frame(
                 width: ChatComposerMetrics.control,
                 height: ChatComposerMetrics.control
             )
-            .background(sendBackgroundStyle, in: Circle())
+            .chatSendGlyphEffect(
+                trigger: sendFeedback,
+                reduceMotion: reduceMotion
+            )
             .animation(
                 reduceMotion
                     ? nil
@@ -1656,14 +1659,12 @@ private struct ChatComposer: View {
                 colorSchemeContrast == .increased ? 0.62 : 0.34
             )
         }
-        return colorScheme == .dark ? .black : .white
+        return .white
     }
 
     private var sendBackgroundStyle: AnyShapeStyle {
         if canSubmit {
-            return AnyShapeStyle(
-                colorScheme == .dark ? Color.white : Color.black
-            )
+            return AnyShapeStyle(Color.black)
         }
         return AnyShapeStyle(
             Color.primary.opacity(
@@ -2334,23 +2335,29 @@ private extension View {
     }
 
     @ViewBuilder
-    func chatSendSymbolEffect(
+    func chatSendGlyphEffect(
         trigger: Int,
         reduceMotion: Bool
     ) -> some View {
-#if compiler(>=5.9)
         if reduceMotion {
             self
         } else {
-            symbolEffect(
-                .bounce,
-                options: .nonRepeating,
-                value: trigger
-            )
+            phaseAnimator(
+                [false, true, false],
+                trigger: trigger
+            ) { content, isLifted in
+                content
+                    .scaleEffect(isLifted ? 0.84 : 1)
+                    .offset(y: isLifted ? -1.5 : 0)
+            } animation: { isLifted in
+                isLifted
+                    ? .easeOut(duration: 0.08)
+                    : .snappy(
+                        duration: 0.2,
+                        extraBounce: 0.08
+                    )
+            }
         }
-#else
-        self
-#endif
     }
 
     @ViewBuilder

@@ -31,7 +31,7 @@ struct IOSRootView: View {
                 .navigationTitle("홈")
             }
             .tabItem {
-                Label("홈", systemImage: "house.fill")
+                Label("홈", image: "TabHome")
             }
             .tag(Tab.home)
 
@@ -63,10 +63,7 @@ struct IOSRootView: View {
                 }
             }
             .tabItem {
-                Label(
-                    "채팅",
-                    systemImage: "bubble.left.and.bubble.right.fill"
-                )
+                Label("채팅", image: "TabChats")
             }
             .tag(Tab.chats)
 
@@ -75,7 +72,7 @@ struct IOSRootView: View {
                     .navigationTitle("생성")
             }
             .tabItem {
-                Label("생성", systemImage: "plus.circle.fill")
+                Label("생성", image: "TabCreate")
             }
             .tag(Tab.create)
 
@@ -87,10 +84,14 @@ struct IOSRootView: View {
                                 Button {
                                     showsCoreStatus = true
                                 } label: {
-                                    Label(
-                                        "코어 상태",
-                                        systemImage: "waveform.path.ecg"
-                                    )
+                                    Label {
+                                        Text("코어 상태")
+                                    } icon: {
+                                        LorepiaGlyphView(
+                                            .waveform,
+                                            size: 18
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -118,7 +119,7 @@ struct IOSRootView: View {
                 .navigationTitle("설정")
             }
             .tabItem {
-                Label("설정", systemImage: "gearshape.fill")
+                Label("설정", image: "TabSettings")
             }
             .tag(Tab.settings)
         }
