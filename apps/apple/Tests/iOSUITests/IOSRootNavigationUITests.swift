@@ -757,6 +757,68 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
+    func testConversationRowWhitespaceOpensChatAfterEdgeSwipeBack() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-chat-bubble-showcase"]
+        app.launch()
+
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 10))
+        chats.tap()
+
+        let conversationRow = app.descendants(matching: .any)[
+            "conversation-row-showcase-morning-walk"
+        ]
+        XCTAssertTrue(conversationRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(conversationRow.isHittable)
+
+        let composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        // This point sits to the right of the intentionally short preview,
+        // below the timestamp: it is transparent row whitespace.
+        conversationRow.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.72, dy: 0.78)
+        ).tap()
+        XCTAssertTrue(
+            composer.waitForExistence(timeout: 5),
+            "행의 텍스트 바깥 빈 공간을 눌러도 채팅방이 열려야 합니다."
+        )
+
+        let window = app.windows.firstMatch
+        let leadingEdge = window.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5)
+        )
+        let destination = window.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)
+        )
+        leadingEdge.press(forDuration: 0.05, thenDragTo: destination)
+
+        XCTAssertTrue(chats.waitForExistence(timeout: 5))
+        XCTAssertTrue(chats.isSelected)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["conversation-list-screen"]
+                .waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(composer.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(conversationRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(conversationRow.isHittable)
+        // The top five percent is the row's vertical spacing, not visible
+        // avatar or text content.
+        conversationRow.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.72, dy: 0.05)
+        ).tap()
+        XCTAssertTrue(
+            composer.waitForExistence(timeout: 5),
+            "Edge swipe 복귀 후에도 행의 상단 여백으로 다시 열려야 합니다."
+        )
+        XCTAssertTrue(
+            app.navigationBars.buttons["채팅"].waitForExistence(timeout: 5)
+        )
+        XCTAssertFalse(app.tabBars.buttons["채팅"].exists)
+    }
+
+    @MainActor
     func testConversationRowsRemainReadableAtLargestTextSize() {
         let app = XCUIApplication()
         app.launchArguments = [

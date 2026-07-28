@@ -87,19 +87,20 @@ public struct ConversationListView: View {
                     onOpenConversation(item)
                 } label: {
                     ConversationListRow(item: item)
+                        .padding(
+                            EdgeInsets(
+                                top: ConversationRowGeometry.verticalInset,
+                                leading: ConversationRowGeometry.leadingInset,
+                                bottom: ConversationRowGeometry.verticalInset,
+                                trailing: ConversationRowGeometry.trailingInset
+                            )
+                        )
+                        .contentShape(.interaction, Rectangle())
                 }
                 .buttonStyle(.plain)
-                .contentShape(Rectangle())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(
-                    EdgeInsets(
-                        top: ConversationRowGeometry.verticalInset,
-                        leading: ConversationRowGeometry.leadingInset,
-                        bottom: ConversationRowGeometry.verticalInset,
-                        trailing: ConversationRowGeometry.trailingInset
-                    )
-                )
+                .listRowInsets(EdgeInsets())
                 .accessibilityHint("대화를 엽니다")
                 .accessibilityIdentifier(
                     "conversation-row-\(item.id)"
