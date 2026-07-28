@@ -14,7 +14,7 @@ struct IOSRootView: View {
     @ObservedObject private var settingsViewModel: SettingsViewModel
 
     @State private var selectedTab: Tab = .home
-    @State private var selectedConversation: ConversationListItem?
+    @State private var chatNavigationPath: [ConversationListItem] = []
     @State private var showsCoreStatus = false
 
     init(environment: AppEnvironment) {
@@ -35,18 +35,21 @@ struct IOSRootView: View {
             }
             .tag(Tab.home)
 
-            NavigationStack {
+            NavigationStack(path: $chatNavigationPath) {
                 ConversationListView(
                     viewModel: environment.conversationListViewModel,
                     onOpenConversation: { item in
-                        selectedConversation = item
+                        guard chatNavigationPath.isEmpty else {
+                            return
+                        }
+                        chatNavigationPath.append(item)
                     },
                     onRequestCharacter: {
                         selectedTab = .create
                     }
                 )
                 .navigationTitle("채팅")
-                .navigationDestination(item: $selectedConversation) { item in
+                .navigationDestination(for: ConversationListItem.self) { item in
                     ChatView(
                         viewModel: environment.chatViewModel,
                         onOpenProviderSettings: {

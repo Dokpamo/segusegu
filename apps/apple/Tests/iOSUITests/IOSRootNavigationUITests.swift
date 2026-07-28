@@ -823,6 +823,14 @@ final class IOSRootNavigationUITests: XCTestCase {
             return
         }
 
+        let composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        composer.tap()
+        composer.typeText("제스처 복귀 초안")
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+
         let window = app.windows.firstMatch
         let leadingEdge = window.coordinate(
             withNormalizedOffset: CGVector(dx: 0.01, dy: 0.5)
@@ -846,6 +854,10 @@ final class IOSRootNavigationUITests: XCTestCase {
         )
         XCTAssertTrue(backButton.exists)
         XCTAssertFalse(app.tabBars.buttons["채팅"].exists)
+        XCTAssertTrue(
+            app.keyboards.firstMatch.exists,
+            "취소된 edge swipe 뒤에도 키보드가 열린 채팅 상태여야 합니다."
+        )
 
         leadingEdge.press(forDuration: 0.05, thenDragTo: destination)
 
@@ -856,6 +868,33 @@ final class IOSRootNavigationUITests: XCTestCase {
             app.descendants(matching: .any)["conversation-list-screen"]
                 .waitForExistence(timeout: 5)
         )
+
+        XCTAssertTrue(composer.waitForNonExistence(timeout: 5))
+
+        let conversationRow = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@",
+                    "conversation-row-"
+                )
+            )
+            .firstMatch
+        XCTAssertTrue(conversationRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            conversationRow.isHittable,
+            "Edge swipe 뒤 대화 row가 다시 터치 가능해야 합니다."
+        )
+
+        conversationRow.tap()
+
+        XCTAssertTrue(
+            composer.waitForExistence(timeout: 5),
+            "Edge swipe 뒤 같은 대화를 다시 열 수 있어야 합니다."
+        )
+        XCTAssertTrue(
+            app.navigationBars.buttons["채팅"].waitForExistence(timeout: 5)
+        )
+        XCTAssertFalse(app.tabBars.buttons["채팅"].exists)
     }
 
     @MainActor
