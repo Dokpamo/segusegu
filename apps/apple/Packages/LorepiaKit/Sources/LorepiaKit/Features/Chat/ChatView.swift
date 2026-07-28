@@ -28,6 +28,11 @@ public struct ChatView: View {
     @State private var copiedMessageID: String?
     @State private var copyFeedback = 0
     @State private var composerEditorHeight: CGFloat = 0
+    /// Restored history is not newly arrived mail. Until the first transcript
+    /// of a conversation has landed, messages appear in place instead of
+    /// animating in, so opening a room never looks like it is rearranging.
+    @State private var hasSettledInitialLoad = false
+    @State private var initialLoadSettleGeneration: UInt = 0
     @FocusState private var isComposerFocused: Bool
 
     public init(
@@ -155,6 +160,7 @@ public struct ChatView: View {
                 await viewModel.refreshProviderSelection()
             }
             .onDisappear {
+                initialLoadSettleGeneration &+= 1
                 isComposerFocused = false
                 viewModel.pauseEventPolling()
             }
@@ -330,7 +336,7 @@ public struct ChatView: View {
                         }
                     }
                         .animation(
-                            reduceMotion
+                            reduceMotion || !hasSettledInitialLoad
                                 ? nil
                                 : .spring(duration: 0.42, bounce: 0.16),
                             value: viewModel.messages.count
@@ -424,7 +430,29 @@ public struct ChatView: View {
                     followsLatest = true
                     isNearBottom = true
                     lastBottomObservation = nil
+                    hasSettledInitialLoad = false
                     scrollToBottom(proxy, animated: false)
+                    initialLoadSettleGeneration &+= 1
+                    let settleGeneration = initialLoadSettleGeneration
+                    guard let conversationID = viewModel.conversation?.id else {
+                        return
+                    }
+                    // Restoring reads from local storage, so the transcript
+                    // lands well inside this window. Anything arriving after
+                    // it is a real arrival and animates.
+                    Task { @MainActor in
+                        do {
+                            try await Task.sleep(for: .milliseconds(150))
+                        } catch {
+                            return
+                        }
+                        guard settleGeneration == initialLoadSettleGeneration,
+                              viewModel.conversation?.id == conversationID
+                        else {
+                            return
+                        }
+                        hasSettledInitialLoad = true
+                    }
                 }
             }
         }
@@ -785,6 +813,11 @@ public struct ChatView: View {
     private func messageTransition(
         for message: ChatMessage
     ) -> AnyTransition {
+        guard hasSettledInitialLoad else {
+            // Restoring a conversation is not an arrival. Place the transcript
+            // rather than flying every bubble in at once.
+            return .identity
+        }
         if reduceMotion {
             return .opacity
         }

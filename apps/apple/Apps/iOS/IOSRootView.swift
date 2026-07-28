@@ -22,12 +22,6 @@ struct IOSRootView: View {
         settingsViewModel = environment.settingsViewModel
     }
 
-    private var chatPushTransaction: Transaction {
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        return transaction
-    }
-
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
@@ -48,9 +42,9 @@ struct IOSRootView: View {
                         guard chatNavigationPath.isEmpty else {
                             return
                         }
-                        withTransaction(chatPushTransaction) {
-                            chatNavigationPath.append(item)
-                        }
+                        // The system push carries the room in from the
+                        // trailing edge and pairs with the back swipe.
+                        chatNavigationPath.append(item)
                     },
                     onRequestCharacter: {
                         selectedTab = .create
