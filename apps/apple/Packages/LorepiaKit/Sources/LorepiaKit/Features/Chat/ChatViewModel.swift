@@ -11,6 +11,8 @@ public final class ChatViewModel: ObservableObject {
     @Published public private(set) var messages: [ChatMessage] = []
     @Published public private(set) var providerProfiles: [ProviderProfile] = []
     @Published public private(set) var selectedProviderProfileID: String?
+    @Published public private(set) var hasLoadedProviderConfiguration = false
+    @Published public private(set) var hasProviderCredentialAccessFailure = false
     @Published public var draft = ""
     @Published public private(set) var isLoading = false
     @Published public private(set) var isGenerating = false
@@ -23,28 +25,73 @@ public final class ChatViewModel: ObservableObject {
 
     private let client: any CoreClient
     private let credentialStore: any CredentialStore
+    private let providerConfigurationStore: ProviderConfigurationStore?
     private let automaticallyPollEvents: Bool
+    private var providerConfigurationCancellable: AnyCancellable?
     private var activeGenerationID: String?
     private var latestSequenceByGeneration: [String: UInt64] = [:]
     private var pollingTask: Task<Void, Never>?
     private var selectionEpoch: UInt64 = 0
     private var providerSelectionRevision: UInt64 = 0
     private var providerRefreshRevision: UInt64 = 0
+    private var providerRefreshRetryScheduled = false
+    private var providerStoreAutoRefreshEnabled = true
+    private var credentialAccessRevision: UInt64 = 0
+    private var credentialFailureProfileID: String?
     private var providerRefreshErrorMessage: String?
     private var idlePollsSinceReconciliation = 0
 
     private static let idlePollsBeforeReconciliation = 10
+    private static let credentialAccessFailureMessage =
+        "저장된 자격 증명을 불러오지 못했습니다. 프로바이더 설정에서 다시 저장하세요."
+    private static let credentialTooLargeMessage =
+        "저장된 자격 증명이 너무 깁니다. 프로바이더 설정에서 다시 저장하세요."
+    private static let blockedProviderMessage =
+        "이 프로바이더의 자격 증명 상태를 확인할 수 없습니다. 프로바이더 설정에서 API 키를 다시 저장하세요."
 
     public init(
         client: any CoreClient,
         credentialStore: any CredentialStore,
         runtimeMode: CoreRuntimeMode,
+        providerConfigurationStore: ProviderConfigurationStore? = nil,
         automaticallyPollEvents: Bool = true
     ) {
         self.client = client
         self.credentialStore = credentialStore
         self.runtimeMode = runtimeMode
+        self.providerConfigurationStore = providerConfigurationStore
         self.automaticallyPollEvents = automaticallyPollEvents
+        if let providerConfigurationStore,
+           providerConfigurationStore.revision > 0
+               || !providerConfigurationStore.profiles.isEmpty
+               || providerConfigurationStore.selectedProfileID != nil
+        {
+            applyProviderConfiguration(
+                profiles: providerConfigurationStore.profiles,
+                selectedProfileID:
+                    providerConfigurationStore.selectedProfileID
+            )
+        }
+        providerConfigurationCancellable = providerConfigurationStore?.$revision
+            .dropFirst()
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    guard
+                        let self,
+                        let store = self.providerConfigurationStore
+                    else {
+                        return
+                    }
+                    self.applyProviderConfiguration(
+                        profiles: store.profiles,
+                        selectedProfileID: store.selectedProfileID
+                    )
+                    guard self.providerStoreAutoRefreshEnabled else {
+                        return
+                    }
+                    await self.refreshProviderSelection()
+                }
+            }
     }
 
     public var canSubmit: Bool {
@@ -54,7 +101,12 @@ public final class ChatViewModel: ObservableObject {
             && !isGenerating
             && !isSubmitting
             && !isChangingProviderProfile
+            && !hasProviderCredentialAccessFailure
             && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (
+                !hasLoadedProviderConfiguration
+                    || selectedProviderProfile != nil
+            )
             && coreIsAvailable
     }
 
@@ -75,10 +127,32 @@ public final class ChatViewModel: ObservableObject {
     }
 
     public var selectedProviderProfile: ProviderProfile? {
-        guard let selectedProviderProfileID else {
+        guard let selectedProviderProfileID,
+              !providerProfileIsBlocked(selectedProviderProfileID)
+        else {
             return nil
         }
         return providerProfiles.first { $0.id == selectedProviderProfileID }
+    }
+
+    public var requiresProviderConfiguration: Bool {
+        selectedProviderProfile == nil
+            || hasProviderCredentialAccessFailure
+    }
+
+    public var providerConfigurationMessage: String {
+        if let selectedProviderProfileID,
+           providerProfileIsBlocked(selectedProviderProfileID)
+        {
+            return Self.blockedProviderMessage
+        }
+        if hasProviderCredentialAccessFailure {
+            return Self.credentialAccessFailureMessage
+        }
+        if providerProfiles.isEmpty {
+            return "메시지를 보내려면 프로바이더 프로필을 추가하세요."
+        }
+        return "메시지를 보내려면 앱 전체 기본 프로바이더를 선택하세요."
     }
 
     public var canChangeProviderProfile: Bool {
@@ -88,6 +162,12 @@ public final class ChatViewModel: ObservableObject {
             && !isSubmitting
             && !isChangingProviderProfile
             && !providerProfiles.isEmpty
+            && providerConfigurationStore?.mutatingProfileIDs.isEmpty != false
+            && (
+                selectedProviderProfileID.map {
+                    !providerProfileIsBlocked($0)
+                } ?? true
+            )
             && coreIsAvailable
     }
 
@@ -395,13 +475,14 @@ public final class ChatViewModel: ObservableObject {
             else {
                 return false
             }
+            try validateProviderAccess(provider)
             let result = try await client.editUserMessage(
                 conversationID: conversation.id,
                 branchID: activeBranch.id,
                 expectedHeadMessageID: activeBranch.headMessageID,
                 messageID: messageID,
                 replacementText: text,
-                providerProfileID: provider.profileID,
+                providerProfileID: provider.profile.id,
                 credential: provider.credential
             )
             try await restoreAfterMessageAction(
@@ -413,7 +494,10 @@ public final class ChatViewModel: ObservableObject {
             startPolling()
             return true
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingProviderError(
+                error,
+                fallback: "메시지를 수정하지 못했습니다. 잠시 후 다시 시도하세요."
+            )
             return false
         }
     }
@@ -438,12 +522,13 @@ public final class ChatViewModel: ObservableObject {
             else {
                 return
             }
+            try validateProviderAccess(provider)
             let result = try await client.regenerateAssistantMessage(
                 conversationID: conversation.id,
                 branchID: activeBranch.id,
                 expectedHeadMessageID: activeBranch.headMessageID,
                 messageID: messageID,
-                providerProfileID: provider.profileID,
+                providerProfileID: provider.profile.id,
                 credential: provider.credential
             )
             try await restoreAfterMessageAction(
@@ -454,7 +539,10 @@ public final class ChatViewModel: ObservableObject {
             errorMessage = nil
             startPolling()
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingProviderError(
+                error,
+                fallback: "응답을 다시 생성하지 못했습니다. 잠시 후 다시 시도하세요."
+            )
         }
     }
 
@@ -489,6 +577,12 @@ public final class ChatViewModel: ObservableObject {
 
     public func submitMessage() async {
         let submittedDraft = draft
+        if let selectedProviderProfileID,
+           providerProfileIsBlocked(selectedProviderProfileID)
+        {
+            errorMessage = Self.blockedProviderMessage
+            return
+        }
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard canSubmit,
               !text.isEmpty,
@@ -507,24 +601,14 @@ public final class ChatViewModel: ObservableObject {
             isSubmitting = false
         }
         do {
-            let settings = try await client.getSettings()
+            let provider = try await selectedProviderAccess()
             guard self.conversation?.id == conversation.id,
                   providerSelectionRevision == providerRevision,
                   !isChangingProviderProfile
             else {
                 return
             }
-            guard let profileID = settings.selectedProviderProfileID else {
-                errorMessage = "설정에서 사용할 프로바이더 프로필을 선택하세요."
-                return
-            }
-            let credential = try await credentialStore.credential(for: profileID)
-            guard self.conversation?.id == conversation.id,
-                  providerSelectionRevision == providerRevision,
-                  !isChangingProviderProfile
-            else {
-                return
-            }
+            try validateProviderAccess(provider)
             if draft == submittedDraft {
                 draft = ""
             }
@@ -536,8 +620,8 @@ public final class ChatViewModel: ObservableObject {
                 expectedHeadMessageID: activeBranch.headMessageID,
                 mode: submissionMode,
                 text: text,
-                providerProfileID: profileID,
-                credential: credential
+                providerProfileID: provider.profile.id,
+                credential: provider.credential
             )
             guard self.conversation?.id == conversation.id else {
                 return
@@ -550,9 +634,12 @@ public final class ChatViewModel: ObservableObject {
             startPolling()
         } catch {
             isGenerating = false
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingProviderError(
+                error,
+                fallback: "메시지를 보내지 못했습니다. 잠시 후 다시 시도하세요."
+            )
             if draft.isEmpty, self.conversation?.id == conversation.id {
-                draft = text
+                draft = submittedDraft
             }
         }
     }
@@ -564,7 +651,10 @@ public final class ChatViewModel: ObservableObject {
         do {
             try await client.cancelGeneration(generationID: generationID)
         } catch {
-            errorMessage = error.localizedDescription
+            errorMessage = userFacingProviderError(
+                error,
+                fallback: "응답 생성을 중단하지 못했습니다. 다시 시도하세요."
+            )
         }
     }
 
@@ -680,7 +770,9 @@ public final class ChatViewModel: ObservableObject {
     }
 
     private func apply(_ event: ChatEvent) -> EventApplication {
-        if let activeGenerationID, event.generationID != activeGenerationID {
+        guard let currentActiveGenerationID = activeGenerationID,
+              event.generationID == currentActiveGenerationID
+        else {
             return .ignored
         }
         let latestSequence = latestSequenceByGeneration[event.generationID] ?? 0
@@ -741,7 +833,8 @@ public final class ChatViewModel: ObservableObject {
             finishGeneration()
             return .reconcile
         case "generation_failed":
-            errorMessage = event.errorMessage ?? "응답 생성에 실패했습니다."
+            errorMessage = Self.providerErrorMessage(for: event.errorCode)
+                ?? "응답 생성에 실패했습니다. 잠시 후 다시 시도하세요."
             finishGeneration()
             return .reconcile
         default:
@@ -750,6 +843,11 @@ public final class ChatViewModel: ObservableObject {
     }
 
     private func finishGeneration() {
+        if let activeGenerationID {
+            latestSequenceByGeneration.removeValue(
+                forKey: activeGenerationID
+            )
+        }
         isGenerating = false
         activeGenerationID = nil
     }
@@ -828,13 +926,25 @@ public final class ChatViewModel: ObservableObject {
         pollingTask = nil
     }
 
+    func setProviderStoreAutoRefreshEnabledForTesting(
+        _ isEnabled: Bool
+    ) {
+        providerStoreAutoRefreshEnabled = isEnabled
+    }
+
     public func refreshProviderSelection() async {
         guard !isChangingProviderProfile else {
+            return
+        }
+        guard providerConfigurationStore?.mutatingProfileIDs.isEmpty != false
+        else {
             return
         }
         providerRefreshRevision &+= 1
         let refreshRevision = providerRefreshRevision
         let selectionRevision = providerSelectionRevision
+        let configurationRevisionBeforeRead =
+            providerConfigurationStore?.revision
 
         do {
             async let profilesTask = client.listProviderProfiles()
@@ -848,37 +958,143 @@ public final class ChatViewModel: ObservableObject {
             else {
                 return
             }
-            providerProfiles = profiles.sorted {
-                if $0.displayName == $1.displayName {
-                    return $0.model.localizedStandardCompare($1.model)
-                        == .orderedAscending
-                }
-                return $0.displayName.localizedStandardCompare($1.displayName)
-                    == .orderedAscending
+            guard providerConfigurationRevisionIsCurrent(
+                configurationRevisionBeforeRead
+            ) else {
+                scheduleProviderSelectionRefresh()
+                return
             }
-            selectedProviderProfileID =
-                profiles.contains {
-                    $0.id == settings.selectedProviderProfileID
+            if let selectedProfileID =
+                settings.selectedProviderProfileID
+            {
+                guard profiles.contains(where: {
+                    $0.id == selectedProfileID
+                }) else {
+                    applyProviderConfiguration(
+                        profiles: profiles,
+                        selectedProfileID: nil
+                    )
+                    errorMessage = userFacingProviderError(
+                        ProviderAccessFailure.invalidSelection,
+                        fallback: "프로바이더 설정을 확인하세요."
+                    )
+                    return
                 }
-                ? settings.selectedProviderProfileID
-                : nil
+                guard !providerProfileIsBlocked(selectedProfileID) else {
+                    providerRefreshErrorMessage = nil
+                    errorMessage = Self.blockedProviderMessage
+                    return
+                }
+            }
+            applyProviderConfiguration(
+                profiles: profiles,
+                selectedProfileID: settings.selectedProviderProfileID
+            )
+            let credentialRevision = credentialAccessRevision
+            let configurationRevision =
+                providerConfigurationStore?.revision
+            var credentialFailureMessage: String?
+            if let profileID = selectedProviderProfileID {
+                guard !providerProfileIsBlocked(profileID) else {
+                    providerRefreshErrorMessage = nil
+                    errorMessage = Self.blockedProviderMessage
+                    return
+                }
+                do {
+                    _ = try await credentialForProvider(
+                        profileID: profileID
+                    )
+                    guard providerRefreshRevision == refreshRevision,
+                          providerSelectionRevision == selectionRevision
+                    else {
+                        return
+                    }
+                    guard providerConfigurationIsCurrent(
+                        profileID: profileID,
+                        revision: configurationRevision
+                    ) else {
+                        scheduleProviderSelectionRefresh()
+                        return
+                    }
+                    if credentialAccessRevision == credentialRevision {
+                        credentialAccessRevision &+= 1
+                        credentialFailureProfileID = nil
+                        hasProviderCredentialAccessFailure = false
+                        if errorMessage
+                            == Self.credentialAccessFailureMessage
+                            || errorMessage
+                                == Self.credentialTooLargeMessage
+                            || errorMessage
+                                == Self.blockedProviderMessage
+                        {
+                            errorMessage = nil
+                        }
+                    }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    guard providerRefreshRevision == refreshRevision,
+                          providerSelectionRevision == selectionRevision
+                    else {
+                        return
+                    }
+                    guard providerConfigurationIsCurrent(
+                        profileID: profileID,
+                        revision: configurationRevision
+                    ) else {
+                        scheduleProviderSelectionRefresh()
+                        return
+                    }
+                    guard credentialAccessRevision == credentialRevision else {
+                        return
+                    }
+                    credentialAccessRevision &+= 1
+                    credentialFailureProfileID = profileID
+                    hasProviderCredentialAccessFailure = true
+                    credentialFailureMessage =
+                        userFacingCredentialError(error)
+                }
+            } else if credentialAccessRevision == credentialRevision {
+                credentialAccessRevision &+= 1
+                credentialFailureProfileID = nil
+                hasProviderCredentialAccessFailure = false
+                if errorMessage == Self.credentialAccessFailureMessage
+                    || errorMessage == Self.credentialTooLargeMessage
+                    || errorMessage == Self.blockedProviderMessage
+                {
+                    errorMessage = nil
+                }
+            }
             if errorMessage == providerRefreshErrorMessage {
                 errorMessage = nil
             }
             providerRefreshErrorMessage = nil
+            if let credentialFailureMessage {
+                errorMessage = credentialFailureMessage
+            }
         } catch is CancellationError {
             return
         } catch {
             // A transient settings failure must not erase the last known,
             // still-usable model choice from the composer.
             guard providerRefreshRevision == refreshRevision,
-                  providerSelectionRevision == selectionRevision,
-                  providerProfiles.isEmpty
+                  providerSelectionRevision == selectionRevision
             else {
                 return
             }
-            let providerError =
-                "모델 목록을 불러오지 못했습니다: \(error.localizedDescription)"
+            guard providerConfigurationRevisionIsCurrent(
+                configurationRevisionBeforeRead
+            ) else {
+                scheduleProviderSelectionRefresh()
+                return
+            }
+            guard providerProfiles.isEmpty else {
+                return
+            }
+            let providerError = userFacingProviderError(
+                error,
+                fallback: "모델 목록을 불러오지 못했습니다. 프로바이더 설정에서 다시 시도하세요."
+            )
             providerRefreshErrorMessage = providerError
             errorMessage = providerError
         }
@@ -888,6 +1104,7 @@ public final class ChatViewModel: ObservableObject {
         guard
             id != selectedProviderProfileID,
             providerProfiles.contains(where: { $0.id == id }),
+            !providerProfileIsBlocked(id),
             canChangeProviderProfile
         else {
             return
@@ -895,6 +1112,8 @@ public final class ChatViewModel: ObservableObject {
 
         providerSelectionRevision &+= 1
         let revision = providerSelectionRevision
+        let configurationRevision =
+            providerConfigurationStore?.revision
         isChangingProviderProfile = true
         defer {
             if providerSelectionRevision == revision {
@@ -903,32 +1122,68 @@ public final class ChatViewModel: ObservableObject {
         }
 
         do {
-            let settings = try await client.getSettings()
-            guard providerSelectionRevision == revision else {
-                return
-            }
-            let updated = try await client.updateSettings(
-                CoreAppSettings(
-                    preservePartialGenerations:
-                        settings.preservePartialGenerations,
-                    selectedProviderProfileID: id
-                )
+            try validateProviderProfileAvailability(
+                profileID: id,
+                revision: configurationRevision
             )
+            let updated = try await client.selectProviderProfile(id: id)
             guard providerSelectionRevision == revision else {
                 return
             }
-            selectedProviderProfileID =
-                providerProfiles.contains {
-                    $0.id == updated.selectedProviderProfileID
+            try validateProviderProfileAvailability(
+                profileID: id,
+                revision: configurationRevision
+            )
+            applyProviderConfiguration(
+                profiles: providerProfiles,
+                selectedProfileID: updated.selectedProviderProfileID
+            )
+            guard selectedProviderProfileID == id else {
+                errorMessage =
+                    "기본 프로바이더 변경 결과를 확인할 수 없습니다. 다시 시도하세요."
+                return
+            }
+            let configurationRevision =
+                providerConfigurationStore?.revision
+            do {
+                _ = try await credentialForProvider(profileID: id)
+                guard providerSelectionRevision == revision,
+                      providerConfigurationIsCurrent(
+                          profileID: id,
+                          revision: configurationRevision
+                      )
+                else {
+                    return
                 }
-                ? updated.selectedProviderProfileID
-                : nil
+                credentialAccessRevision &+= 1
+                credentialFailureProfileID = nil
+                hasProviderCredentialAccessFailure = false
+            } catch is CancellationError {
+                return
+            } catch {
+                guard providerSelectionRevision == revision,
+                      providerConfigurationIsCurrent(
+                          profileID: id,
+                          revision: configurationRevision
+                      )
+                else {
+                    return
+                }
+                credentialAccessRevision &+= 1
+                credentialFailureProfileID = id
+                hasProviderCredentialAccessFailure = true
+                errorMessage = userFacingCredentialError(error)
+                return
+            }
             errorMessage = nil
         } catch is CancellationError {
             return
         } catch {
             if providerSelectionRevision == revision {
-                errorMessage = error.localizedDescription
+                errorMessage = userFacingProviderError(
+                    error,
+                    fallback: "기본 프로바이더를 변경하지 못했습니다. 다시 시도하세요."
+                )
             }
         }
     }
@@ -940,18 +1195,355 @@ public final class ChatViewModel: ObservableObject {
         return branches.first { $0.id == activeBranchID }
     }
 
-    private func selectedProviderAccess() async throws -> (
-        profileID: String,
-        credential: String?
-    ) {
-        let settings = try await client.getSettings()
-        guard let profileID = settings.selectedProviderProfileID else {
-            throw CoreClientFailure.configurationRequired(
-                "설정에서 사용할 프로바이더 프로필을 선택하세요."
-            )
+    private struct SelectedProviderAccess {
+        let profile: ProviderProfile
+        let credential: String?
+        let configurationRevision: UInt64?
+    }
+
+    private enum ProviderAccessFailure: Error {
+        case noProfiles
+        case selectionRequired
+        case invalidSelection
+        case credentialUnavailable
+        case credentialTooLarge
+        case profileBlocked
+        case configurationChanged
+    }
+
+    private func selectedProviderAccess() async throws -> SelectedProviderAccess {
+        guard providerConfigurationStore?.mutatingProfileIDs.isEmpty != false
+        else {
+            throw ProviderAccessFailure.configurationChanged
         }
-        let credential = try await credentialStore.credential(for: profileID)
-        return (profileID, credential)
+        let configurationRevisionBeforeRead =
+            providerConfigurationStore?.revision
+        async let profilesTask = client.listProviderProfiles()
+        async let settingsTask = client.getSettings()
+        let (profiles, settings) = try await (profilesTask, settingsTask)
+
+        guard providerConfigurationRevisionIsCurrent(
+            configurationRevisionBeforeRead
+        ) else {
+            scheduleProviderSelectionRefresh()
+            throw ProviderAccessFailure.configurationChanged
+        }
+
+        guard !profiles.isEmpty else {
+            applyProviderConfiguration(
+                profiles: [],
+                selectedProfileID: nil
+            )
+            throw ProviderAccessFailure.noProfiles
+        }
+        guard let profileID = settings.selectedProviderProfileID else {
+            applyProviderConfiguration(
+                profiles: profiles,
+                selectedProfileID: nil
+            )
+            throw ProviderAccessFailure.selectionRequired
+        }
+        guard let profile = profiles.first(where: { $0.id == profileID }) else {
+            applyProviderConfiguration(
+                profiles: profiles,
+                selectedProfileID: nil
+            )
+            throw ProviderAccessFailure.invalidSelection
+        }
+        guard !providerProfileIsBlocked(profileID) else {
+            throw ProviderAccessFailure.profileBlocked
+        }
+        applyProviderConfiguration(
+            profiles: profiles,
+            selectedProfileID: profileID
+        )
+        let configurationRevision = providerConfigurationStore?.revision
+
+        let credential: String?
+        do {
+            credential = try await credentialForProvider(
+                profileID: profileID
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            if providerProfileIsBlocked(profileID) {
+                throw ProviderAccessFailure.profileBlocked
+            }
+            guard providerConfigurationIsCurrent(
+                profileID: profile.id,
+                revision: configurationRevision
+            ) else {
+                scheduleProviderSelectionRefresh()
+                throw ProviderAccessFailure.configurationChanged
+            }
+            credentialAccessRevision &+= 1
+            credentialFailureProfileID = profileID
+            hasProviderCredentialAccessFailure = true
+            if let credentialError = error as? CredentialStoreError,
+               credentialError == .credentialTooLarge
+            {
+                throw ProviderAccessFailure.credentialTooLarge
+            }
+            throw ProviderAccessFailure.credentialUnavailable
+        }
+        guard !providerProfileIsBlocked(profileID) else {
+            throw ProviderAccessFailure.profileBlocked
+        }
+        guard providerConfigurationIsCurrent(
+            profileID: profile.id,
+            revision: configurationRevision
+        )
+        else {
+            scheduleProviderSelectionRefresh()
+            throw ProviderAccessFailure.configurationChanged
+        }
+        credentialAccessRevision &+= 1
+        credentialFailureProfileID = nil
+        hasProviderCredentialAccessFailure = false
+        return SelectedProviderAccess(
+            profile: profile,
+            credential: credential,
+            configurationRevision: configurationRevision
+        )
+    }
+
+    private func credentialForProvider(
+        profileID: String
+    ) async throws -> String? {
+        let credential = try await credentialStore.credential(
+            for: profileID
+        )
+        guard
+            (credential?.utf8.count ?? 0)
+                <= CredentialStorePolicy.maximumCredentialUTF8Bytes
+        else {
+            throw CredentialStoreError.credentialTooLarge
+        }
+        return credential
+    }
+
+    private func providerAccessIsCurrent(
+        _ access: SelectedProviderAccess
+    ) -> Bool {
+        providerConfigurationIsCurrent(
+            profileID: access.profile.id,
+            revision: access.configurationRevision
+        )
+    }
+
+    private func validateProviderAccess(
+        _ access: SelectedProviderAccess
+    ) throws {
+        guard !providerProfileIsBlocked(access.profile.id) else {
+            throw ProviderAccessFailure.profileBlocked
+        }
+        guard providerAccessIsCurrent(access) else {
+            scheduleProviderSelectionRefresh()
+            throw ProviderAccessFailure.configurationChanged
+        }
+    }
+
+    private func validateProviderProfileAvailability(
+        profileID: String,
+        revision: UInt64?
+    ) throws {
+        guard !providerProfileIsBlocked(profileID) else {
+            throw ProviderAccessFailure.profileBlocked
+        }
+        guard let providerConfigurationStore else {
+            return
+        }
+        guard let revision,
+              providerConfigurationStore.revision == revision
+        else {
+            scheduleProviderSelectionRefresh()
+            throw ProviderAccessFailure.configurationChanged
+        }
+    }
+
+    private func providerProfileIsBlocked(
+        _ profileID: String
+    ) -> Bool {
+        providerConfigurationStore?.isBlocked(
+            profileID: profileID
+        ) == true
+    }
+
+    private func providerConfigurationRevisionIsCurrent(
+        _ revision: UInt64?
+    ) -> Bool {
+        guard let providerConfigurationStore else {
+            return revision == nil
+        }
+        guard let revision else {
+            return false
+        }
+        return providerConfigurationStore.revision == revision
+    }
+
+    private func scheduleProviderSelectionRefresh() {
+        guard !providerRefreshRetryScheduled else {
+            return
+        }
+        providerRefreshRetryScheduled = true
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self else {
+                return
+            }
+            self.providerRefreshRetryScheduled = false
+            await self.refreshProviderSelection()
+        }
+    }
+
+    private func providerConfigurationIsCurrent(
+        profileID: String,
+        revision: UInt64?
+    ) -> Bool {
+        guard let providerConfigurationStore else {
+            return selectedProviderProfileID == profileID
+        }
+        guard let revision else {
+            return false
+        }
+        return providerConfigurationStore.revision == revision
+            && providerConfigurationStore.selectedProfileID == profileID
+            && !providerConfigurationStore.isBlocked(
+                profileID: profileID
+            )
+    }
+
+    private func applyProviderConfiguration(
+        profiles: [ProviderProfile],
+        selectedProfileID: String?
+    ) {
+        let sortedProfiles = profiles.sorted {
+            if $0.displayName == $1.displayName {
+                if $0.model == $1.model {
+                    return $0.id.localizedStandardCompare($1.id)
+                        == .orderedAscending
+                }
+                return $0.model.localizedStandardCompare($1.model)
+                    == .orderedAscending
+            }
+            return $0.displayName.localizedStandardCompare($1.displayName)
+                == .orderedAscending
+        }
+        let validSelection = sortedProfiles.contains {
+            $0.id == selectedProfileID
+        } ? selectedProfileID : nil
+        providerProfiles = sortedProfiles
+        selectedProviderProfileID = validSelection
+        if credentialFailureProfileID != nil,
+           credentialFailureProfileID != validSelection
+        {
+            credentialAccessRevision &+= 1
+            credentialFailureProfileID = nil
+            hasProviderCredentialAccessFailure = false
+            if errorMessage == Self.credentialAccessFailureMessage
+                || errorMessage == Self.credentialTooLargeMessage
+            {
+                errorMessage = nil
+            }
+        }
+        hasLoadedProviderConfiguration = true
+        providerConfigurationStore?.replace(
+            profiles: sortedProfiles,
+            selectedProfileID: validSelection
+        )
+        if errorMessage == Self.blockedProviderMessage,
+           validSelection.map({
+               !providerProfileIsBlocked($0)
+           }) ?? true
+        {
+            errorMessage = nil
+        }
+    }
+
+    private func userFacingProviderError(
+        _ error: Error,
+        fallback: String
+    ) -> String {
+        if let accessFailure = error as? ProviderAccessFailure {
+            switch accessFailure {
+            case .noProfiles:
+                return "프로바이더 프로필이 없습니다. 프로바이더 설정에서 추가하세요."
+            case .selectionRequired:
+                return "기본 프로바이더가 선택되지 않았습니다. 프로바이더 설정에서 선택하세요."
+            case .invalidSelection:
+                return "선택된 프로바이더를 찾을 수 없습니다. 프로바이더 설정에서 다시 선택하세요."
+            case .credentialUnavailable:
+                return Self.credentialAccessFailureMessage
+            case .credentialTooLarge:
+                return Self.credentialTooLargeMessage
+            case .profileBlocked:
+                return Self.blockedProviderMessage
+            case .configurationChanged:
+                return "기본 프로바이더가 변경되었습니다. 메시지를 다시 보내세요."
+            }
+        }
+
+        if error is CredentialStoreError {
+            return userFacingCredentialError(error)
+        }
+
+        if let urlError = error as? URLError {
+            if urlError.code == .timedOut {
+                return "프로바이더 응답 시간이 초과되었습니다. 잠시 후 다시 시도하세요."
+            }
+            return "네트워크에 연결할 수 없습니다. 연결 상태를 확인한 뒤 다시 시도하세요."
+        }
+
+#if LOREPIA_UNIFFI_GENERATED
+        if let ffiError = error as? FfiError,
+           case let .Core(code, _, _, _) = ffiError,
+           let message = Self.providerErrorMessage(for: code)
+        {
+            return message
+        }
+#endif
+
+        if let coreFailure = error as? CoreClientFailure {
+            switch coreFailure {
+            case let .configurationRequired(message):
+                return message
+            case .bindingsUnavailable:
+                return coreFailure.localizedDescription
+            case .startupFailed, .invalidResponse:
+                return fallback
+            }
+        }
+
+        return fallback
+    }
+
+    private func userFacingCredentialError(_ error: Error) -> String {
+        if let credentialError = error as? CredentialStoreError,
+           credentialError == .credentialTooLarge
+        {
+            return Self.credentialTooLargeMessage
+        }
+        return Self.credentialAccessFailureMessage
+    }
+
+    private static func providerErrorMessage(for code: String?) -> String? {
+        switch code {
+        case "provider_auth_failed":
+            "인증에 실패했습니다. 프로바이더 설정에서 API 키를 확인하세요."
+        case "provider_rate_limited":
+            "요청 한도에 도달했습니다. 잠시 후 다시 시도하세요."
+        case "network_unavailable":
+            "네트워크에 연결할 수 없습니다. 연결 상태를 확인한 뒤 다시 시도하세요."
+        case "provider_unavailable":
+            "프로바이더가 응답하지 않거나 시간이 초과되었습니다. 잠시 후 다시 시도하세요."
+        case "provider_timeout", "timeout":
+            "프로바이더 응답 시간이 초과되었습니다. 잠시 후 다시 시도하세요."
+        case "cancelled":
+            "응답 생성을 취소했습니다."
+        default:
+            nil
+        }
     }
 
     private func restoreAfterMessageAction(

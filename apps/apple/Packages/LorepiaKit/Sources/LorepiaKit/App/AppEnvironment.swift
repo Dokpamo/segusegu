@@ -10,6 +10,7 @@ public final class AppEnvironment {
     public let chatViewModel: ChatViewModel
     public let importReviewViewModel: ImportReviewViewModel
     public let settingsViewModel: SettingsViewModel
+    public let providerConfigurationStore: ProviderConfigurationStore
     private let coreClient: any CoreClient
     private var hasStarted = false
 
@@ -23,6 +24,8 @@ public final class AppEnvironment {
     ) {
         self.coreClient = coreClient
         self.runtimeMode = runtimeMode
+        let providerConfiguration = ProviderConfigurationStore()
+        providerConfigurationStore = providerConfiguration
         sharedState = SharedAppState()
         coreStatusViewModel = CoreStatusViewModel(
             client: coreClient,
@@ -37,7 +40,8 @@ public final class AppEnvironment {
         chatViewModel = ChatViewModel(
             client: coreClient,
             credentialStore: credentialStore,
-            runtimeMode: runtimeMode
+            runtimeMode: runtimeMode,
+            providerConfigurationStore: providerConfiguration
         )
         importReviewViewModel = ImportReviewViewModel(
             client: coreClient,
@@ -47,7 +51,8 @@ public final class AppEnvironment {
         settingsViewModel = SettingsViewModel(
             client: coreClient,
             credentialStore: credentialStore,
-            runtimeMode: runtimeMode
+            runtimeMode: runtimeMode,
+            providerConfigurationStore: providerConfiguration
         )
     }
 

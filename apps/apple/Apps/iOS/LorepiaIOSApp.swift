@@ -10,20 +10,6 @@ struct LorepiaIOSApp: App {
     init() {
 #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
-        if arguments.contains("--lorepia-chat-bubble-showcase") {
-            environment = AppEnvironment(
-                coreClient: FakeCoreClient(
-                    initialConversationMessages:
-                        ChatBubbleShowcase.messages,
-                    initialConversationFixtures:
-                        ChatBubbleShowcase.conversationFixtures
-                ),
-                runtimeMode: .preview,
-                credentialStore: InMemoryCredentialStore(),
-                characters: LibraryCharacter.previewCharacters
-            )
-            return
-        }
         if arguments.contains("--lorepia-ui-test") {
             environment = AppEnvironment(
                 coreClient: FakeCoreClient(characters: []),
@@ -38,6 +24,26 @@ struct LorepiaIOSApp: App {
         ) {
             environment = AppEnvironment(
                 coreClient: FakeCoreClient(),
+                runtimeMode: .preview,
+                credentialStore: InMemoryCredentialStore(),
+                characters: LibraryCharacter.previewCharacters
+            )
+            return
+        }
+        if arguments.contains("--lorepia-ci-smoke") {
+            environment = AppEnvironment.makeDefault(
+                dataRoot: IOSAppDirectories.dataRoot()
+            )
+            return
+        }
+        if arguments.contains("--lorepia-chat-bubble-showcase") {
+            environment = AppEnvironment(
+                coreClient: FakeCoreClient(
+                    initialConversationMessages:
+                        ChatBubbleShowcase.messages,
+                    initialConversationFixtures:
+                        ChatBubbleShowcase.conversationFixtures
+                ),
                 runtimeMode: .preview,
                 credentialStore: InMemoryCredentialStore(),
                 characters: LibraryCharacter.previewCharacters

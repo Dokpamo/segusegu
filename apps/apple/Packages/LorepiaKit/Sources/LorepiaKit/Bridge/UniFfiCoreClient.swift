@@ -359,6 +359,40 @@ public actor UniFfiCoreClient: CoreClient {
         )
     }
 
+    public func setPreservePartialGenerations(
+        _ value: Bool
+    ) async throws -> CoreAppSettings {
+        let current = try core.getSettings()
+        let updated = try core.updateSettings(
+            settings: FfiAppSettings(
+                preservePartialGenerations: value,
+                selectedProviderProfileId:
+                    current.selectedProviderProfileId
+            )
+        )
+        return CoreAppSettings(
+            preservePartialGenerations: updated.preservePartialGenerations,
+            selectedProviderProfileID: updated.selectedProviderProfileId
+        )
+    }
+
+    public func selectProviderProfile(
+        id: String?
+    ) async throws -> CoreAppSettings {
+        let current = try core.getSettings()
+        let updated = try core.updateSettings(
+            settings: FfiAppSettings(
+                preservePartialGenerations:
+                    current.preservePartialGenerations,
+                selectedProviderProfileId: id
+            )
+        )
+        return CoreAppSettings(
+            preservePartialGenerations: updated.preservePartialGenerations,
+            selectedProviderProfileID: updated.selectedProviderProfileId
+        )
+    }
+
     public func databaseStats() async throws -> DatabaseStats {
         let stats = try core.databaseStats()
         return DatabaseStats(
@@ -589,6 +623,16 @@ public actor UniFfiCoreClient: CoreClient {
     public func getSettings() async throws -> CoreAppSettings { try unavailable() }
     public func updateSettings(
         _ settings: CoreAppSettings
+    ) async throws -> CoreAppSettings {
+        try unavailable()
+    }
+    public func setPreservePartialGenerations(
+        _ value: Bool
+    ) async throws -> CoreAppSettings {
+        try unavailable()
+    }
+    public func selectProviderProfile(
+        id: String?
     ) async throws -> CoreAppSettings {
         try unavailable()
     }

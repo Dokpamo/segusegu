@@ -1227,6 +1227,11 @@ impl Storage {
         let generation_id = assistant.generation_id.as_ref().ok_or_else(|| {
             CoreError::invalid("a terminal assistant message requires a generation id")
         })?;
+        let (input_tokens, output_tokens) = usage.map_or((None, None), |usage| {
+            (usage.input_tokens, usage.output_tokens)
+        });
+        let input_tokens = input_tokens.map(u64_to_i64).transpose()?;
+        let output_tokens = output_tokens.map(u64_to_i64).transpose()?;
         let mut connection = self.connection()?;
         let transaction = connection.transaction().map_err(storage_db_error)?;
         let generation = load_running_generation(&transaction, generation_id)?;
@@ -1248,9 +1253,6 @@ impl Storage {
             &now,
             keep_assistant,
         )?;
-        let (input_tokens, output_tokens) = usage.map_or((None, None), |usage| {
-            (usage.input_tokens, usage.output_tokens)
-        });
         transaction
             .execute(
                 "UPDATE generations
@@ -1263,13 +1265,79 @@ impl Storage {
                 params![
                     generation_id.0,
                     generation_status_to_str(message_status_to_generation_status(assistant.status)),
-                    input_tokens.map(u64_to_i64).transpose()?,
-                    output_tokens.map(u64_to_i64).transpose()?,
+                    input_tokens,
+                    output_tokens,
                     error_code,
                     now
                 ],
             )
             .map_err(storage_db_error)?;
+        transaction
+            .execute(
+                "UPDATE conversations SET updated_at = ?2 WHERE id = ?1",
+                params![assistant.conversation_id.0, now],
+            )
+            .map_err(storage_db_error)?;
+        transaction.commit().map_err(storage_db_error)
+    }
+
+    /// Marks a generation failed after its normal terminal transaction could not complete.
+    ///
+    /// This intentionally stores only a stable error code. Provider credentials and raw
+    /// persistence errors must never enter the conversation database.
+    pub fn fail_generation_after_finalize_error(
+        &self,
+        assistant: &Message,
+        keep_assistant: bool,
+    ) -> CoreResult<()> {
+        if assistant.role != MessageRole::Assistant || assistant.status != MessageStatus::Failed {
+            return Err(CoreError::invalid(
+                "only a failed assistant message can compensate a generation finalization",
+            ));
+        }
+        let generation_id = assistant.generation_id.as_ref().ok_or_else(|| {
+            CoreError::invalid("a failed assistant message requires a generation id")
+        })?;
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction().map_err(storage_db_error)?;
+        let generation = load_running_generation(&transaction, generation_id)?;
+        if generation.conversation != assistant.conversation_id.0
+            || generation.assistant_message.as_deref() != Some(assistant.id.0.as_str())
+        {
+            return Err(CoreError::new(
+                CoreErrorCode::StorageCorrupted,
+                "generation assistant ownership is inconsistent",
+                false,
+            ));
+        }
+        let now = Utc::now().to_rfc3339();
+        compensate_terminal_assistant(
+            &transaction,
+            assistant,
+            generation_id,
+            &generation,
+            &now,
+            keep_assistant,
+        )?;
+        let changed = transaction
+            .execute(
+                "UPDATE generations
+                SET status = 'failed',
+                     input_tokens = NULL,
+                     output_tokens = NULL,
+                     error_code = 'storage_unavailable',
+                     finished_at = ?2
+                 WHERE id = ?1 AND status = 'running'",
+                params![generation_id.0, now],
+            )
+            .map_err(storage_db_error)?;
+        if changed != 1 {
+            return Err(CoreError::new(
+                CoreErrorCode::StorageCorrupted,
+                "generation compensation target was not found",
+                false,
+            ));
+        }
         transaction
             .execute(
                 "UPDATE conversations SET updated_at = ?2 WHERE id = ?1",
@@ -1375,14 +1443,32 @@ impl Storage {
     pub fn save_settings(&self, settings: &AppSettings) -> CoreResult<()> {
         let json = serde_json::to_string(settings)
             .map_err(|error| CoreError::internal(format!("cannot encode settings: {error}")))?;
-        self.connection()?
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction().map_err(storage_db_error)?;
+        if let Some(profile_id) = settings.selected_provider_profile_id.as_deref() {
+            let exists = transaction
+                .query_row(
+                    "SELECT EXISTS(SELECT 1 FROM provider_profiles WHERE id = ?1)",
+                    [profile_id],
+                    |row| row.get::<_, bool>(0),
+                )
+                .map_err(storage_db_error)?;
+            if !exists {
+                return Err(CoreError::new(
+                    CoreErrorCode::NotFound,
+                    "provider profile was not found",
+                    false,
+                ));
+            }
+        }
+        transaction
             .execute(
                 "INSERT INTO app_settings (key, value_json) VALUES ('application', ?1)
                  ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json",
                 [json],
             )
             .map_err(storage_db_error)?;
-        Ok(())
+        transaction.commit().map_err(storage_db_error)
     }
 
     pub fn list_provider_profiles(&self) -> CoreResult<Vec<ProviderProfile>> {
@@ -1443,10 +1529,42 @@ impl Storage {
     }
 
     pub fn delete_provider_profile(&self, id: &str) -> CoreResult<()> {
-        self.connection()?
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction().map_err(storage_db_error)?;
+        let settings_json = transaction
+            .query_row(
+                "SELECT value_json FROM app_settings WHERE key = 'application'",
+                [],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()
+            .map_err(storage_db_error)?;
+        if let Some(settings_json) = settings_json {
+            let mut settings =
+                serde_json::from_str::<AppSettings>(&settings_json).map_err(|error| {
+                    CoreError::new(
+                        CoreErrorCode::StorageCorrupted,
+                        format!("stored settings are invalid: {error}"),
+                        false,
+                    )
+                })?;
+            if settings.selected_provider_profile_id.as_deref() == Some(id) {
+                settings.selected_provider_profile_id = None;
+                let settings_json = serde_json::to_string(&settings).map_err(|error| {
+                    CoreError::internal(format!("cannot encode settings: {error}"))
+                })?;
+                transaction
+                    .execute(
+                        "UPDATE app_settings SET value_json = ?1 WHERE key = 'application'",
+                        [settings_json],
+                    )
+                    .map_err(storage_db_error)?;
+            }
+        }
+        transaction
             .execute("DELETE FROM provider_profiles WHERE id = ?1", [id])
             .map_err(storage_db_error)?;
-        Ok(())
+        transaction.commit().map_err(storage_db_error)
     }
 
     pub fn stats(&self) -> CoreResult<DatabaseStats> {
@@ -2381,6 +2499,78 @@ fn persist_terminal_assistant(
     Ok(())
 }
 
+fn compensate_terminal_assistant(
+    transaction: &rusqlite::Transaction<'_>,
+    assistant: &Message,
+    generation_id: &GenerationId,
+    generation: &StoredGenerationRoute,
+    finished_at: &str,
+    keep_assistant: bool,
+) -> CoreResult<()> {
+    if keep_assistant {
+        let changed = transaction
+            .execute(
+                "UPDATE messages
+                 SET content = ?3, status = 'failed'
+                 WHERE id = ?1
+                   AND generation_id = ?2
+                   AND role = 'assistant'
+                   AND status = 'pending'",
+                params![assistant.id.0, generation_id.0, assistant.content],
+            )
+            .map_err(storage_db_error)?;
+        if changed == 1 {
+            return Ok(());
+        }
+        return Err(CoreError::new(
+            CoreErrorCode::StorageCorrupted,
+            "generation assistant compensation target was not found",
+            false,
+        ));
+    }
+    let changed = transaction
+        .execute(
+            "UPDATE conversation_branches
+             SET head_message_id = ?3, updated_at = ?4
+             WHERE id = ?1
+               AND conversation_id = ?2
+               AND head_message_id = ?5",
+            params![
+                generation.branch,
+                generation.conversation,
+                generation.user_message,
+                finished_at,
+                assistant.id.0
+            ],
+        )
+        .map_err(storage_db_error)?;
+    if changed != 1 {
+        return Err(CoreError::new(
+            CoreErrorCode::StorageCorrupted,
+            "generation branch compensation target was not found",
+            false,
+        ));
+    }
+    let changed = transaction
+        .execute(
+            "DELETE FROM messages
+             WHERE id = ?1
+               AND generation_id = ?2
+               AND role = 'assistant'
+               AND status = 'pending'",
+            params![assistant.id.0, generation_id.0],
+        )
+        .map_err(storage_db_error)?;
+    if changed != 1 {
+        return Err(CoreError::new(
+            CoreErrorCode::StorageCorrupted,
+            "generation assistant compensation target was not found",
+            false,
+        ));
+    }
+    Ok(())
+}
+
 fn stale_branch_error() -> CoreError {
     CoreError::new(
         CoreErrorCode::InvalidInput,
@@ -2923,21 +3113,24 @@ fn storage_db_error(error: rusqlite::Error) -> CoreError {
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
+    use std::{
+        io::Write,
+        sync::{Arc, Barrier},
+        thread,
+    };
 
     use chrono::Duration;
     use tempfile::{NamedTempFile, tempdir};
 
     use super::*;
 
-    fn append_complete_generation(
+    fn append_pending_generation(
         storage: &Storage,
         conversation_id: &ConversationId,
         branch_id: &ConversationBranchId,
         expected_head: Option<&MessageId>,
         user_text: &str,
-        assistant_text: &str,
-    ) -> (Message, Message) {
+    ) -> (Message, Message, GenerationRecord) {
         let user = Message::user_after(conversation_id.clone(), expected_head.cloned(), user_text);
         let generation_id = GenerationId::new();
         let pending = Message::pending_assistant(
@@ -2963,6 +3156,24 @@ mod tests {
         storage
             .append_generation(branch_id, expected_head, &user, &pending, &generation)
             .expect("append generation");
+        (user, pending, generation)
+    }
+
+    fn append_complete_generation(
+        storage: &Storage,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        user_text: &str,
+        assistant_text: &str,
+    ) -> (Message, Message) {
+        let (user, pending, _) = append_pending_generation(
+            storage,
+            conversation_id,
+            branch_id,
+            expected_head,
+            user_text,
+        );
         let mut assistant = pending;
         assistant.content = assistant_text.to_owned();
         assistant.status = MessageStatus::Complete;
@@ -2997,6 +3208,360 @@ mod tests {
             .save_conversation_with_mode(&conversation, ConversationMode::Chat)
             .expect("save conversation");
         (root, storage, conversation, state.active_branch_id)
+    }
+
+    #[test]
+    fn usage_overflow_can_be_compensated_and_the_branch_accepts_another_generation() {
+        let (_root, storage, conversation, branch_id) = imported_storage();
+        let (_user, pending, generation) =
+            append_pending_generation(&storage, &conversation.id, &branch_id, None, "first");
+        let mut assistant = pending.clone();
+        assistant.content = "response before invalid usage".to_owned();
+        assistant.status = MessageStatus::Complete;
+        let error = storage
+            .finalize_generation(
+                &assistant,
+                Some(&lorepia_domain::GenerationUsage {
+                    input_tokens: Some(i64::MAX as u64 + 1),
+                    output_tokens: Some(1),
+                }),
+                None,
+                true,
+            )
+            .expect_err("overflow usage must reject normal finalization");
+        assert_eq!(error.code, CoreErrorCode::InvalidInput);
+        assert_eq!(
+            storage
+                .get_generation(&generation.id)
+                .expect("running generation")
+                .status,
+            GenerationStatus::Running
+        );
+        assert_eq!(
+            storage
+                .list_branch_messages(&branch_id)
+                .expect("pending lineage")[1]
+                .status,
+            MessageStatus::Pending
+        );
+
+        assistant.status = MessageStatus::Failed;
+        storage
+            .fail_generation_after_finalize_error(&assistant, true)
+            .expect("compensate overflow");
+        let failed = storage
+            .get_generation(&generation.id)
+            .expect("failed generation");
+        assert_eq!(failed.status, GenerationStatus::Failed);
+        assert_eq!(failed.input_tokens, None);
+        assert_eq!(failed.output_tokens, None);
+        assert_eq!(
+            failed.error_code.as_deref(),
+            Some(CoreErrorCode::StorageUnavailable.as_str())
+        );
+        assert!(failed.finished_at.is_some());
+        let messages = storage
+            .list_branch_messages(&branch_id)
+            .expect("failed lineage");
+        assert_eq!(messages[1].status, MessageStatus::Failed);
+
+        let (_, retry) = append_complete_generation(
+            &storage,
+            &conversation.id,
+            &branch_id,
+            Some(&assistant.id),
+            "retry",
+            "retry succeeded",
+        );
+        assert_eq!(retry.status, MessageStatus::Complete);
+        assert!(
+            storage
+                .list_branch_messages(&branch_id)
+                .expect("retried lineage")
+                .iter()
+                .all(|message| message.status != MessageStatus::Pending)
+        );
+    }
+
+    #[test]
+    fn terminal_database_failure_is_compensated_without_raw_error_text() {
+        let (_root, storage, conversation, branch_id) = imported_storage();
+        let (_user, pending, generation) = append_pending_generation(
+            &storage,
+            &conversation.id,
+            &branch_id,
+            None,
+            "trigger failure",
+        );
+        storage
+            .connection()
+            .expect("connection")
+            .execute_batch(
+                "CREATE TEMP TRIGGER reject_complete_generation
+                 BEFORE UPDATE OF status ON generations
+                 WHEN NEW.status = 'complete'
+                 BEGIN
+                   SELECT RAISE(ABORT, 'synthetic terminal database failure');
+                 END;",
+            )
+            .expect("install synthetic failure");
+
+        let mut assistant = pending;
+        assistant.content = "completed provider response".to_owned();
+        assistant.status = MessageStatus::Complete;
+        let error = storage
+            .finalize_generation(&assistant, None, None, true)
+            .expect_err("synthetic terminal update must fail");
+        assert_eq!(error.code, CoreErrorCode::StorageUnavailable);
+
+        assistant.status = MessageStatus::Failed;
+        storage
+            .fail_generation_after_finalize_error(&assistant, true)
+            .expect("compensate terminal database failure");
+        let failed = storage
+            .get_generation(&generation.id)
+            .expect("failed generation");
+        assert_eq!(failed.status, GenerationStatus::Failed);
+        assert_eq!(
+            failed.error_code.as_deref(),
+            Some(CoreErrorCode::StorageUnavailable.as_str())
+        );
+        assert!(
+            !failed
+                .error_code
+                .as_deref()
+                .unwrap_or_default()
+                .contains("synthetic")
+        );
+        let messages = storage
+            .list_branch_messages(&branch_id)
+            .expect("failed lineage");
+        assert_eq!(messages[1].status, MessageStatus::Failed);
+        assert_eq!(messages[1].content, "completed provider response");
+    }
+
+    #[test]
+    fn compensation_never_regresses_an_already_terminal_generation() {
+        let (_root, storage, conversation, branch_id) = imported_storage();
+        let (_, complete) = append_complete_generation(
+            &storage,
+            &conversation.id,
+            &branch_id,
+            None,
+            "already complete",
+            "durable response",
+        );
+        let generation_id = complete
+            .generation_id
+            .clone()
+            .expect("assistant generation id");
+        let mut attempted_compensation = complete.clone();
+        attempted_compensation.status = MessageStatus::Failed;
+        let error = storage
+            .fail_generation_after_finalize_error(&attempted_compensation, true)
+            .expect_err("terminal generation must reject compensation");
+        assert_eq!(error.code, CoreErrorCode::NotFound);
+
+        let generation = storage
+            .get_generation(&generation_id)
+            .expect("terminal generation");
+        assert_eq!(generation.status, GenerationStatus::Complete);
+        assert_eq!(generation.error_code, None);
+        let messages = storage
+            .list_branch_messages(&branch_id)
+            .expect("terminal lineage");
+        assert_eq!(messages[1].status, MessageStatus::Complete);
+        assert_eq!(messages[1].content, "durable response");
+    }
+
+    #[test]
+    fn discarded_partial_compensation_rewinds_the_branch_head() {
+        let (_root, storage, conversation, branch_id) = imported_storage();
+        let (user, pending, generation) = append_pending_generation(
+            &storage,
+            &conversation.id,
+            &branch_id,
+            None,
+            "discard partial",
+        );
+        let mut assistant = pending;
+        assistant.content = "partial response".to_owned();
+        assistant.status = MessageStatus::Failed;
+        let error = storage
+            .finalize_generation(
+                &assistant,
+                Some(&lorepia_domain::GenerationUsage {
+                    input_tokens: Some(i64::MAX as u64 + 1),
+                    output_tokens: None,
+                }),
+                Some(CoreErrorCode::ProviderUnavailable.as_str()),
+                false,
+            )
+            .expect_err("overflow usage must reject normal finalization");
+        assert_eq!(error.code, CoreErrorCode::InvalidInput);
+
+        storage
+            .fail_generation_after_finalize_error(&assistant, false)
+            .expect("discard compensated partial");
+        assert_eq!(
+            storage
+                .get_generation(&generation.id)
+                .expect("failed generation")
+                .status,
+            GenerationStatus::Failed
+        );
+        let branch = storage
+            .get_conversation_branch(&branch_id)
+            .expect("compensated branch");
+        assert_eq!(branch.head_message_id, Some(user.id.clone()));
+        assert_eq!(
+            storage
+                .list_branch_messages(&branch_id)
+                .expect("rewound lineage"),
+            vec![user]
+        );
+    }
+
+    #[test]
+    fn provider_profile_delete_and_selection_clear_are_atomic() {
+        let root = tempdir().expect("temp root");
+        let storage = Storage::open(root.path()).expect("open storage");
+        let profile = ProviderProfile {
+            id: "selected".to_owned(),
+            display_name: "Selected".to_owned(),
+            base_url: "http://127.0.0.1:11434/v1".to_owned(),
+            model: "synthetic".to_owned(),
+            timeout_seconds: 30,
+        };
+        storage
+            .save_provider_profile(&profile)
+            .expect("save provider");
+        storage
+            .save_settings(&AppSettings {
+                preserve_partial_generations: true,
+                selected_provider_profile_id: Some(profile.id.clone()),
+            })
+            .expect("select provider");
+        storage
+            .connection()
+            .expect("connection")
+            .execute_batch(
+                "CREATE TEMP TRIGGER reject_provider_delete
+                 BEFORE DELETE ON provider_profiles
+                 BEGIN
+                   SELECT RAISE(ABORT, 'synthetic provider delete failure');
+                 END;",
+            )
+            .expect("install synthetic failure");
+
+        let error = storage
+            .delete_provider_profile(&profile.id)
+            .expect_err("delete trigger must abort");
+        assert_eq!(error.code, CoreErrorCode::StorageUnavailable);
+        assert_eq!(
+            storage
+                .load_settings()
+                .expect("settings after rollback")
+                .selected_provider_profile_id
+                .as_deref(),
+            Some(profile.id.as_str())
+        );
+        assert_eq!(
+            storage
+                .get_provider_profile(&profile.id)
+                .expect("provider after rollback"),
+            profile
+        );
+
+        storage
+            .connection()
+            .expect("connection")
+            .execute_batch("DROP TRIGGER reject_provider_delete;")
+            .expect("remove synthetic failure");
+        storage
+            .delete_provider_profile(&profile.id)
+            .expect("delete provider");
+        assert!(
+            storage
+                .list_provider_profiles()
+                .expect("providers")
+                .is_empty()
+        );
+        assert_eq!(
+            storage
+                .load_settings()
+                .expect("settings after delete")
+                .selected_provider_profile_id,
+            None
+        );
+    }
+
+    #[test]
+    fn concurrent_provider_selection_and_delete_cannot_leave_dangling_settings() {
+        let root = tempdir().expect("temp root");
+        let storage = Arc::new(Storage::open(root.path()).expect("open storage"));
+
+        for index in 0..32 {
+            let profile = ProviderProfile {
+                id: format!("provider-{index}"),
+                display_name: format!("Provider {index}"),
+                base_url: "http://127.0.0.1:11434/v1".to_owned(),
+                model: "synthetic".to_owned(),
+                timeout_seconds: 30,
+            };
+            storage
+                .save_provider_profile(&profile)
+                .expect("save provider");
+            storage
+                .save_settings(&AppSettings {
+                    preserve_partial_generations: true,
+                    selected_provider_profile_id: None,
+                })
+                .expect("reset settings");
+
+            let barrier = Arc::new(Barrier::new(3));
+            let selecting_storage = Arc::clone(&storage);
+            let selecting_barrier = Arc::clone(&barrier);
+            let selected_id = profile.id.clone();
+            let selection = thread::spawn(move || {
+                selecting_barrier.wait();
+                selecting_storage.save_settings(&AppSettings {
+                    preserve_partial_generations: true,
+                    selected_provider_profile_id: Some(selected_id),
+                })
+            });
+            let deleting_storage = Arc::clone(&storage);
+            let deleting_barrier = Arc::clone(&barrier);
+            let deleted_id = profile.id.clone();
+            let deletion = thread::spawn(move || {
+                deleting_barrier.wait();
+                deleting_storage.delete_provider_profile(&deleted_id)
+            });
+            barrier.wait();
+
+            let selection = selection.join().expect("selection thread");
+            deletion
+                .join()
+                .expect("deletion thread")
+                .expect("delete provider");
+            if let Err(error) = selection {
+                assert_eq!(error.code, CoreErrorCode::NotFound);
+            }
+            assert_eq!(
+                storage
+                    .get_provider_profile(&profile.id)
+                    .expect_err("provider must be deleted")
+                    .code,
+                CoreErrorCode::NotFound
+            );
+            assert_eq!(
+                storage
+                    .load_settings()
+                    .expect("settings after concurrent operations")
+                    .selected_provider_profile_id,
+                None
+            );
+        }
     }
 
     #[test]

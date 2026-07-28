@@ -24,8 +24,11 @@ struct IOSRootView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            IOSHomeView {
-                selectedTab = .create
+            NavigationStack {
+                IOSHomeView {
+                    selectedTab = .create
+                }
+                .navigationTitle("홈")
             }
             .tabItem {
                 Label("홈", systemImage: "house.fill")
@@ -44,7 +47,15 @@ struct IOSRootView: View {
                 )
                 .navigationTitle("채팅")
                 .navigationDestination(item: $selectedConversation) { item in
-                    ChatView(viewModel: environment.chatViewModel)
+                    ChatView(
+                        viewModel: environment.chatViewModel,
+                        onOpenProviderSettings: {
+                            selectedTab = .settings
+                            Task {
+                                await settingsViewModel.refresh()
+                            }
+                        }
+                    )
                         .navigationBarTitleDisplayMode(.inline)
                         .task(id: item.id) {
                             await environment.selectConversation(item)
@@ -59,7 +70,10 @@ struct IOSRootView: View {
             }
             .tag(Tab.chats)
 
-            IOSCreateView()
+            NavigationStack {
+                IOSCreateView()
+                    .navigationTitle("생성")
+            }
             .tabItem {
                 Label("생성", systemImage: "plus.circle.fill")
             }

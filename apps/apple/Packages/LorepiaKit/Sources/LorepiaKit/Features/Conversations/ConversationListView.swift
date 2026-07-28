@@ -45,17 +45,6 @@ public struct ConversationListView: View {
             placement: .automatic,
             prompt: Text("캐릭터, 대화 제목 또는 메시지 검색")
         )
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    viewModel.clearCreationError()
-                    showsNewConversation = true
-                } label: {
-                    LorepiaGlyphLabel("새 대화", glyph: .edit)
-                }
-                .accessibilityIdentifier("new-conversation-button")
-            }
-        }
         .sheet(isPresented: $showsNewConversation) {
             NewConversationSheet(
                 viewModel: viewModel,
@@ -105,10 +94,10 @@ public struct ConversationListView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(
                     EdgeInsets(
-                        top: 2,
-                        leading: LorepiaSpacing.standard,
-                        bottom: 2,
-                        trailing: LorepiaSpacing.standard
+                        top: ConversationRowGeometry.verticalInset,
+                        leading: ConversationRowGeometry.leadingInset,
+                        bottom: ConversationRowGeometry.verticalInset,
+                        trailing: ConversationRowGeometry.trailingInset
                     )
                 )
                 .accessibilityHint("대화를 엽니다")
@@ -190,11 +179,31 @@ private enum ConversationListContentState: Hashable {
     case results
 }
 
+private enum ConversationRowGeometry {
+    static let avatarSize: CGFloat = 52
+    static let verticalGap: CGFloat = 18
+    static let verticalInset = verticalGap / 2
+    static let leadingInset: CGFloat = 11
+    static let trailingInset: CGFloat = 13
+    static let avatarTextSpacing: CGFloat = 13
+    static let titleAccessorySpacing: CGFloat = 8
+    static let timestampOpticalAdjustment: CGFloat = 0.5
+    static let textLineSpacing: CGFloat = 6
+    static let minimumHitTarget: CGFloat = 44
+}
+
 private struct ConversationListRow: View {
     let item: ConversationListItem
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .body) private var avatarSize: CGFloat = 50
+    @ScaledMetric(relativeTo: .body)
+    private var avatarSize: CGFloat = ConversationRowGeometry.avatarSize
+    @ScaledMetric(relativeTo: .headline)
+    private var titleFontSize: CGFloat = 16
+    @ScaledMetric(relativeTo: .subheadline)
+    private var previewFontSize: CGFloat = 15
+    @ScaledMetric(relativeTo: .caption2)
+    private var timestampFontSize: CGFloat = 11
 
     var body: some View {
         Group {
@@ -204,31 +213,46 @@ private struct ConversationListRow: View {
                 standardLayout
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
-        .padding(.vertical, 1)
+        .frame(
+            maxWidth: .infinity,
+            minHeight: max(
+                ConversationRowGeometry.minimumHitTarget,
+                resolvedAvatarSize
+            ),
+            alignment: .leading
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
     }
 
     private var standardLayout: some View {
-        HStack(alignment: .center, spacing: LorepiaSpacing.compact) {
+        HStack(
+            alignment: .center,
+            spacing: ConversationRowGeometry.avatarTextSpacing
+        ) {
             avatar
-            textContent
+            standardTextContent
                 .layoutPriority(1)
-            trailingAccessory
         }
     }
 
     private var accessibilityLayout: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .center, spacing: LorepiaSpacing.compact) {
+        VStack(
+            alignment: .leading,
+            spacing: ConversationRowGeometry.textLineSpacing
+        ) {
+            HStack(
+                alignment: .center,
+                spacing: ConversationRowGeometry.avatarTextSpacing
+            ) {
                 avatar
                 textContent
             }
             trailingAccessory
                 .padding(
                     .leading,
-                    resolvedAvatarSize + LorepiaSpacing.compact
+                    resolvedAvatarSize
+                        + ConversationRowGeometry.avatarTextSpacing
                 )
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -243,42 +267,72 @@ private struct ConversationListRow: View {
     }
 
     private var resolvedAvatarSize: CGFloat {
-        max(44, min(avatarSize, 72))
+        max(
+            ConversationRowGeometry.minimumHitTarget,
+            min(avatarSize, 72)
+        )
     }
 
-    private var textContent: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            title
-            Text(item.previewText)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-                .fixedSize(
-                    horizontal: false,
-                    vertical: dynamicTypeSize.isAccessibilitySize
-                )
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
+    private var standardTextContent: some View {
+        VStack(
+            alignment: .leading,
+            spacing: ConversationRowGeometry.textLineSpacing
+        ) {
+            HStack(
+                alignment: .center,
+                spacing: ConversationRowGeometry.titleAccessorySpacing
+            ) {
+                title
+                trailingAccessory
+                    .alignmentGuide(VerticalAlignment.center) { dimensions in
+                        dimensions[VerticalAlignment.center]
+                            + ConversationRowGeometry.timestampOpticalAdjustment
+                    }
+            }
+            preview
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var trailingAccessory: some View {
-        HStack(spacing: 2) {
-            timestamp
-            Image(systemName: "chevron.right")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.tertiary)
-                .accessibilityHidden(true)
+    private var textContent: some View {
+        VStack(
+            alignment: .leading,
+            spacing: ConversationRowGeometry.textLineSpacing
+        ) {
+            title
+            preview
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var preview: some View {
+        Text(item.previewText)
+            .font(.system(size: previewFontSize))
+            .foregroundStyle(.secondary)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .fixedSize(
+                horizontal: false,
+                vertical: dynamicTypeSize.isAccessibilitySize
+            )
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var trailingAccessory: some View {
+        timestamp
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     @ViewBuilder
     private var title: some View {
         Text(item.displayTitle)
-            .font(.title3.weight(.semibold))
+            .font(.system(size: titleFontSize, weight: .semibold))
             .foregroundStyle(.primary)
             .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .fixedSize(
+                horizontal: false,
+                vertical: dynamicTypeSize.isAccessibilitySize
+            )
             .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -287,7 +341,7 @@ private struct ConversationListRow: View {
     private var timestamp: some View {
         if let date = item.updatedDate {
             Text(ConversationListTimestamp.shortLabel(for: date))
-                .font(.caption)
+                .font(.system(size: timestampFontSize))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }

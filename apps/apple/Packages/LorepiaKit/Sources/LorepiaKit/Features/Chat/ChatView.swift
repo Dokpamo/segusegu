@@ -8,6 +8,7 @@ import AppKit
 
 public struct ChatView: View {
     @ObservedObject private var viewModel: ChatViewModel
+    private let onOpenProviderSettings: () -> Void
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.calendar) private var calendar
@@ -29,8 +30,12 @@ public struct ChatView: View {
     @State private var composerEditorHeight: CGFloat = 0
     @FocusState private var isComposerFocused: Bool
 
-    public init(viewModel: ChatViewModel) {
+    public init(
+        viewModel: ChatViewModel,
+        onOpenProviderSettings: @escaping () -> Void = {}
+    ) {
         self.viewModel = viewModel
+        self.onOpenProviderSettings = onOpenProviderSettings
     }
 
     public var body: some View {
@@ -460,11 +465,26 @@ public struct ChatView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, LorepiaSpacing.roomy)
                 .transition(.opacity)
-        } else if viewModel.messages.isEmpty, viewModel.errorMessage == nil {
+        } else if viewModel.messages.isEmpty {
             ContentUnavailableView {
                 Label("첫 메시지를 보내보세요", systemImage: "sparkles")
             } description: {
-                Text("이 대화는 이 기기에만 저장됩니다.")
+                if viewModel.requiresProviderConfiguration {
+                    Text(viewModel.providerConfigurationMessage)
+                } else {
+                    Text("이 대화는 이 기기에만 저장됩니다.")
+                }
+            } actions: {
+                if viewModel.requiresProviderConfiguration {
+                    Button(
+                        "프로바이더 설정",
+                        action: openProviderSettings
+                    )
+                    .buttonStyle(.borderedProminent)
+                    .accessibilityIdentifier(
+                        "chat-empty-provider-settings"
+                    )
+                }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, LorepiaSpacing.roomy)
@@ -522,10 +542,18 @@ public struct ChatView: View {
                     await viewModel.selectProviderProfile(id: profileID)
                 }
             },
-            onOpenSettings: {
+            onOpenConversationSettings: {
                 isRoomSettingsPresented = true
+            },
+            onOpenProviderSettings: {
+                openProviderSettings()
             }
         )
+    }
+
+    private func openProviderSettings() {
+        dismissComposerKeyboard()
+        onOpenProviderSettings()
     }
 
     private func dismissComposerKeyboard() {
@@ -1061,7 +1089,8 @@ private struct ChatComposer: View {
     let onCancel: () -> Void
     let onModeChange: (ConversationMode) -> Void
     let onProviderProfileChange: (String) -> Void
-    let onOpenSettings: () -> Void
+    let onOpenConversationSettings: () -> Void
+    let onOpenProviderSettings: () -> Void
 
     @ScaledMetric(relativeTo: .body) private var scaledVerticalInset = 6
     @ScaledMetric(relativeTo: .body) private var scaledFieldPadding = 16
@@ -1309,20 +1338,30 @@ private struct ChatComposer: View {
     @ViewBuilder
     private var toolsMenuControl: some View {
         Menu {
-            Button(action: onOpenSettings) {
+            Button(action: onOpenConversationSettings) {
                 Label(
                     "대화 설정",
                     systemImage: "slider.horizontal.3"
                 )
             }
             .accessibilityIdentifier("chat-composer-tools-settings")
+
+            Button(action: onOpenProviderSettings) {
+                Label(
+                    "프로바이더 설정",
+                    systemImage: "gearshape"
+                )
+            }
+            .accessibilityIdentifier(
+                "chat-composer-tools-provider-settings"
+            )
         } label: {
             toolsControlLabel
         }
         .buttonStyle(.plain)
         .disabled(!canUseTools)
         .accessibilityLabel("추가")
-        .accessibilityHint("대화 설정 메뉴를 엽니다")
+        .accessibilityHint("대화 또는 프로바이더 설정 메뉴를 엽니다")
         .accessibilityIdentifier("chat-composer-tools")
     }
 
@@ -1341,12 +1380,18 @@ private struct ChatComposer: View {
     private var modelMenuControl: some View {
         Menu {
             if providerProfiles.isEmpty {
-                Button("설정된 모델 없음", systemImage: "cpu") {}
+                Button("설정된 프로바이더 없음", systemImage: "cpu") {}
                     .disabled(true)
             } else {
-                Picker("모델", selection: providerProfileSelection) {
+                Picker(
+                    "앱 전체 기본 모델",
+                    selection: providerProfileSelection
+                ) {
                     ForEach(providerProfiles) { profile in
-                        Label(profile.model, systemImage: "cpu")
+                        Label(
+                            providerTitle(profile),
+                            systemImage: "cpu"
+                        )
                             .tag(Optional(profile.id))
                             .accessibilityIdentifier(
                                 "chat-composer-model-option-\(profile.id)"
@@ -1354,10 +1399,21 @@ private struct ChatComposer: View {
                     }
                 }
                 .pickerStyle(.inline)
+                .disabled(!canChangeProviderProfile)
             }
+
+            Divider()
+
+            Button(action: onOpenProviderSettings) {
+                Label("프로바이더 설정", systemImage: "gearshape")
+            }
+            .accessibilityIdentifier("chat-composer-provider-settings")
         } label: {
             HStack(spacing: 4) {
-                Text(selectedProviderProfile?.model ?? "모델")
+                Text(
+                    selectedProviderProfile.map(providerTitle)
+                        ?? "프로바이더 설정"
+                )
                     .lineLimit(1)
                     .truncationMode(.middle)
 
@@ -1367,15 +1423,17 @@ private struct ChatComposer: View {
             .font(.caption.weight(.medium))
             .foregroundStyle(.secondary)
             .padding(.horizontal, 6)
-            .frame(maxWidth: 112)
+            .frame(maxWidth: 148)
             .frame(height: 44)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(!canChangeProviderProfile)
-        .accessibilityLabel("모델 변경")
-        .accessibilityValue(selectedProviderProfile?.model ?? "선택 안 됨")
-        .accessibilityHint("이 대화에 사용할 모델을 선택합니다")
+        .accessibilityLabel("앱 전체 기본 모델")
+        .accessibilityValue(
+            selectedProviderProfile.map(providerTitle)
+                ?? "선택 안 됨"
+        )
+        .accessibilityHint("기본 모델을 선택하거나 프로바이더 설정을 엽니다")
         .accessibilityIdentifier("chat-composer-model")
     }
 
@@ -1450,6 +1508,10 @@ private struct ChatComposer: View {
         return providerProfiles.first {
             $0.id == selectedProviderProfileID
         }
+    }
+
+    private func providerTitle(_ profile: ProviderProfile) -> String {
+        "\(profile.displayName) · \(profile.model)"
     }
 
     private var isFocused: Bool {

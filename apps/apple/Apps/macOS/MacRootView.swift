@@ -146,7 +146,15 @@ struct MacRootView: View {
                 navigationModel.acknowledgeRendered(.library)
             }
         case .chat:
-            ChatView(viewModel: environment.chatViewModel)
+            ChatView(
+                viewModel: environment.chatViewModel,
+                onOpenProviderSettings: {
+                    navigationModel.navigate(to: .settings)
+                    Task {
+                        await settingsViewModel.refresh()
+                    }
+                }
+            )
                 .onAppear {
                     navigationModel.acknowledgeRendered(.chat)
                 }

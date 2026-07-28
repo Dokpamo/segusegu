@@ -70,6 +70,8 @@ schemes:
         LorepiaIOS: all
     run:
       config: Debug
+      commandLineArguments:
+        "--lorepia-chat-bubble-showcase": true
     test:
       config: Debug
       targets:

@@ -16,6 +16,54 @@ public struct FakeConversationFixture: Sendable {
     }
 }
 
+struct FakeProviderSendRequest: Equatable, Sendable {
+    enum EntryPoint: Equatable, Sendable {
+        case conversation
+        case branch
+    }
+
+    let entryPoint: EntryPoint
+    let conversationID: String
+    let branchID: String?
+    let mode: ConversationMode?
+    let text: String
+    let providerProfileID: String
+    let hasCredential: Bool
+}
+
+struct FakeProviderReadInvocationCounts: Equatable, Sendable {
+    let profiles: Int
+    let settings: Int
+}
+
+struct FakeCoreClientTestingOptions: Sendable {
+    let deleteProviderFailuresBeforeSuccess: UInt
+    let sendMessageToBranchFailure: CoreClientFailure?
+    let upsertProviderProfileFailure: CoreClientFailure?
+    let upsertProviderFailureInvocations: Set<Int>
+    let updateSettingsFailure: CoreClientFailure?
+    let updateSettingsFailureInvocations: Set<Int>
+
+    init(
+        deleteProviderFailuresBeforeSuccess: UInt = 0,
+        sendMessageToBranchFailure: CoreClientFailure? = nil,
+        upsertProviderProfileFailure: CoreClientFailure? = nil,
+        upsertProviderFailureInvocations: Set<Int> = [],
+        updateSettingsFailure: CoreClientFailure? = nil,
+        updateSettingsFailureInvocations: Set<Int> = []
+    ) {
+        self.deleteProviderFailuresBeforeSuccess =
+            deleteProviderFailuresBeforeSuccess
+        self.sendMessageToBranchFailure = sendMessageToBranchFailure
+        self.upsertProviderProfileFailure = upsertProviderProfileFailure
+        self.upsertProviderFailureInvocations =
+            upsertProviderFailureInvocations
+        self.updateSettingsFailure = updateSettingsFailure
+        self.updateSettingsFailureInvocations =
+            updateSettingsFailureInvocations
+    }
+}
+
 /// A deterministic in-memory implementation for unit tests and SwiftUI previews.
 ///
 /// Production app construction never selects this client automatically.
@@ -33,11 +81,30 @@ public actor FakeCoreClient: CoreClient {
     private var settings: CoreAppSettings
     private var events: [ChatEvent] = []
     private var droppedEventCount: UInt64 = 0
+    private var providerSendRequests: [FakeProviderSendRequest] = []
+    private var providerUpsertInvocationCount = 0
+    private var providerDeleteInvocationCount = 0
+    private var updateSettingsInvocationCount = 0
+    private var listProviderProfilesInvocationCount = 0
+    private var getSettingsInvocationCount = 0
+    private var gatedListProviderProfilesInvocation: Int?
+    private var gatedGetSettingsInvocation: Int?
+    private var providerReadSnapshotCaptureCount = 0
+    private var providerReadSnapshotsReleased = true
+    private var providerReadSnapshotWaiters: [
+        CheckedContinuation<Void, Never>
+    ] = []
     private var commitFailuresRemaining: UInt
     private var listProviderFailuresRemaining: UInt
+    private var deleteProviderFailuresRemaining: UInt
     private let listProviderProfilesDelay: Duration?
     private let getSettingsDelay: Duration?
     private let updateSettingsDelay: Duration?
+    private let sendMessageToBranchFailure: CoreClientFailure?
+    private let upsertProviderProfileFailure: CoreClientFailure?
+    private let upsertProviderFailureInvocations: Set<Int>
+    private let updateSettingsFailure: CoreClientFailure?
+    private let updateSettingsFailureInvocations: Set<Int>
     private let initialConversationMessages: [ChatMessage]
 
     public init(
@@ -52,6 +119,37 @@ public actor FakeCoreClient: CoreClient {
         updateSettingsDelay: Duration? = nil,
         initialConversationMessages: [ChatMessage] = [],
         initialConversationFixtures: [FakeConversationFixture] = []
+    ) {
+        self.init(
+            version: version,
+            health: health,
+            characters: characters,
+            profiles: profiles,
+            commitFailuresBeforeSuccess: commitFailuresBeforeSuccess,
+            listProviderFailuresBeforeSuccess:
+                listProviderFailuresBeforeSuccess,
+            listProviderProfilesDelay: listProviderProfilesDelay,
+            getSettingsDelay: getSettingsDelay,
+            updateSettingsDelay: updateSettingsDelay,
+            initialConversationMessages: initialConversationMessages,
+            initialConversationFixtures: initialConversationFixtures,
+            testingOptions: FakeCoreClientTestingOptions()
+        )
+    }
+
+    init(
+        version: String = "lorepia-core-preview/0.1.0",
+        health: HealthStatus? = nil,
+        characters: [CoreCharacter]? = nil,
+        profiles: [ProviderProfile]? = nil,
+        commitFailuresBeforeSuccess: UInt = 0,
+        listProviderFailuresBeforeSuccess: UInt = 0,
+        listProviderProfilesDelay: Duration? = nil,
+        getSettingsDelay: Duration? = nil,
+        updateSettingsDelay: Duration? = nil,
+        initialConversationMessages: [ChatMessage] = [],
+        initialConversationFixtures: [FakeConversationFixture] = [],
+        testingOptions: FakeCoreClientTestingOptions
     ) {
         reportedVersion = version
         reportedHealth = health ?? HealthStatus(
@@ -82,9 +180,20 @@ public actor FakeCoreClient: CoreClient {
         )
         self.profiles = profiles ?? [defaultProfile]
         listProviderFailuresRemaining = listProviderFailuresBeforeSuccess
+        deleteProviderFailuresRemaining =
+            testingOptions.deleteProviderFailuresBeforeSuccess
         self.listProviderProfilesDelay = listProviderProfilesDelay
         self.getSettingsDelay = getSettingsDelay
         self.updateSettingsDelay = updateSettingsDelay
+        sendMessageToBranchFailure =
+            testingOptions.sendMessageToBranchFailure
+        upsertProviderProfileFailure =
+            testingOptions.upsertProviderProfileFailure
+        self.upsertProviderFailureInvocations =
+            testingOptions.upsertProviderFailureInvocations
+        updateSettingsFailure = testingOptions.updateSettingsFailure
+        self.updateSettingsFailureInvocations =
+            testingOptions.updateSettingsFailureInvocations
         self.initialConversationMessages = initialConversationMessages
         settings = CoreAppSettings(
             preservePartialGenerations: true,
@@ -425,8 +534,19 @@ public actor FakeCoreClient: CoreClient {
         conversationID: String,
         text: String,
         providerProfileID: String,
-        credential _: String?
+        credential: String?
     ) async throws -> String {
+        providerSendRequests.append(
+            FakeProviderSendRequest(
+                entryPoint: .conversation,
+                conversationID: conversationID,
+                branchID: nil,
+                mode: nil,
+                text: text,
+                providerProfileID: providerProfileID,
+                hasCredential: credential != nil
+            )
+        )
         guard let state = statesByConversation[conversationID],
               let branch = branchesByConversation[conversationID]?.first(
                   where: { $0.id == state.activeBranchID }
@@ -451,9 +571,23 @@ public actor FakeCoreClient: CoreClient {
         mode: ConversationMode,
         text: String,
         providerProfileID: String,
-        credential _: String?
+        credential: String?
     ) async throws -> String {
-        try sendMessageRecord(
+        providerSendRequests.append(
+            FakeProviderSendRequest(
+                entryPoint: .branch,
+                conversationID: conversationID,
+                branchID: branchID,
+                mode: mode,
+                text: text,
+                providerProfileID: providerProfileID,
+                hasCredential: credential != nil
+            )
+        )
+        if let sendMessageToBranchFailure {
+            throw sendMessageToBranchFailure
+        }
+        return try sendMessageRecord(
             conversationID: conversationID,
             branchID: branchID,
             expectedHeadMessageID: expectedHeadMessageID,
@@ -461,6 +595,55 @@ public actor FakeCoreClient: CoreClient {
             text: text,
             providerProfileID: providerProfileID
         )
+    }
+
+    func providerSendRequestsForTesting() -> [FakeProviderSendRequest] {
+        providerSendRequests
+    }
+
+    func providerUpsertInvocationCountForTesting() -> Int {
+        providerUpsertInvocationCount
+    }
+
+    func providerDeleteInvocationCountForTesting() -> Int {
+        providerDeleteInvocationCount
+    }
+
+    func updateSettingsInvocationCountForTesting() -> Int {
+        updateSettingsInvocationCount
+    }
+
+    func gateNextProviderReadSnapshotsForTesting() {
+        precondition(providerReadSnapshotWaiters.isEmpty)
+        gatedListProviderProfilesInvocation =
+            listProviderProfilesInvocationCount + 1
+        gatedGetSettingsInvocation = getSettingsInvocationCount + 1
+        providerReadSnapshotCaptureCount = 0
+        providerReadSnapshotsReleased = false
+    }
+
+    func providerReadSnapshotCaptureCountForTesting() -> Int {
+        providerReadSnapshotCaptureCount
+    }
+
+    func providerReadInvocationCountsForTesting()
+        -> FakeProviderReadInvocationCounts
+    {
+        FakeProviderReadInvocationCounts(
+            profiles: listProviderProfilesInvocationCount,
+            settings: getSettingsInvocationCount
+        )
+    }
+
+    func releaseProviderReadSnapshotsForTesting() {
+        providerReadSnapshotsReleased = true
+        gatedListProviderProfilesInvocation = nil
+        gatedGetSettingsInvocation = nil
+        let waiters = providerReadSnapshotWaiters
+        providerReadSnapshotWaiters.removeAll()
+        for waiter in waiters {
+            waiter.resume()
+        }
     }
 
     public func editUserMessage(
@@ -987,6 +1170,16 @@ public actor FakeCoreClient: CoreClient {
     }
 
     public func listProviderProfiles() async throws -> [ProviderProfile] {
+        listProviderProfilesInvocationCount += 1
+        let shouldReturnCapturedSnapshot =
+            listProviderProfilesInvocationCount
+                == gatedListProviderProfilesInvocation
+        let capturedProfiles = shouldReturnCapturedSnapshot
+            ? profiles
+            : nil
+        if shouldReturnCapturedSnapshot {
+            await captureProviderReadSnapshotAndWaitForRelease()
+        }
         if let listProviderProfilesDelay {
             try await Task.sleep(for: listProviderProfilesDelay)
         }
@@ -996,18 +1189,39 @@ public actor FakeCoreClient: CoreClient {
                 "provider profiles unavailable"
             )
         }
-        return profiles
+        return capturedProfiles ?? profiles
     }
 
     public func upsertProviderProfile(
         _ profile: ProviderProfile
     ) async throws -> ProviderProfile {
+        providerUpsertInvocationCount += 1
+        if upsertProviderFailureInvocations.contains(
+            providerUpsertInvocationCount
+        ) {
+            throw upsertProviderProfileFailure
+                ?? CoreClientFailure.startupFailed(
+                    "synthetic provider upsert failure"
+                )
+        }
+        if upsertProviderFailureInvocations.isEmpty,
+           let upsertProviderProfileFailure
+        {
+            throw upsertProviderProfileFailure
+        }
         profiles.removeAll { $0.id == profile.id }
         profiles.append(profile)
         return profile
     }
 
     public func deleteProviderProfile(id: String) async throws {
+        providerDeleteInvocationCount += 1
+        if deleteProviderFailuresRemaining > 0 {
+            deleteProviderFailuresRemaining -= 1
+            throw CoreClientFailure.startupFailed(
+                "synthetic provider deletion failure"
+            )
+        }
         profiles.removeAll { $0.id == id }
         if settings.selectedProviderProfileID == id {
             settings.selectedProviderProfileID = nil
@@ -1015,20 +1229,80 @@ public actor FakeCoreClient: CoreClient {
     }
 
     public func getSettings() async throws -> CoreAppSettings {
+        getSettingsInvocationCount += 1
+        let shouldReturnCapturedSnapshot =
+            getSettingsInvocationCount == gatedGetSettingsInvocation
+        let capturedSettings = shouldReturnCapturedSnapshot
+            ? settings
+            : nil
+        if shouldReturnCapturedSnapshot {
+            await captureProviderReadSnapshotAndWaitForRelease()
+        }
         if let getSettingsDelay {
             try await Task.sleep(for: getSettingsDelay)
         }
-        return settings
+        return capturedSettings ?? settings
     }
 
     public func updateSettings(
         _ settings: CoreAppSettings
     ) async throws -> CoreAppSettings {
+        try await prepareSettingsUpdate()
+        self.settings = settings
+        return settings
+    }
+
+    public func setPreservePartialGenerations(
+        _ value: Bool
+    ) async throws -> CoreAppSettings {
+        try await prepareSettingsUpdate()
+        settings.preservePartialGenerations = value
+        return settings
+    }
+
+    public func selectProviderProfile(
+        id: String?
+    ) async throws -> CoreAppSettings {
+        try await prepareSettingsUpdate()
+        if let id,
+           !profiles.contains(where: { $0.id == id })
+        {
+            throw CoreClientFailure.invalidResponse(
+                "프로바이더 프로필이 없습니다."
+            )
+        }
+        settings.selectedProviderProfileID = id
+        return settings
+    }
+
+    private func prepareSettingsUpdate() async throws {
+        updateSettingsInvocationCount += 1
+        if updateSettingsFailureInvocations.contains(
+            updateSettingsInvocationCount
+        ) {
+            throw updateSettingsFailure
+                ?? CoreClientFailure.startupFailed(
+                    "synthetic settings update failure"
+                )
+        }
+        if updateSettingsFailureInvocations.isEmpty,
+           let updateSettingsFailure
+        {
+            throw updateSettingsFailure
+        }
         if let updateSettingsDelay {
             try await Task.sleep(for: updateSettingsDelay)
         }
-        self.settings = settings
-        return settings
+    }
+
+    private func captureProviderReadSnapshotAndWaitForRelease() async {
+        providerReadSnapshotCaptureCount += 1
+        guard !providerReadSnapshotsReleased else {
+            return
+        }
+        await withCheckedContinuation { continuation in
+            providerReadSnapshotWaiters.append(continuation)
+        }
     }
 
     public func databaseStats() async throws -> DatabaseStats {
@@ -1190,6 +1464,16 @@ public actor UnavailableCoreClient: CoreClient {
     public func getSettings() async throws -> CoreAppSettings { try unavailable() }
     public func updateSettings(
         _ settings: CoreAppSettings
+    ) async throws -> CoreAppSettings {
+        try unavailable()
+    }
+    public func setPreservePartialGenerations(
+        _ value: Bool
+    ) async throws -> CoreAppSettings {
+        try unavailable()
+    }
+    public func selectProviderProfile(
+        id: String?
     ) async throws -> CoreAppSettings {
         try unavailable()
     }

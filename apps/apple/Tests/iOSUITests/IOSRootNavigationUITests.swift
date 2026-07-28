@@ -68,6 +68,7 @@ final class IOSRootNavigationUITests: XCTestCase {
     private func recognizedFrame(
         of expectedText: String,
         in screenshot: XCUIScreenshot,
+        required: Bool = true,
         file: StaticString = #filePath,
         line: UInt = #line
     ) -> CGRect? {
@@ -111,15 +112,10 @@ final class IOSRootNavigationUITests: XCTestCase {
                     continue
                 }
 
-                let normalizedBounds: CGRect
-                if let range = candidate.string.range(of: expectedText),
-                   let textBounds = try? candidate.boundingBox(for: range)
-                {
-                    normalizedBounds = textBounds.boundingBox
-                } else {
-                    normalizedBounds = observation.boundingBox
-                }
-
+                // Keep the full detected line rather than a prefix-only
+                // candidate range; the attachment can then expose when
+                // Vision merges neighboring text.
+                let normalizedBounds = observation.boundingBox
                 let imageSize = screenshot.image.size
                 return CGRect(
                     x: normalizedBounds.minX * imageSize.width,
@@ -130,12 +126,81 @@ final class IOSRootNavigationUITests: XCTestCase {
             }
         }
 
-        XCTFail(
-            "OCR did not find visible text: \(expectedText)",
-            file: file,
-            line: line
-        )
+        if required {
+            XCTFail(
+                "OCR did not find visible text: \(expectedText)",
+                file: file,
+                line: line
+            )
+        }
         return nil
+    }
+
+    @MainActor
+    private func recognizedRightmostTextFrame(
+        in screenshot: XCUIScreenshot,
+        rowFrame: CGRect,
+        after minimumLeading: CGFloat,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> CGRect? {
+        guard let cgImage = screenshot.image.cgImage else {
+            XCTFail(
+                "The UI screenshot did not expose a CGImage.",
+                file: file,
+                line: line
+            )
+            return nil
+        }
+
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["ko-KR", "en-US"]
+        request.usesLanguageCorrection = true
+
+        do {
+            try VNImageRequestHandler(
+                cgImage: cgImage,
+                orientation: .up
+            ).perform([request])
+        } catch {
+            XCTFail(
+                "Timestamp recognition failed: \(error)",
+                file: file,
+                line: line
+            )
+            return nil
+        }
+
+        let imageSize = screenshot.image.size
+        let candidates = (request.results ?? []).compactMap {
+            observation -> CGRect? in
+            let normalizedBounds = observation.boundingBox
+            let frame = CGRect(
+                x: normalizedBounds.minX * imageSize.width,
+                y: (1 - normalizedBounds.maxY) * imageSize.height,
+                width: normalizedBounds.width * imageSize.width,
+                height: normalizedBounds.height * imageSize.height
+            )
+            guard frame.minX >= minimumLeading,
+                  frame.intersects(rowFrame)
+            else {
+                return nil
+            }
+            return frame
+        }
+
+        guard let rightmostFrame = candidates.max(by: {
+            $0.maxX < $1.maxX
+        }) else {
+            XCTFail(
+                "OCR did not find the row's trailing timestamp.",
+                file: file,
+                line: line
+            )
+            return nil
+        }
+        return rightmostFrame
     }
 
     @MainActor
@@ -151,10 +216,10 @@ final class IOSRootNavigationUITests: XCTestCase {
         }
         chats.tap()
 
-        let newConversation = app.buttons["new-conversation-button"]
+        let newConversation = app.buttons["새 대화 시작"]
         guard newConversation.waitForExistence(timeout: 5) else {
             XCTFail(
-                "The new-conversation action did not appear.",
+                "The empty-state new-conversation action did not appear.",
                 file: file,
                 line: line
             )
@@ -162,8 +227,8 @@ final class IOSRootNavigationUITests: XCTestCase {
         }
         XCTAssertEqual(
             newConversation.label,
-            "새 대화",
-            "The custom edit glyph must preserve the action label.",
+            "새 대화 시작",
+            "The empty-state action must preserve the creation flow.",
             file: file,
             line: line
         )
@@ -227,6 +292,13 @@ final class IOSRootNavigationUITests: XCTestCase {
             file: file,
             line: line
         )
+        let navigationBar = app.navigationBars["생성"]
+        XCTAssertTrue(
+            navigationBar.waitForExistence(timeout: 5),
+            "The blank Create tab must retain its visible title.",
+            file: file,
+            line: line
+        )
         let prohibitedTypes: [(XCUIElement.ElementType, String)] = [
             (.button, "buttons"),
             (.staticText, "text"),
@@ -246,13 +318,23 @@ final class IOSRootNavigationUITests: XCTestCase {
         ) else {
             return
         }
+        let blankBodyBounds = CGRect(
+            x: contentBounds.minX,
+            y: max(contentBounds.minY, navigationBar.frame.maxY),
+            width: contentBounds.width,
+            height: max(
+                0,
+                contentBounds.maxY
+                    - max(contentBounds.minY, navigationBar.frame.maxY)
+            )
+        )
 
         for (elementType, description) in prohibitedTypes {
             XCTAssertTrue(
                 visibleContentElements(
                     matching: elementType,
                     in: app,
-                    contentBounds: contentBounds,
+                    contentBounds: blankBodyBounds,
                     file: file,
                     line: line
                 ).isEmpty,
@@ -261,6 +343,53 @@ final class IOSRootNavigationUITests: XCTestCase {
                 line: line
             )
         }
+    }
+
+    @MainActor
+    func testPrimaryTabsKeepHeadersAndChatHidesTopNewConversationAction() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-ui-test"]
+        app.launch()
+
+        let home = app.tabBars.buttons["홈"]
+        let chats = app.tabBars.buttons["채팅"]
+        let create = app.tabBars.buttons["생성"]
+        XCTAssertTrue(home.waitForExistence(timeout: 10))
+        XCTAssertTrue(home.isSelected)
+        XCTAssertTrue(
+            app.navigationBars["홈"].waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(
+            app.buttons["home-add-button"].waitForExistence(timeout: 5)
+        )
+
+        chats.tap()
+        XCTAssertTrue(chats.isSelected)
+        XCTAssertTrue(
+            app.navigationBars["채팅"].waitForExistence(timeout: 5)
+        )
+        XCTAssertEqual(
+            app.buttons.matching(
+                NSPredicate(format: "label == %@", "새 대화")
+            ).count,
+            0,
+            "The Chats navigation bar must not expose a top new-chat action."
+        )
+        XCTAssertFalse(app.buttons["new-conversation-button"].exists)
+        XCTAssertTrue(
+            app.buttons["새 대화 시작"].waitForExistence(timeout: 5),
+            "Removing the top action must not remove the empty-state flow."
+        )
+
+        create.tap()
+        assertBlankCreateScreen(in: app)
+
+        home.tap()
+        XCTAssertTrue(home.isSelected)
+        XCTAssertTrue(
+            app.navigationBars["홈"].waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(app.buttons["home-add-button"].exists)
     }
 
     @MainActor
@@ -275,6 +404,9 @@ final class IOSRootNavigationUITests: XCTestCase {
         let settings = app.tabBars.buttons["설정"]
         XCTAssertTrue(home.waitForExistence(timeout: 10))
         XCTAssertTrue(home.isSelected)
+        XCTAssertTrue(
+            app.navigationBars["홈"].waitForExistence(timeout: 5)
+        )
 
         let add = app.buttons["home-add-button"]
         let window = app.windows.firstMatch
@@ -298,6 +430,13 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         chats.tap()
         XCTAssertTrue(chats.isSelected)
+        XCTAssertTrue(
+            app.navigationBars["채팅"].waitForExistence(timeout: 5)
+        )
+        XCTAssertFalse(app.buttons["new-conversation-button"].exists)
+        XCTAssertFalse(
+            app.navigationBars["채팅"].buttons["새 대화"].exists
+        )
         XCTAssertTrue(
             app.staticTexts["아직 대화가 없습니다"].waitForExistence(timeout: 5)
         )
@@ -337,6 +476,9 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(home.waitForExistence(timeout: 5))
         home.tap()
         XCTAssertTrue(home.isSelected)
+        XCTAssertTrue(
+            app.navigationBars["홈"].waitForExistence(timeout: 5)
+        )
     }
 
     @MainActor
@@ -351,6 +493,9 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         let add = app.buttons["home-add-button"]
         let window = app.windows.firstMatch
+        XCTAssertTrue(
+            app.navigationBars["홈"].waitForExistence(timeout: 5)
+        )
         XCTAssertTrue(add.waitForExistence(timeout: 5))
         XCTAssertTrue(window.waitForExistence(timeout: 5))
         let homeButtons = visibleContentElements(
@@ -371,7 +516,7 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
-    func testConversationRowsLeadTextHideStoryBadgeAndStayCompact() {
+    func testConversationRowsMatchReferenceGeometryAndHideStoryBadge() {
         let app = XCUIApplication()
         app.launchArguments = ["--lorepia-chat-bubble-showcase"]
         app.launch()
@@ -379,6 +524,17 @@ final class IOSRootNavigationUITests: XCTestCase {
         let chats = app.tabBars.buttons["채팅"]
         XCTAssertTrue(chats.waitForExistence(timeout: 10))
         chats.tap()
+        XCTAssertTrue(
+            app.navigationBars["채팅"].waitForExistence(timeout: 5)
+        )
+        XCTAssertFalse(app.buttons["new-conversation-button"].exists)
+        XCTAssertEqual(
+            app.buttons.matching(
+                NSPredicate(format: "label == %@", "새 대화")
+            ).count,
+            0,
+            "Populated Chats must not restore the removed top action."
+        )
 
         let newestRow = app.descendants(matching: .any)[
             "conversation-row-showcase-morning-walk"
@@ -400,14 +556,10 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         let newestRowFrame = newestRow.frame
         let storyRowFrame = storyRow.frame
+        XCTAssertTrue(newestRow.isHittable)
+        XCTAssertTrue(storyRow.isHittable)
         XCTAssertGreaterThanOrEqual(newestRowFrame.height, 44)
         XCTAssertGreaterThanOrEqual(storyRowFrame.height, 44)
-        XCTAssertLessThanOrEqual(newestRowFrame.height, 60)
-        XCTAssertLessThanOrEqual(storyRowFrame.height, 60)
-        XCTAssertLessThanOrEqual(
-            storyRowFrame.minY - newestRowFrame.maxY,
-            8
-        )
 
         let window = app.windows.firstMatch
         XCTAssertTrue(window.waitForExistence(timeout: 5))
@@ -420,32 +572,245 @@ final class IOSRootNavigationUITests: XCTestCase {
             of: "내 열 줄",
             in: screenshot
         ) else {
+            XCTFail("Required title or preview OCR geometry was absent.")
             return
         }
         XCTAssertTrue(newestRowFrame.contains(titleFrame))
         XCTAssertTrue(newestRowFrame.contains(previewFrame))
-        XCTAssertEqual(titleFrame.minX, previewFrame.minX, accuracy: 6)
+        XCTAssertEqual(titleFrame.minX, previewFrame.minX, accuracy: 3)
 
-        let listContentLeading = max(
+        guard let storyTitleFrame = recognizedFrame(
+            of: "마지막 장면부터",
+            in: screenshot
+        ),
+        let storyPreviewFrame = recognizedFrame(
+            of: "문이 닫히기 직전",
+            in: screenshot
+        ),
+        let timestampFrame = recognizedRightmostTextFrame(
+            in: screenshot,
+            rowFrame: newestRowFrame,
+            after: window.frame.midX
+        ),
+        let storyTimestampFrame = recognizedRightmostTextFrame(
+            in: screenshot,
+            rowFrame: storyRowFrame,
+            after: window.frame.midX
+        ) else {
+            XCTFail(
+                "Required row text, avatar, or timestamp geometry was absent."
+            )
+            return
+        }
+
+        let timestampCenterDelta =
+            timestampFrame.midY - titleFrame.midY
+        let storyTimestampCenterDelta =
+            storyTimestampFrame.midY - storyTitleFrame.midY
+        let storyTitleTimestampGap =
+            storyTimestampFrame.minX - storyTitleFrame.maxX
+        let timestampTrailingInset =
+            window.frame.maxX - timestampFrame.maxX
+        let storyTimestampTrailingInset =
+            window.frame.maxX - storyTimestampFrame.maxX
+        let metrics = String(
+            format:
+                """
+                row x=%.2f y=%.2f width=%.2f height=%.2f; \
+                pitch=%.2f; inferred avatar gap=%.2f; \
+                title x=%.2f y=%.2f width=%.2f height=%.2f; \
+                preview x=%.2f y=%.2f width=%.2f height=%.2f; \
+                story title x=%.2f y=%.2f width=%.2f height=%.2f; \
+                story preview x=%.2f y=%.2f width=%.2f height=%.2f; \
+                timestamp x=%.2f y=%.2f width=%.2f height=%.2f; \
+                timestamp center delta=%.2f trailing inset=%.2f; \
+                story timestamp x=%.2f y=%.2f width=%.2f height=%.2f; \
+                story timestamp center delta=%.2f trailing inset=%.2f; \
+                story title-to-timestamp visual gap=%.2f
+                """,
             newestRowFrame.minX,
-            window.frame.minX + 16
+            newestRowFrame.minY,
+            newestRowFrame.width,
+            newestRowFrame.height,
+            storyRowFrame.midY - newestRowFrame.midY,
+            storyRowFrame.midY - newestRowFrame.midY - 52,
+            titleFrame.minX,
+            titleFrame.minY,
+            titleFrame.width,
+            titleFrame.height,
+            previewFrame.minX,
+            previewFrame.minY,
+            previewFrame.width,
+            previewFrame.height,
+            storyTitleFrame.minX,
+            storyTitleFrame.minY,
+            storyTitleFrame.width,
+            storyTitleFrame.height,
+            storyPreviewFrame.minX,
+            storyPreviewFrame.minY,
+            storyPreviewFrame.width,
+            storyPreviewFrame.height,
+            timestampFrame.minX,
+            timestampFrame.minY,
+            timestampFrame.width,
+            timestampFrame.height,
+            timestampCenterDelta,
+            timestampTrailingInset,
+            storyTimestampFrame.minX,
+            storyTimestampFrame.minY,
+            storyTimestampFrame.width,
+            storyTimestampFrame.height,
+            storyTimestampCenterDelta,
+            storyTimestampTrailingInset,
+            storyTitleTimestampGap
         )
-        let expectedTextLeading = listContentLeading + 50 + 8
-        XCTAssertGreaterThan(titleFrame.minX, listContentLeading + 44)
+        let metricsAttachment = XCTAttachment(string: metrics)
+        metricsAttachment.name = "Rendered conversation row measurements"
+        metricsAttachment.lifetime = .keepAlways
+        add(metricsAttachment)
+
+        XCTAssertEqual(
+            newestRowFrame.height,
+            70,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            storyRowFrame.height,
+            70,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            storyRowFrame.midY - newestRowFrame.midY,
+            70,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            storyRowFrame.minY - newestRowFrame.maxY,
+            0,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            storyRowFrame.midY - newestRowFrame.midY - 52,
+            18,
+            accuracy: 1
+        )
+        let expectedTextLeading = window.frame.minX + 11 + 52 + 13
         XCTAssertEqual(
             titleFrame.minX,
             expectedTextLeading,
-            accuracy: 8
+            accuracy: 1.5
         )
-
-        let textBlockFrame = titleFrame.union(previewFrame)
         XCTAssertEqual(
-            textBlockFrame.midY,
+            storyTitleFrame.minX,
+            expectedTextLeading,
+            accuracy: 1.5
+        )
+        XCTAssertEqual(
+            storyTitleFrame.minX,
+            storyPreviewFrame.minX,
+            accuracy: 3
+        )
+        XCTAssertEqual(
+            previewFrame.midY - titleFrame.midY,
+            24.5,
+            accuracy: 2
+        )
+        XCTAssertEqual(
+            storyPreviewFrame.midY - storyTitleFrame.midY,
+            24.5,
+            accuracy: 2
+        )
+        XCTAssertEqual(
+            timestampFrame.midY,
+            titleFrame.midY,
+            accuracy: 1.5,
+            "The timestamp ink must be visually centered on the title ink."
+        )
+        XCTAssertEqual(
+            storyTimestampFrame.midY,
+            storyTitleFrame.midY,
+            accuracy: 1.5,
+            "Every timestamp must remain centered on its title row."
+        )
+        XCTAssertEqual(
+            titleFrame.union(previewFrame).midY,
             newestRowFrame.midY,
-            accuracy: 8
+            accuracy: 4
+        )
+        XCTAssertEqual(
+            storyTitleFrame.union(storyPreviewFrame).midY,
+            storyRowFrame.midY,
+            accuracy: 4
         )
         XCTAssertGreaterThan(titleFrame.height, previewFrame.height)
         XCTAssertLessThan(titleFrame.midY, previewFrame.midY)
+
+        XCTAssertNil(
+            recognizedFrame(
+                of: "스토리",
+                in: screenshot,
+                required: false
+            ),
+            "Story mode must remain available to assistive technology without "
+                + "rendering a standalone badge."
+        )
+    }
+
+    @MainActor
+    func testConversationRowsRemainReadableAtLargestTextSize() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--lorepia-chat-bubble-showcase",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryAccessibilityXXXL",
+        ]
+        app.launch()
+
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 10))
+        chats.tap()
+
+        let newestRow = app.descendants(matching: .any)[
+            "conversation-row-showcase-morning-walk"
+        ]
+        let storyRow = app.descendants(matching: .any)[
+            "conversation-row-showcase-last-scene"
+        ]
+        XCTAssertTrue(newestRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(newestRow.isHittable)
+        XCTAssertGreaterThanOrEqual(newestRow.frame.height, 72)
+
+        let screenshot = XCUIScreen.main.screenshot()
+        guard let titleFrame = recognizedFrame(
+            of: "새벽 산책",
+            in: screenshot
+        ),
+        let previewFrame = recognizedFrame(
+            of: "내 열 줄",
+            in: screenshot
+        ) else {
+            XCTFail(
+                "Required large-text conversation geometry was absent."
+            )
+            return
+        }
+
+        XCTAssertTrue(newestRow.frame.contains(titleFrame))
+        XCTAssertTrue(newestRow.frame.contains(previewFrame))
+        XCTAssertEqual(titleFrame.minX, previewFrame.minX, accuracy: 4)
+        XCTAssertLessThan(titleFrame.midY, previewFrame.midY)
+        XCTAssertLessThanOrEqual(
+            max(titleFrame.maxX, previewFrame.maxX),
+            app.windows.firstMatch.frame.maxX - 8
+        )
+
+        app.swipeUp()
+        XCTAssertTrue(storyRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(storyRow.isHittable)
+        XCTAssertGreaterThanOrEqual(storyRow.frame.height, 72)
+        XCTAssertTrue(storyRow.label.contains("스토리 모드"))
+        XCTAssertFalse(app.staticTexts["스토리 모드"].exists)
+        XCTAssertFalse(app.staticTexts["스토리"].exists)
     }
 
     @MainActor
@@ -491,6 +856,181 @@ final class IOSRootNavigationUITests: XCTestCase {
             app.descendants(matching: .any)["conversation-list-screen"]
                 .waitForExistence(timeout: 5)
         )
+    }
+
+    @MainActor
+    func testChatModelControlExposesAppWideDefaultProviderAndModel() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-native-navigation-ui-test"]
+        app.launch()
+
+        guard openPreviewChat(in: app) else {
+            return
+        }
+
+        let model = app.buttons["chat-composer-model"]
+        XCTAssertTrue(model.waitForExistence(timeout: 5))
+        XCTAssertEqual(model.label, "앱 전체 기본 모델")
+        XCTAssertEqual(
+            model.value as? String,
+            "Preview Provider · preview-model"
+        )
+
+        model.tap()
+        let selectedProvider = app.buttons[
+            "chat-composer-model-option-preview-provider"
+        ]
+        let providerSettings = app.buttons[
+            "chat-composer-provider-settings"
+        ]
+        XCTAssertTrue(selectedProvider.waitForExistence(timeout: 2))
+        XCTAssertEqual(
+            selectedProvider.label,
+            "Preview Provider · preview-model"
+        )
+        XCTAssertTrue(providerSettings.waitForExistence(timeout: 2))
+        XCTAssertEqual(providerSettings.label, "프로바이더 설정")
+    }
+
+    @MainActor
+    func testMissingProviderEmptyChatCTAOpensSettings() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-native-navigation-ui-test"]
+        app.launch()
+
+        let settingsTab = app.tabBars.buttons["설정"]
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
+        settingsTab.tap()
+        XCTAssertTrue(settingsTab.isSelected)
+
+        let profilePicker = app.buttons[
+            "settings-provider-profile-picker"
+        ]
+        let profileName = app.textFields["표시 이름"]
+        let newProfileButtons = app.buttons.matching(
+            identifier: "settings-new-provider-profile"
+        )
+        let deleteProfileButtons = app.buttons.matching(
+            identifier: "settings-delete-provider-profile"
+        )
+        let saveProfileButtons = app.buttons.matching(
+            identifier: "settings-save-provider-profile"
+        )
+        XCTAssertTrue(profilePicker.waitForExistence(timeout: 5))
+        XCTAssertEqual(profilePicker.value as? String, "Preview Provider")
+        XCTAssertTrue(profileName.waitForExistence(timeout: 5))
+        XCTAssertEqual(newProfileButtons.count, 1)
+        XCTAssertEqual(deleteProfileButtons.count, 1)
+        XCTAssertEqual(saveProfileButtons.count, 1)
+        let deleteProfile = deleteProfileButtons.firstMatch
+        XCTAssertTrue(deleteProfile.waitForExistence(timeout: 5))
+        if !deleteProfile.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertEqual(deleteProfileButtons.count, 1)
+        let visibleDeleteProfile = deleteProfileButtons.firstMatch
+        XCTAssertTrue(visibleDeleteProfile.waitForExistence(timeout: 5))
+        let deleteEnabled = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "isEnabled == true AND isHittable == true"
+            ),
+            object: visibleDeleteProfile
+        )
+        wait(for: [deleteEnabled], timeout: 5)
+        XCTAssertEqual(profileName.value as? String, "Preview Provider")
+        XCTAssertEqual(visibleDeleteProfile.label, "프로필 삭제")
+        visibleDeleteProfile.tap()
+
+        let deletionStarted = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isEnabled == false"),
+            object: visibleDeleteProfile
+        )
+        wait(for: [deletionStarted], timeout: 5)
+
+        let clearedProfileName = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "value == nil OR value == '' OR value == %@",
+                "표시 이름"
+            ),
+            object: app.textFields["표시 이름"]
+        )
+        let clearedModel = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "value == nil OR value == '' OR value == %@",
+                "모델"
+            ),
+            object: app.textFields["모델"]
+        )
+        wait(for: [clearedProfileName, clearedModel], timeout: 5)
+
+        app.swipeDown()
+        app.swipeDown()
+        let noSelectedProfile = app.buttons[
+            "settings-provider-profile-picker"
+        ]
+        XCTAssertTrue(noSelectedProfile.waitForExistence(timeout: 5))
+        let noSelectedProfileValue = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "value == %@",
+                "선택 안 함"
+            ),
+            object: noSelectedProfile
+        )
+        let noSelectedProfileResult = XCTWaiter().wait(
+            for: [noSelectedProfileValue],
+            timeout: 5
+        )
+        if noSelectedProfileResult == .completed {
+            let selectionMustRemainEmpty = XCTNSPredicateExpectation(
+                predicate: NSPredicate(
+                    format: "value != %@",
+                    "선택 안 함"
+                ),
+                object: noSelectedProfile
+            )
+            selectionMustRemainEmpty.isInverted = true
+            wait(for: [selectionMustRemainEmpty], timeout: 1)
+        }
+        let observedPickerValue = noSelectedProfile.value as? String
+        XCTAssertFalse(
+            app.buttons["settings-delete-provider-profile"].isEnabled
+        )
+
+        guard openPreviewChat(in: app) else {
+            return
+        }
+
+        let providerCTA = app.buttons["chat-empty-provider-settings"]
+        let providerCTAExists = providerCTA.waitForExistence(timeout: 5)
+
+        let model = app.buttons["chat-composer-model"]
+        let modelExists = model.waitForExistence(timeout: 5)
+        let observedModelValue = model.value as? String
+
+        XCTAssertTrue(
+            noSelectedProfileResult == .completed,
+            "Deleted profile remained selected: \(observedPickerValue ?? "nil")"
+        )
+        XCTAssertTrue(
+            providerCTAExists,
+            "Missing-provider CTA absent; model value: \(observedModelValue ?? "nil")"
+        )
+        XCTAssertTrue(modelExists)
+        XCTAssertEqual(model.label, "앱 전체 기본 모델")
+        XCTAssertEqual(model.value as? String, "선택 안 됨")
+
+        if providerCTAExists {
+            XCTAssertEqual(providerCTA.label, "프로바이더 설정")
+            providerCTA.tap()
+            XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
+            XCTAssertTrue(settingsTab.isSelected)
+            XCTAssertTrue(
+                app.navigationBars["설정"].waitForExistence(timeout: 5)
+            )
+            XCTAssertTrue(
+                app.staticTexts["프로필 편집"].waitForExistence(timeout: 5)
+            )
+        }
     }
 
     @MainActor
@@ -987,7 +1527,10 @@ final class IOSRootNavigationUITests: XCTestCase {
             XCTFail("The open composer must expose an accessibility state.")
             return
         }
-        XCTAssertEqual(model.value as? String, "preview-model")
+        XCTAssertEqual(
+            model.value as? String,
+            "Preview Provider · preview-model"
+        )
         XCTAssertEqual(mode.value as? String, "채팅 모드")
 
         let restingComposerBounds = tools.frame
@@ -1102,7 +1645,10 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(model.waitForExistence(timeout: 5))
         XCTAssertTrue(mode.waitForExistence(timeout: 5))
         XCTAssertEqual(composerSurface.value as? String, openComposerState)
-        XCTAssertEqual(model.value as? String, "preview-model")
+        XCTAssertEqual(
+            model.value as? String,
+            "Preview Provider · preview-model"
+        )
         XCTAssertEqual(mode.value as? String, "채팅 모드")
         let focusedSurfaceBounds = composerSurface.frame
         let focusedFieldBounds = composer.frame
@@ -1334,7 +1880,10 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(model.waitForExistence(timeout: 5))
         XCTAssertTrue(mode.waitForExistence(timeout: 5))
         XCTAssertEqual(composerSurface.value as? String, openComposerState)
-        XCTAssertEqual(model.value as? String, "preview-model")
+        XCTAssertEqual(
+            model.value as? String,
+            "Preview Provider · preview-model"
+        )
         XCTAssertEqual(mode.value as? String, "채팅 모드")
         XCTAssertTrue(
             String(describing: composer.value)
@@ -1569,7 +2118,10 @@ final class IOSRootNavigationUITests: XCTestCase {
             composerSurface.value as? String,
             openComposerState
         )
-        XCTAssertEqual(model.value as? String, "preview-model")
+        XCTAssertEqual(
+            model.value as? String,
+            "Preview Provider · preview-model"
+        )
         XCTAssertEqual(mode.value as? String, "채팅 모드")
         XCTAssertEqual(
             String(describing: composer.value),

@@ -141,6 +141,9 @@ public protocol CoreClient: Sendable {
     func deleteProviderProfile(id: String) async throws
     func getSettings() async throws -> CoreAppSettings
     func updateSettings(_ settings: CoreAppSettings) async throws -> CoreAppSettings
+    func setPreservePartialGenerations(_ value: Bool) async throws
+        -> CoreAppSettings
+    func selectProviderProfile(id: String?) async throws -> CoreAppSettings
     func databaseStats() async throws -> DatabaseStats
 }
 

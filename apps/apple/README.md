@@ -197,6 +197,13 @@ Open the committed workspace and choose `LorepiaIOS` or `LorepiaMac`:
 open apps/apple/Lorepia.xcworkspace
 ```
 
+The standard Debug Run action for `LorepiaIOS` enables the project-owned
+synthetic chat showcase with `--lorepia-chat-bubble-showcase`. It uses only
+`FakeCoreClient` and in-memory credentials, so it does not write demo chats to
+the production database or Keychain. To run against the live Rust core in
+Xcode, uncheck or remove that argument in **Product > Scheme > Edit Scheme >
+Run > Arguments**.
+
 `apps/apple/project.yml` is the source of truth for the committed Xcode project
 structure. After changing targets or build settings, regenerate the project
 from the repository root:

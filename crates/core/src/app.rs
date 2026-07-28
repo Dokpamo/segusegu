@@ -51,6 +51,8 @@ const MAX_CONVERSATION_TITLE_BYTES: usize = 1_024;
 const MAX_CONVERSATION_TITLE_CHARS: usize = 256;
 const MAX_BRANCH_TITLE_BYTES: usize = 1_024;
 const MAX_BRANCH_TITLE_CHARS: usize = 256;
+const GENERATION_PERSISTENCE_FAILURE_MESSAGE: &str =
+    "generation state could not be saved; retry the message";
 
 #[derive(Clone)]
 pub struct Core {
@@ -97,11 +99,25 @@ struct GenerationTask {
     preserve_partial: bool,
 }
 
+struct TerminalPersistenceContext<'a> {
+    storage: &'a Storage,
+    event_bus: &'a broadcast::Sender<ChatEvent>,
+    generation_id: &'a GenerationId,
+    conversation_id: &'a ConversationId,
+    branch_id: &'a ConversationBranchId,
+    assistant_message_id: &'a MessageId,
+}
+
 struct GenerationLaunchPermit {
     generation_id: GenerationId,
     active_generations: Arc<GenerationRegistry>,
     cancel_receiver: Option<watch::Receiver<bool>>,
     preserve_partial: bool,
+}
+
+struct ActiveGenerationGuard {
+    generation_id: GenerationId,
+    active_generations: Arc<GenerationRegistry>,
 }
 
 impl GenerationLaunchPermit {
@@ -140,6 +156,12 @@ impl Drop for GenerationLaunchPermit {
         if self.cancel_receiver.is_some() {
             self.active_generations.remove(&self.generation_id);
         }
+    }
+}
+
+impl Drop for ActiveGenerationGuard {
+    fn drop(&mut self) {
+        self.active_generations.remove(&self.generation_id);
     }
 }
 
@@ -692,9 +714,6 @@ impl Core {
     }
 
     pub fn update_settings(&self, settings: &AppSettings) -> CoreResult<()> {
-        if let Some(profile_id) = settings.selected_provider_profile_id.as_deref() {
-            self.inner.storage.get_provider_profile(profile_id)?;
-        }
         self.inner.storage.save_settings(settings)
     }
 
@@ -744,11 +763,6 @@ impl Core {
     }
 
     pub fn delete_provider_profile(&self, id: &str) -> CoreResult<()> {
-        let mut settings = self.get_settings()?;
-        if settings.selected_provider_profile_id.as_deref() == Some(id) {
-            settings.selected_provider_profile_id = None;
-            self.inner.storage.save_settings(&settings)?;
-        }
         self.inner.storage.delete_provider_profile(id)
     }
 
@@ -1110,6 +1124,10 @@ async fn execute_generation_task(task: GenerationTask) {
         preserve_partial,
     } = task;
     let generation_id = request.generation_id.clone();
+    let _active_generation = ActiveGenerationGuard {
+        generation_id: generation_id.clone(),
+        active_generations,
+    };
     let conversation_id = request.conversation_id.clone();
     let assistant_message_id = assistant.id.clone();
     let (event_sender, event_receiver) = mpsc::channel(128);
@@ -1150,38 +1168,24 @@ async fn execute_generation_task(task: GenerationTask) {
         .err()
         .map(|failure| failure.error.code.as_str().to_owned());
 
-    let (mut sequence, mut terminal_kind, should_commit) =
+    let (sequence, terminal_kind, should_commit) =
         apply_generation_result(&mut assistant, result, preserve_partial);
-    let persistence = storage.finalize_generation(
-        &assistant,
+    let (sequence, terminal_kind) = persist_generation_terminal(
+        TerminalPersistenceContext {
+            storage: &storage,
+            event_bus: &event_bus,
+            generation_id: &generation_id,
+            conversation_id: &conversation_id,
+            branch_id: &branch_id,
+            assistant_message_id: &assistant_message_id,
+        },
+        &mut assistant,
         usage.as_ref(),
         error_code.as_deref(),
         should_commit,
+        sequence,
+        terminal_kind,
     );
-    match persistence {
-        Ok(()) if should_commit => {
-            let _ = event_bus.send(
-                ChatEvent::new(
-                    generation_id.clone(),
-                    conversation_id.clone(),
-                    sequence,
-                    ChatEventKind::MessageCommitted {
-                        message_id: assistant.id,
-                        status: assistant.status,
-                    },
-                )
-                .with_route(branch_id.clone(), assistant_message_id.clone()),
-            );
-            sequence = sequence.saturating_add(1);
-        }
-        Ok(()) => {}
-        Err(error) => {
-            terminal_kind = ChatEventKind::GenerationFailed {
-                code: error.code.as_str().to_owned(),
-                message: error.message,
-            };
-        }
-    }
     let _ = event_bus.send(
         ChatEvent::new(
             generation_id.clone(),
@@ -1191,7 +1195,81 @@ async fn execute_generation_task(task: GenerationTask) {
         )
         .with_route(branch_id, assistant_message_id),
     );
-    active_generations.remove(&generation_id);
+}
+
+fn persist_generation_terminal(
+    context: TerminalPersistenceContext<'_>,
+    assistant: &mut Message,
+    usage: Option<&lorepia_domain::GenerationUsage>,
+    error_code: Option<&str>,
+    should_commit: bool,
+    mut sequence: u64,
+    mut terminal_kind: ChatEventKind,
+) -> (u64, ChatEventKind) {
+    let original_status = assistant.status;
+    let persistence =
+        context
+            .storage
+            .finalize_generation(assistant, usage, error_code, should_commit);
+    let committed = if persistence.is_ok() {
+        should_commit
+    } else {
+        assistant.status = MessageStatus::Failed;
+        let compensation = context
+            .storage
+            .fail_generation_after_finalize_error(assistant, should_commit);
+        if compensation.is_ok() {
+            terminal_kind = generation_persistence_failure();
+            should_commit
+        } else if context
+            .storage
+            .get_generation(context.generation_id)
+            .is_ok_and(|generation| {
+                generation.status == generation_status_for_message(original_status)
+            })
+        {
+            assistant.status = original_status;
+            should_commit
+        } else {
+            terminal_kind = generation_persistence_failure();
+            false
+        }
+    };
+    if committed {
+        let _ = context.event_bus.send(
+            ChatEvent::new(
+                context.generation_id.clone(),
+                context.conversation_id.clone(),
+                sequence,
+                ChatEventKind::MessageCommitted {
+                    message_id: assistant.id.clone(),
+                    status: assistant.status,
+                },
+            )
+            .with_route(
+                context.branch_id.clone(),
+                context.assistant_message_id.clone(),
+            ),
+        );
+        sequence = sequence.saturating_add(1);
+    }
+    (sequence, terminal_kind)
+}
+
+const fn generation_status_for_message(status: MessageStatus) -> GenerationStatus {
+    match status {
+        MessageStatus::Pending => GenerationStatus::Running,
+        MessageStatus::Complete => GenerationStatus::Complete,
+        MessageStatus::Cancelled => GenerationStatus::Cancelled,
+        MessageStatus::Failed => GenerationStatus::Failed,
+    }
+}
+
+fn generation_persistence_failure() -> ChatEventKind {
+    ChatEventKind::GenerationFailed {
+        code: CoreErrorCode::StorageUnavailable.as_str().to_owned(),
+        message: GENERATION_PERSISTENCE_FAILURE_MESSAGE.to_owned(),
+    }
 }
 
 async fn forward_generation_events(
@@ -1526,6 +1604,8 @@ mod tests {
         captured: Mutex<Option<std_mpsc::Sender<Vec<String>>>>,
     }
 
+    struct OverflowUsageProvider;
+
     impl CapturingProvider {
         fn new(response: impl Into<String>) -> (Arc<Self>, std_mpsc::Receiver<Vec<String>>) {
             let (sender, receiver) = std_mpsc::channel();
@@ -1569,6 +1649,35 @@ mod tests {
                 .await
                 .map_err(|_| CoreError::internal("chat event receiver closed"))?;
             Ok(GenerationUsage::default())
+        }
+    }
+
+    #[async_trait]
+    impl Provider for OverflowUsageProvider {
+        fn capabilities(&self) -> ProviderCapabilities {
+            ProviderCapabilities {
+                streaming: true,
+                reasoning: false,
+                max_context_tokens: None,
+            }
+        }
+
+        async fn generate(
+            &self,
+            _request: GenerationRequest,
+            _credential: Option<&str>,
+            sink: ProviderEventSender,
+            _cancelled: watch::Receiver<bool>,
+        ) -> CoreResult<GenerationUsage> {
+            sink.send(ProviderEvent::TextDelta(
+                "response before invalid usage".to_owned(),
+            ))
+            .await
+            .map_err(|_| CoreError::internal("provider event receiver closed"))?;
+            Ok(GenerationUsage {
+                input_tokens: Some(i64::MAX as u64 + 1),
+                output_tokens: Some(1),
+            })
         }
     }
 
@@ -1648,6 +1757,40 @@ mod tests {
             assert!(
                 Instant::now() < deadline,
                 "partial checkpoint was not persisted"
+            );
+            thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    fn wait_for_generation_status(
+        core: &Core,
+        generation_id: &GenerationId,
+        expected: GenerationStatus,
+    ) -> GenerationRecord {
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            let generation = core
+                .inner
+                .storage
+                .get_generation(generation_id)
+                .expect("generation snapshot");
+            if generation.status == expected {
+                return generation;
+            }
+            assert!(
+                Instant::now() < deadline,
+                "generation did not reach {expected:?}"
+            );
+            thread::sleep(Duration::from_millis(10));
+        }
+    }
+
+    fn wait_for_generation_registry_to_drain(core: &Core) {
+        let deadline = Instant::now() + Duration::from_secs(2);
+        while core.active_generation_count() != 0 {
+            assert!(
+                Instant::now() < deadline,
+                "generation registry did not drain"
             );
             thread::sleep(Duration::from_millis(10));
         }
@@ -2879,5 +3022,94 @@ mod tests {
             .expect("restored messages");
         assert_eq!(restored.len(), 2);
         assert_eq!(restored[1].content, "Hi there");
+    }
+
+    #[test]
+    fn usage_overflow_is_compensated_as_failed_and_allows_the_next_send() {
+        let (root, core, character) = imported_core();
+        let conversation = core.open_conversation(&character.id).expect("conversation");
+        let mut events = core.subscribe_events();
+        let secret = "credential-must-not-leak";
+        let failed_generation_id = core
+            .send_message_with_provider(
+                &conversation.id,
+                "first",
+                "overflow".to_owned(),
+                Some(secret.to_owned()),
+                Arc::new(OverflowUsageProvider),
+            )
+            .expect("start overflow generation");
+
+        let failed_generation =
+            wait_for_generation_status(&core, &failed_generation_id, GenerationStatus::Failed);
+        wait_for_generation_registry_to_drain(&core);
+        assert_eq!(failed_generation.input_tokens, None);
+        assert_eq!(failed_generation.output_tokens, None);
+        assert_eq!(
+            failed_generation.error_code.as_deref(),
+            Some(CoreErrorCode::StorageUnavailable.as_str())
+        );
+        assert!(failed_generation.finished_at.is_some());
+
+        let failed_messages = core
+            .list_messages(&conversation.id)
+            .expect("failed messages");
+        assert_eq!(failed_messages.len(), 2);
+        assert_eq!(failed_messages[1].status, MessageStatus::Failed);
+        assert_eq!(failed_messages[1].content, "response before invalid usage");
+
+        let observed = std::iter::from_fn(|| events.try_recv().ok()).collect::<Vec<_>>();
+        assert!(observed.iter().any(|event| {
+            matches!(
+                &event.kind,
+                ChatEventKind::GenerationFailed { code, message }
+                    if code == CoreErrorCode::StorageUnavailable.as_str()
+                        && message == GENERATION_PERSISTENCE_FAILURE_MESSAGE
+            )
+        }));
+        assert!(
+            !format!("{observed:?}").contains(secret),
+            "generation events must not expose credentials"
+        );
+
+        drop(core);
+        let core = Core::open(CoreConfig::new(root.path())).expect("reopen core");
+        assert_eq!(
+            core.inner
+                .storage
+                .get_generation(&failed_generation_id)
+                .expect("restored failed generation")
+                .status,
+            GenerationStatus::Failed
+        );
+        assert_eq!(
+            core.list_messages(&conversation.id)
+                .expect("restored failed messages")[1]
+                .status,
+            MessageStatus::Failed
+        );
+
+        let next_generation_id = core
+            .send_message_with_provider(
+                &conversation.id,
+                "second",
+                "static".to_owned(),
+                None,
+                Arc::new(StaticProvider::new("retry succeeded")),
+            )
+            .expect("start retry generation");
+        wait_for_generation_status(&core, &next_generation_id, GenerationStatus::Complete);
+        let messages = core
+            .list_messages(&conversation.id)
+            .expect("messages after retry");
+        assert_eq!(messages.len(), 4);
+        assert_eq!(messages[1].status, MessageStatus::Failed);
+        assert_eq!(messages[3].status, MessageStatus::Complete);
+        assert_eq!(messages[3].content, "retry succeeded");
+        assert!(
+            messages
+                .iter()
+                .all(|message| message.status != MessageStatus::Pending)
+        );
     }
 }

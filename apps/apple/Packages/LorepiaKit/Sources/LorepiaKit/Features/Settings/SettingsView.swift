@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct SettingsView: View {
     @ObservedObject private var viewModel: SettingsViewModel
+    @State private var showsProviderSelector = false
 
     public init(viewModel: SettingsViewModel) {
         self.viewModel = viewModel
@@ -21,21 +22,43 @@ public struct SettingsView: View {
             }
 
             Section("사용할 프로바이더") {
-                Picker(
-                    "프로필",
-                    selection: Binding(
-                        get: { viewModel.selectedProfileID },
-                        set: { id in
+                Button {
+                    showsProviderSelector = true
+                } label: {
+                    HStack {
+                        Text("프로필")
+                            .foregroundStyle(.primary)
+                        Spacer()
+                        Text(selectedProviderDisplayName)
+                            .foregroundStyle(.secondary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("프로필")
+                .accessibilityIdentifier(
+                    "settings-provider-profile-picker"
+                )
+                .accessibilityValue(selectedProviderDisplayName)
+                .confirmationDialog(
+                    "사용할 프로바이더",
+                    isPresented: $showsProviderSelector
+                ) {
+                    Button("선택 안 함") {
+                        Task {
+                            await viewModel.selectProfile(id: nil)
+                        }
+                    }
+                    ForEach(viewModel.profiles) { profile in
+                        Button(profile.displayName) {
                             Task {
-                                await viewModel.selectProfile(id: id)
+                                await viewModel.selectProfile(
+                                    id: profile.id
+                                )
                             }
                         }
-                    )
-                ) {
-                    Text("선택 안 함").tag(String?.none)
-                    ForEach(viewModel.profiles) { profile in
-                        Text(profile.displayName).tag(Optional(profile.id))
                     }
+                    Button("취소", role: .cancel) {}
                 }
 
                 Toggle(
@@ -60,6 +83,9 @@ public struct SettingsView: View {
                     .autocorrectionDisabled()
                     .keyboardType(.URL)
                     #endif
+                Text(viewModel.baseURLGuidance)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
                 TextField("모델", text: $viewModel.model)
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
@@ -78,33 +104,45 @@ public struct SettingsView: View {
                 .textContentType(.password)
                 .privacySensitive()
 
-                if viewModel.hasStoredCredential {
-                    Label("Keychain에 자격증명이 저장되어 있습니다.", systemImage: "key.fill")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                    Button("저장된 자격증명 삭제", role: .destructive) {
+                Text(viewModel.credentialStatusDescription)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .privacySensitive()
+
+                if viewModel.hasStoredCredential
+                    || viewModel.requiresCredentialRecovery
+                    || (
+                        !viewModel.isCredentialStateKnown
+                            && viewModel.isEditingStoredProfile
+                    )
+                {
+                    Button(
+                        credentialRecoveryButtonTitle,
+                        role: .destructive
+                    ) {
                         Task {
                             await viewModel.clearCredential()
                         }
                     }
+                    .accessibilityIdentifier(
+                        "settings-credential-recovery"
+                    )
+                }
+                if !viewModel.isCredentialStateKnown,
+                   viewModel.isEditingStoredProfile
+                {
+                    Button("API 키 상태 다시 확인") {
+                        Task {
+                            await viewModel.refreshCredentialStatus()
+                        }
+                    }
                 }
 
-                ViewThatFits(in: .horizontal) {
-                    HStack {
-                        newProfileButton
-                        Spacer()
-                        deleteProfileButton
-                        saveProfileButton
-                    }
-
-                    VStack(spacing: LorepiaSpacing.compact) {
-                        newProfileButton
-                            .frame(maxWidth: .infinity)
-                        deleteProfileButton
-                            .frame(maxWidth: .infinity)
-                        saveProfileButton
-                            .frame(maxWidth: .infinity)
-                    }
+                HStack {
+                    newProfileButton
+                    Spacer()
+                    deleteProfileButton
+                    saveProfileButton
                 }
             }
 
@@ -125,6 +163,9 @@ public struct SettingsView: View {
                 Section {
                     LorepiaGlyphLabel(statusMessage, glyph: .check)
                         .foregroundStyle(.secondary)
+                        .accessibilityIdentifier(
+                            "settings-status-message"
+                        )
                 }
             }
 
@@ -137,6 +178,7 @@ public struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .disabled(viewModel.isLoading)
         .overlay {
             if viewModel.isLoading {
                 ProgressView()
@@ -144,10 +186,22 @@ public struct SettingsView: View {
         }
     }
 
+    private var credentialRecoveryButtonTitle: String {
+        if viewModel.hasStoredCredential {
+            return "저장된 자격증명 삭제"
+        }
+        if viewModel.requiresCredentialRecovery {
+            return "API 키 없이 복구"
+        }
+        return "읽을 수 없는 API 키 삭제"
+    }
+
     private var newProfileButton: some View {
         Button("새 프로필") {
             viewModel.beginNewProfile()
         }
+        .buttonStyle(.borderless)
+        .accessibilityIdentifier("settings-new-provider-profile")
     }
 
     private var deleteProfileButton: some View {
@@ -156,6 +210,9 @@ public struct SettingsView: View {
                 await viewModel.deleteEditingProfile()
             }
         }
+        .disabled(!viewModel.isEditingStoredProfile)
+        .buttonStyle(.borderless)
+        .accessibilityIdentifier("settings-delete-provider-profile")
     }
 
     private var saveProfileButton: some View {
@@ -165,5 +222,18 @@ public struct SettingsView: View {
             }
         }
         .buttonStyle(.borderedProminent)
+        .accessibilityIdentifier("settings-save-provider-profile")
+    }
+
+    private var selectedProviderDisplayName: String {
+        guard
+            let selectedProfileID = viewModel.selectedProfileID,
+            let selectedProfile = viewModel.profiles.first(where: {
+                $0.id == selectedProfileID
+            })
+        else {
+            return "선택 안 함"
+        }
+        return selectedProfile.displayName
     }
 }
