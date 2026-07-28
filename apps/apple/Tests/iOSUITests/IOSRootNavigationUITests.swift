@@ -357,9 +357,14 @@ final class IOSRootNavigationUITests: XCTestCase {
         // No extra tap: successful input proves the native field's
         // accessibility frame and first-responder state still match the pixels.
         composer.typeText("포커스유지")
-        XCTAssertTrue(
-            String(describing: composer.value).contains("포커스유지")
+        let retainedFocusValue = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "value CONTAINS %@",
+                "포커스유지"
+            ),
+            object: composer
         )
+        wait(for: [retainedFocusValue], timeout: 2)
     }
 
     @MainActor
@@ -666,10 +671,16 @@ final class IOSRootNavigationUITests: XCTestCase {
             windowBounds.maxY - restingSurfaceBounds.maxY
         // iOS 26 reports the Liquid Glass effect's inset accessibility
         // bounds. Earlier fallback rendering reports the 12 pt layout rim.
-        let expectedSurfaceHorizontalInset: CGFloat =
+        let usesLiquidGlassAccessibilityBounds =
             ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26
+        let expectedSurfaceHorizontalInset: CGFloat =
+            usesLiquidGlassAccessibilityBounds
                 ? 14
                 : 12
+        let expectedSurfaceBottomInset: CGFloat =
+            usesLiquidGlassAccessibilityBounds
+                ? 36
+                : 34
         XCTAssertEqual(
             restingSurfaceLeadingInset,
             expectedSurfaceHorizontalInset,
@@ -680,7 +691,11 @@ final class IOSRootNavigationUITests: XCTestCase {
             expectedSurfaceHorizontalInset,
             accuracy: 1
         )
-        XCTAssertEqual(restingSurfaceBottomInset, 36, accuracy: 2)
+        XCTAssertEqual(
+            restingSurfaceBottomInset,
+            expectedSurfaceBottomInset,
+            accuracy: 2
+        )
 
         let restingLeadingInset =
             restingVisualBounds.minX - windowBounds.minX
