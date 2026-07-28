@@ -101,8 +101,12 @@ public struct ConversationListView: View {
                 }
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
                 .accessibilityHint("대화를 엽니다")
-                .accessibilityIdentifier("conversation-row-\(item.id)")
+                .accessibilityIdentifier(
+                    "conversation-row-\(item.id)"
+                )
             }
         }
         .listStyle(.plain)
@@ -182,7 +186,7 @@ private struct ConversationListRow: View {
     let item: ConversationListItem
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .body) private var avatarSize: CGFloat = 48
+    @ScaledMetric(relativeTo: .body) private var avatarSize: CGFloat = 56
 
     var body: some View {
         Group {
@@ -193,32 +197,48 @@ private struct ConversationListRow: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
-        .padding(.vertical, LorepiaSpacing.compact / 2)
+        .padding(.vertical, LorepiaSpacing.tight)
+        .overlay {
+#if DEBUG
+            RoundedRectangle(
+                cornerRadius: LorepiaRadius.card,
+                style: .continuous
+            )
+            .stroke(
+                Color.red.opacity(0.65),
+                style: StrokeStyle(
+                    lineWidth: 1,
+                    dash: [5, 3]
+                )
+            )
+#endif
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
     }
 
     private var standardLayout: some View {
-        HStack(alignment: .top, spacing: LorepiaSpacing.standard) {
+        HStack(alignment: .top, spacing: LorepiaSpacing.snug) {
             avatar
-            VStack(alignment: .leading, spacing: 4) {
-                title
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: LorepiaSpacing.compact) {
+                    title
+                    Spacer(minLength: LorepiaSpacing.tight)
+                    timestamp
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                }
                 Text(item.previewText)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(1)
                     .multilineTextAlignment(.leading)
-                if let mode = item.mode {
+                if let mode = item.mode, mode == .story {
                     modeLabel(mode)
+                        .padding(.top, 2)
                 }
-            }
-            Spacer(minLength: LorepiaSpacing.compact)
-            VStack(alignment: .trailing, spacing: 8) {
-                timestamp
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
             }
         }
     }
@@ -243,31 +263,23 @@ private struct ConversationListRow: View {
     }
 
     private var avatar: some View {
-        Image(systemName: item.character?.symbolName ?? "person.crop.circle")
-            .font(.title2)
-            .frame(
-                width: max(44, min(avatarSize, 64)),
-                height: max(44, min(avatarSize, 64))
-            )
-            .background(.tint.opacity(0.12), in: Circle())
-            .accessibilityHidden(true)
+        LorepiaAvatar(
+            symbolName: item.character?.symbolName ?? "person.crop.circle",
+            seed: item.character?.id ?? item.id,
+            size: resolvedAvatarSize
+        )
+    }
+
+    private var resolvedAvatarSize: CGFloat {
+        max(44, min(avatarSize, 72))
     }
 
     @ViewBuilder
     private var title: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(item.displayTitle)
-                .font(.headline)
-                .foregroundStyle(.primary)
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
-            if let characterName = item.character?.name,
-               characterName != item.displayTitle
-            {
-                Text(characterName)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
+        Text(item.displayTitle)
+            .font(.headline)
+            .foregroundStyle(.primary)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
     }
 
     @ViewBuilder
@@ -288,7 +300,13 @@ private struct ConversationListRow: View {
     }
 
     private var accessibilityLabel: String {
-        var components = [item.displayTitle, item.previewText]
+        var components = [item.displayTitle]
+        if let characterName = item.character?.name,
+           characterName != item.displayTitle
+        {
+            components.append(characterName)
+        }
+        components.append(item.previewText)
         if let mode = item.mode {
             components.append("\(mode.title) 모드")
         }

@@ -9,9 +9,13 @@ public final class ChatViewModel: ObservableObject {
     @Published public private(set) var activeBranchID: String?
     @Published public private(set) var mode: ConversationMode = .chat
     @Published public private(set) var messages: [ChatMessage] = []
+    @Published public private(set) var providerProfiles: [ProviderProfile] = []
+    @Published public private(set) var selectedProviderProfileID: String?
     @Published public var draft = ""
     @Published public private(set) var isLoading = false
     @Published public private(set) var isGenerating = false
+    @Published public private(set) var isSubmitting = false
+    @Published public private(set) var isChangingProviderProfile = false
     @Published public private(set) var errorMessage: String?
     @Published public private(set) var usageDescription: String?
 
@@ -24,6 +28,9 @@ public final class ChatViewModel: ObservableObject {
     private var latestSequenceByGeneration: [String: UInt64] = [:]
     private var pollingTask: Task<Void, Never>?
     private var selectionEpoch: UInt64 = 0
+    private var providerSelectionRevision: UInt64 = 0
+    private var providerRefreshRevision: UInt64 = 0
+    private var providerRefreshErrorMessage: String?
     private var idlePollsSinceReconciliation = 0
 
     private static let idlePollsBeforeReconciliation = 10
@@ -45,7 +52,17 @@ public final class ChatViewModel: ObservableObject {
             && activeBranchID != nil
             && !isLoading
             && !isGenerating
+            && !isSubmitting
+            && !isChangingProviderProfile
             && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && coreIsAvailable
+    }
+
+    public var canEditDraft: Bool {
+        conversation != nil
+            && !isLoading
+            && !isGenerating
+            && !isSubmitting
             && coreIsAvailable
     }
 
@@ -53,6 +70,24 @@ public final class ChatViewModel: ObservableObject {
         conversation != nil
             && !isLoading
             && !isGenerating
+            && !isSubmitting
+            && coreIsAvailable
+    }
+
+    public var selectedProviderProfile: ProviderProfile? {
+        guard let selectedProviderProfileID else {
+            return nil
+        }
+        return providerProfiles.first { $0.id == selectedProviderProfileID }
+    }
+
+    public var canChangeProviderProfile: Bool {
+        conversation != nil
+            && !isLoading
+            && !isGenerating
+            && !isSubmitting
+            && !isChangingProviderProfile
+            && !providerProfiles.isEmpty
             && coreIsAvailable
     }
 
@@ -453,8 +488,10 @@ public final class ChatViewModel: ObservableObject {
     }
 
     public func submitMessage() async {
+        let submittedDraft = draft
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty,
+        guard canSubmit,
+              !text.isEmpty,
               let conversation,
               let activeBranchID,
               let activeBranch = branches.first(
@@ -463,9 +500,18 @@ public final class ChatViewModel: ObservableObject {
         else {
             return
         }
+        let submissionMode = mode
+        let providerRevision = providerSelectionRevision
+        isSubmitting = true
+        defer {
+            isSubmitting = false
+        }
         do {
             let settings = try await client.getSettings()
-            guard self.conversation?.id == conversation.id else {
+            guard self.conversation?.id == conversation.id,
+                  providerSelectionRevision == providerRevision,
+                  !isChangingProviderProfile
+            else {
                 return
             }
             guard let profileID = settings.selectedProviderProfileID else {
@@ -473,17 +519,22 @@ public final class ChatViewModel: ObservableObject {
                 return
             }
             let credential = try await credentialStore.credential(for: profileID)
-            guard self.conversation?.id == conversation.id else {
+            guard self.conversation?.id == conversation.id,
+                  providerSelectionRevision == providerRevision,
+                  !isChangingProviderProfile
+            else {
                 return
             }
-            draft = ""
+            if draft == submittedDraft {
+                draft = ""
+            }
             errorMessage = nil
             isGenerating = true
             let generationID = try await client.sendMessageToBranch(
                 conversationID: conversation.id,
                 branchID: activeBranchID,
                 expectedHeadMessageID: activeBranch.headMessageID,
-                mode: mode,
+                mode: submissionMode,
                 text: text,
                 providerProfileID: profileID,
                 credential: credential
@@ -775,6 +826,111 @@ public final class ChatViewModel: ObservableObject {
     public func pauseEventPolling() {
         pollingTask?.cancel()
         pollingTask = nil
+    }
+
+    public func refreshProviderSelection() async {
+        guard !isChangingProviderProfile else {
+            return
+        }
+        providerRefreshRevision &+= 1
+        let refreshRevision = providerRefreshRevision
+        let selectionRevision = providerSelectionRevision
+
+        do {
+            async let profilesTask = client.listProviderProfiles()
+            async let settingsTask = client.getSettings()
+            let (profiles, settings) = try await (
+                profilesTask,
+                settingsTask
+            )
+            guard providerRefreshRevision == refreshRevision,
+                  providerSelectionRevision == selectionRevision
+            else {
+                return
+            }
+            providerProfiles = profiles.sorted {
+                if $0.displayName == $1.displayName {
+                    return $0.model.localizedStandardCompare($1.model)
+                        == .orderedAscending
+                }
+                return $0.displayName.localizedStandardCompare($1.displayName)
+                    == .orderedAscending
+            }
+            selectedProviderProfileID =
+                profiles.contains {
+                    $0.id == settings.selectedProviderProfileID
+                }
+                ? settings.selectedProviderProfileID
+                : nil
+            if errorMessage == providerRefreshErrorMessage {
+                errorMessage = nil
+            }
+            providerRefreshErrorMessage = nil
+        } catch is CancellationError {
+            return
+        } catch {
+            // A transient settings failure must not erase the last known,
+            // still-usable model choice from the composer.
+            guard providerRefreshRevision == refreshRevision,
+                  providerSelectionRevision == selectionRevision,
+                  providerProfiles.isEmpty
+            else {
+                return
+            }
+            let providerError =
+                "모델 목록을 불러오지 못했습니다: \(error.localizedDescription)"
+            providerRefreshErrorMessage = providerError
+            errorMessage = providerError
+        }
+    }
+
+    public func selectProviderProfile(id: String) async {
+        guard
+            id != selectedProviderProfileID,
+            providerProfiles.contains(where: { $0.id == id }),
+            canChangeProviderProfile
+        else {
+            return
+        }
+
+        providerSelectionRevision &+= 1
+        let revision = providerSelectionRevision
+        isChangingProviderProfile = true
+        defer {
+            if providerSelectionRevision == revision {
+                isChangingProviderProfile = false
+            }
+        }
+
+        do {
+            let settings = try await client.getSettings()
+            guard providerSelectionRevision == revision else {
+                return
+            }
+            let updated = try await client.updateSettings(
+                CoreAppSettings(
+                    preservePartialGenerations:
+                        settings.preservePartialGenerations,
+                    selectedProviderProfileID: id
+                )
+            )
+            guard providerSelectionRevision == revision else {
+                return
+            }
+            selectedProviderProfileID =
+                providerProfiles.contains {
+                    $0.id == updated.selectedProviderProfileID
+                }
+                ? updated.selectedProviderProfileID
+                : nil
+            errorMessage = nil
+        } catch is CancellationError {
+            return
+        } catch {
+            if providerSelectionRevision == revision {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     private var activeBranch: CoreConversationBranch? {

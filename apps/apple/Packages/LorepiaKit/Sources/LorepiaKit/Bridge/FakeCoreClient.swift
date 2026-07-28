@@ -1,5 +1,21 @@
 import Foundation
 
+public struct FakeConversationFixture: Sendable {
+    public let conversation: CoreConversation
+    public let mode: ConversationMode
+    public let messages: [ChatMessage]
+
+    public init(
+        conversation: CoreConversation,
+        mode: ConversationMode,
+        messages: [ChatMessage]
+    ) {
+        self.conversation = conversation
+        self.mode = mode
+        self.messages = messages
+    }
+}
+
 /// A deterministic in-memory implementation for unit tests and SwiftUI previews.
 ///
 /// Production app construction never selects this client automatically.
@@ -18,13 +34,24 @@ public actor FakeCoreClient: CoreClient {
     private var events: [ChatEvent] = []
     private var droppedEventCount: UInt64 = 0
     private var commitFailuresRemaining: UInt
+    private var listProviderFailuresRemaining: UInt
+    private let listProviderProfilesDelay: Duration?
+    private let getSettingsDelay: Duration?
+    private let updateSettingsDelay: Duration?
+    private let initialConversationMessages: [ChatMessage]
 
     public init(
         version: String = "lorepia-core-preview/0.1.0",
         health: HealthStatus? = nil,
         characters: [CoreCharacter]? = nil,
         profiles: [ProviderProfile]? = nil,
-        commitFailuresBeforeSuccess: UInt = 0
+        commitFailuresBeforeSuccess: UInt = 0,
+        listProviderFailuresBeforeSuccess: UInt = 0,
+        listProviderProfilesDelay: Duration? = nil,
+        getSettingsDelay: Duration? = nil,
+        updateSettingsDelay: Duration? = nil,
+        initialConversationMessages: [ChatMessage] = [],
+        initialConversationFixtures: [FakeConversationFixture] = []
     ) {
         reportedVersion = version
         reportedHealth = health ?? HealthStatus(
@@ -54,11 +81,59 @@ public actor FakeCoreClient: CoreClient {
             timeoutSeconds: 30
         )
         self.profiles = profiles ?? [defaultProfile]
+        listProviderFailuresRemaining = listProviderFailuresBeforeSuccess
+        self.listProviderProfilesDelay = listProviderProfilesDelay
+        self.getSettingsDelay = getSettingsDelay
+        self.updateSettingsDelay = updateSettingsDelay
+        self.initialConversationMessages = initialConversationMessages
         settings = CoreAppSettings(
             preservePartialGenerations: true,
             selectedProviderProfileID: (profiles ?? [defaultProfile]).first?.id
         )
         commitFailuresRemaining = commitFailuresBeforeSuccess
+
+        for fixture in initialConversationFixtures {
+            let conversation = fixture.conversation
+            var parentID: String?
+            let seededMessages = fixture.messages.enumerated().map {
+                index, template in
+                let messageID = "\(conversation.id)-fixture-\(index + 1)"
+                let message = ChatMessage(
+                    id: messageID,
+                    conversationID: conversation.id,
+                    parentID: parentID,
+                    role: template.role,
+                    text: template.text,
+                    status: template.status,
+                    generationID: template.generationID == nil
+                        ? nil
+                        : "\(conversation.id)-fixture-generation-\(index + 1)",
+                    createdAt: template.createdAt ?? conversation.updatedAt
+                )
+                parentID = messageID
+                return message
+            }
+            let branch = CoreConversationBranch(
+                id: "\(conversation.id)-fixture-main",
+                conversationID: conversation.id,
+                title: nil,
+                forkMessageID: nil,
+                headMessageID: seededMessages.last?.id,
+                createdAt: conversation.createdAt,
+                updatedAt: conversation.updatedAt
+            )
+
+            conversations.append(conversation)
+            messagesByConversation[conversation.id] = seededMessages
+            branchesByConversation[conversation.id] = [branch]
+            messagesByBranch[branch.id] = seededMessages
+            statesByConversation[conversation.id] = CoreConversationState(
+                conversationID: conversation.id,
+                activeBranchID: branch.id,
+                selectedMode: fixture.mode,
+                updatedAt: conversation.updatedAt
+            )
+        }
     }
 
     public func version() async throws -> String {
@@ -305,19 +380,38 @@ public actor FakeCoreClient: CoreClient {
             createdAt: timestamp,
             updatedAt: timestamp
         )
+        var parentID: String?
+        let seededMessages = initialConversationMessages.enumerated().map {
+            index, template in
+            let messageID = "\(conversation.id)-seed-\(index + 1)"
+            let message = ChatMessage(
+                id: messageID,
+                conversationID: conversation.id,
+                parentID: parentID,
+                role: template.role,
+                text: template.text,
+                status: template.status,
+                generationID: template.generationID == nil
+                    ? nil
+                    : "\(conversation.id)-seed-generation-\(index + 1)",
+                createdAt: template.createdAt ?? timestamp
+            )
+            parentID = messageID
+            return message
+        }
         let branch = CoreConversationBranch(
             id: UUID().uuidString,
             conversationID: conversation.id,
             title: nil,
             forkMessageID: nil,
-            headMessageID: nil,
+            headMessageID: seededMessages.last?.id,
             createdAt: timestamp,
             updatedAt: timestamp
         )
         conversations.append(conversation)
-        messagesByConversation[conversation.id] = []
+        messagesByConversation[conversation.id] = seededMessages
         branchesByConversation[conversation.id] = [branch]
-        messagesByBranch[branch.id] = []
+        messagesByBranch[branch.id] = seededMessages
         statesByConversation[conversation.id] = CoreConversationState(
             conversationID: conversation.id,
             activeBranchID: branch.id,
@@ -893,7 +987,16 @@ public actor FakeCoreClient: CoreClient {
     }
 
     public func listProviderProfiles() async throws -> [ProviderProfile] {
-        profiles
+        if let listProviderProfilesDelay {
+            try await Task.sleep(for: listProviderProfilesDelay)
+        }
+        if listProviderFailuresRemaining > 0 {
+            listProviderFailuresRemaining -= 1
+            throw CoreClientFailure.startupFailed(
+                "provider profiles unavailable"
+            )
+        }
+        return profiles
     }
 
     public func upsertProviderProfile(
@@ -912,12 +1015,18 @@ public actor FakeCoreClient: CoreClient {
     }
 
     public func getSettings() async throws -> CoreAppSettings {
-        settings
+        if let getSettingsDelay {
+            try await Task.sleep(for: getSettingsDelay)
+        }
+        return settings
     }
 
     public func updateSettings(
         _ settings: CoreAppSettings
     ) async throws -> CoreAppSettings {
+        if let updateSettingsDelay {
+            try await Task.sleep(for: updateSettingsDelay)
+        }
         self.settings = settings
         return settings
     }

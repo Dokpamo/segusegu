@@ -53,7 +53,7 @@ struct IOSRootView: View {
                 }
             }
             .tabItem {
-                Label("홈", systemImage: "house")
+                Label("홈", systemImage: "house.fill")
             }
             .tag(Tab.home)
 
@@ -79,7 +79,7 @@ struct IOSRootView: View {
             .tabItem {
                 Label(
                     "채팅",
-                    systemImage: "bubble.left.and.bubble.right"
+                    systemImage: "bubble.left.and.bubble.right.fill"
                 )
             }
             .tag(Tab.chats)
@@ -134,7 +134,7 @@ struct IOSRootView: View {
                 .navigationTitle("설정")
             }
             .tabItem {
-                Label("설정", systemImage: "gearshape")
+                Label("설정", systemImage: "gearshape.fill")
             }
             .tag(Tab.settings)
         }

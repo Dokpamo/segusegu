@@ -26,18 +26,36 @@ public enum ChatMessageAction: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// Used where the platform draws the icon for us, such as context menus.
     public var systemImage: String {
         switch self {
         case .edit:
-            "pencil.line"
+            "pencil"
         case .copy:
-            "square.on.square"
+            "doc.on.doc"
         case .regenerate:
-            "arrow.2.circlepath"
+            "arrow.clockwise"
         case .branch:
-            "arrow.branch"
+            "arrow.triangle.branch"
         case .delete:
             "trash"
+        }
+    }
+
+    /// Used in surfaces we draw ourselves, where one icon family matters more
+    /// than matching the system symbol set.
+    var glyph: LorepiaGlyph {
+        switch self {
+        case .edit:
+            .edit
+        case .copy:
+            .copy
+        case .regenerate:
+            .regenerate
+        case .branch:
+            .branch
+        case .delete:
+            .delete
         }
     }
 }
@@ -85,30 +103,16 @@ public struct ChatMessageActionRow: View {
                 Button(role: action == .delete ? .destructive : nil) {
                     onAction(action)
                 } label: {
-                    Image(
-                        systemName:
-                            action == .copy && isCopied
-                                ? "checkmark"
-                                : action.systemImage
+                    LorepiaGlyphView(
+                        action == .copy && isCopied ? .check : action.glyph,
+                        size: glyphSize
                     )
-                        .symbolRenderingMode(.hierarchical)
-                        .font(
-                            .system(
-                                size: glyphSize,
-                                weight: .regular,
-                                design: .rounded
-                            )
-                        )
-                        .contentTransition(.symbolEffect(.replace))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                    .offset(y: -8)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(ChatMessageActionButtonStyle())
-                .foregroundStyle(
-                    action == .copy && isCopied
-                        ? Color.accentColor
-                        : Color.secondary
-                )
+                .foregroundStyle(color(for: action))
                 .disabled(!isEnabled(action))
                 .accessibilityLabel(accessibilityLabel(for: action))
                 .accessibilityHint(accessibilityHint(for: action))
@@ -124,8 +128,22 @@ public struct ChatMessageActionRow: View {
         )
     }
 
+    /// Our glyphs sit on a 24-unit grid, so they need more room than an SF
+    /// Symbol at the same point size to read at the same optical weight.
     private var glyphSize: CGFloat {
-        min(max(scaledGlyphSize, 15), 18)
+        min(max(scaledGlyphSize, 15), 18) * 1.25
+    }
+
+    /// Branching keeps its own hue everywhere it appears, so the action row
+    /// matches the fork marker and the branch controls.
+    private func color(for action: ChatMessageAction) -> Color {
+        if action == .copy, isCopied {
+            return LorepiaColor.loreAccent
+        }
+        if action == .branch {
+            return LorepiaColor.thread
+        }
+        return Color.secondary
     }
 
     private func isEnabled(_ action: ChatMessageAction) -> Bool {
@@ -201,6 +219,7 @@ private struct ChatMessageActionButtonStyle: ButtonStyle {
                             )
                     }
                     .frame(width: 34, height: 34)
+                    .offset(y: -8)
                     .opacity(configuration.isPressed ? 1 : 0)
                     .scaleEffect(
                         reduceMotion

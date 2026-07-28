@@ -4,6 +4,25 @@ import XCTest
 
 @MainActor
 final class FeatureViewModelTests: XCTestCase {
+    private func providerSelectionFixtures() -> [ProviderProfile] {
+        [
+            ProviderProfile(
+                id: "compact",
+                displayName: "Compact",
+                baseURL: "https://example.invalid/v1",
+                model: "lore-compact",
+                timeoutSeconds: 30
+            ),
+            ProviderProfile(
+                id: "pro",
+                displayName: "Pro",
+                baseURL: "https://example.invalid/v1",
+                model: "lore-pro",
+                timeoutSeconds: 60
+            ),
+        ]
+    }
+
     func testLibraryFilteringMatchesSummary() {
         let viewModel = LibraryViewModel(
             characters: LibraryCharacter.previewCharacters
@@ -292,6 +311,229 @@ final class FeatureViewModelTests: XCTestCase {
 
         XCTAssertEqual(restored.mode, .story)
         XCTAssertEqual(restored.activeBranchID, persisted.activeBranchID)
+    }
+
+    func testChatRefreshesAndChangesTheSelectedProviderModel() async throws {
+        let profiles = [
+            ProviderProfile(
+                id: "compact",
+                displayName: "Compact",
+                baseURL: "https://example.invalid/v1",
+                model: "lore-compact",
+                timeoutSeconds: 30
+            ),
+            ProviderProfile(
+                id: "pro",
+                displayName: "Pro",
+                baseURL: "https://example.invalid/v1",
+                model: "lore-pro",
+                timeoutSeconds: 60
+            ),
+        ]
+        let client = FakeCoreClient(profiles: profiles)
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+
+        await viewModel.setCharacter(
+            LibraryCharacter.previewCharacters[0]
+        )
+        await viewModel.refreshProviderSelection()
+
+        XCTAssertEqual(viewModel.providerProfiles, profiles)
+        XCTAssertEqual(viewModel.selectedProviderProfile?.model, "lore-compact")
+        XCTAssertTrue(viewModel.canChangeProviderProfile)
+
+        await viewModel.selectProviderProfile(id: "pro")
+
+        XCTAssertEqual(viewModel.selectedProviderProfile?.model, "lore-pro")
+        let settings = try await client.getSettings()
+        XCTAssertEqual(settings.selectedProviderProfileID, "pro")
+        XCTAssertTrue(settings.preservePartialGenerations)
+    }
+
+    func testChatDiscardsAStaleProviderRefreshAfterASelection() async throws {
+        let profiles = providerSelectionFixtures()
+        let client = FakeCoreClient(
+            profiles: profiles,
+            listProviderProfilesDelay: .milliseconds(80)
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+
+        await viewModel.setCharacter(
+            LibraryCharacter.previewCharacters[0]
+        )
+        await viewModel.refreshProviderSelection()
+
+        let staleRefresh = Task {
+            await viewModel.refreshProviderSelection()
+        }
+        try await Task.sleep(for: .milliseconds(20))
+        await viewModel.selectProviderProfile(id: "pro")
+        await staleRefresh.value
+
+        XCTAssertEqual(viewModel.selectedProviderProfileID, "pro")
+        let settings = try await client.getSettings()
+        XCTAssertEqual(settings.selectedProviderProfileID, "pro")
+    }
+
+    func testChatBlocksSubmitWhileProviderSelectionIsSaving() async throws {
+        let client = FakeCoreClient(
+            profiles: providerSelectionFixtures(),
+            updateSettingsDelay: .milliseconds(80)
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+
+        await viewModel.setCharacter(
+            LibraryCharacter.previewCharacters[0]
+        )
+        await viewModel.refreshProviderSelection()
+        viewModel.draft = "이전 모델로 보내면 안 되는 메시지"
+
+        let selection = Task {
+            await viewModel.selectProviderProfile(id: "pro")
+        }
+        for _ in 0 ..< 20 where !viewModel.isChangingProviderProfile {
+            await Task.yield()
+        }
+        XCTAssertTrue(viewModel.isChangingProviderProfile)
+        XCTAssertFalse(viewModel.canSubmit)
+
+        await viewModel.submitMessage()
+
+        XCTAssertEqual(
+            viewModel.draft,
+            "이전 모델로 보내면 안 되는 메시지"
+        )
+        XCTAssertFalse(viewModel.isGenerating)
+        await selection.value
+        XCTAssertEqual(viewModel.selectedProviderProfileID, "pro")
+    }
+
+    func testChatReportsAnInitialProviderRefreshFailure() async {
+        let viewModel = ChatViewModel(
+            client: UnavailableCoreClient(message: "offline"),
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .unavailable("offline"),
+            automaticallyPollEvents: false
+        )
+
+        await viewModel.refreshProviderSelection()
+
+        XCTAssertTrue(viewModel.providerProfiles.isEmpty)
+        XCTAssertTrue(
+            viewModel.errorMessage?.contains(
+                "모델 목록을 불러오지 못했습니다"
+            ) == true
+        )
+    }
+
+    func testChatClearsItsProviderErrorAfterRefreshRecovers() async {
+        let client = FakeCoreClient(
+            profiles: providerSelectionFixtures(),
+            listProviderFailuresBeforeSuccess: 1
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+
+        await viewModel.refreshProviderSelection()
+        XCTAssertNotNil(viewModel.errorMessage)
+
+        await viewModel.refreshProviderSelection()
+
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertEqual(viewModel.selectedProviderProfileID, "compact")
+    }
+
+    func testChatSubmitIsNotCancelledByAReadOnlyProviderRefresh() async throws {
+        let client = FakeCoreClient(
+            profiles: providerSelectionFixtures(),
+            listProviderProfilesDelay: .milliseconds(80)
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+
+        await viewModel.setCharacter(
+            LibraryCharacter.previewCharacters[0]
+        )
+        await viewModel.refreshProviderSelection()
+        viewModel.draft = "조회 중에도 보내야 하는 메시지"
+
+        let refresh = Task {
+            await viewModel.refreshProviderSelection()
+        }
+        try await Task.sleep(for: .milliseconds(20))
+        await viewModel.submitMessage()
+        await refresh.value
+
+        XCTAssertTrue(viewModel.draft.isEmpty)
+        XCTAssertTrue(
+            viewModel.messages.contains {
+                $0.text == "조회 중에도 보내야 하는 메시지"
+            }
+        )
+    }
+
+    func testChatSerializesDoubleSubmitAndLocksItsModeSnapshot() async {
+        let client = FakeCoreClient(
+            profiles: providerSelectionFixtures(),
+            getSettingsDelay: .milliseconds(80)
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+
+        await viewModel.setCharacter(
+            LibraryCharacter.previewCharacters[0]
+        )
+        await viewModel.refreshProviderSelection()
+        viewModel.draft = "한 번만 보내야 하는 메시지"
+
+        let firstSubmit = Task {
+            await viewModel.submitMessage()
+        }
+        for _ in 0 ..< 20 where !viewModel.isSubmitting {
+            await Task.yield()
+        }
+        XCTAssertTrue(viewModel.isSubmitting)
+        XCTAssertFalse(viewModel.canEditDraft)
+
+        async let secondSubmit: Void = viewModel.submitMessage()
+        await viewModel.setMode(.story)
+        _ = await (firstSubmit.value, secondSubmit)
+
+        XCTAssertEqual(viewModel.mode, .chat)
+        XCTAssertEqual(
+            viewModel.messages.filter {
+                $0.role == .user
+                    && $0.text == "한 번만 보내야 하는 메시지"
+            }.count,
+            1
+        )
     }
 
     func testChatSelectsIndependentRoomsForTheSameCharacter() async throws {

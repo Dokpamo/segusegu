@@ -31,6 +31,116 @@ final class CoreClientTests: XCTestCase {
         XCTAssertEqual(settings.selectedProviderProfileID, profiles.first?.id)
     }
 
+    func testFakeClientSeedsOneFiveAndTenLineConversationMessages() async throws {
+        let lineCounts = [1, 1, 5, 5, 10, 10]
+        let roles: [ChatMessage.Role] = [
+            .assistant,
+            .user,
+            .assistant,
+            .user,
+            .assistant,
+            .user,
+        ]
+        let templates = zip(roles, lineCounts).enumerated().map {
+            index, fixture in
+            ChatMessage(
+                id: "template-\(index)",
+                role: fixture.0,
+                text: (1...fixture.1)
+                    .map { "합성 \(index + 1)-\($0)" }
+                    .joined(separator: "\n")
+            )
+        }
+        let client = FakeCoreClient(
+            initialConversationMessages: templates
+        )
+        let characters = try await client.listCharacters()
+        let character = try XCTUnwrap(characters.first)
+
+        let conversation = try await client.openConversation(
+            characterID: character.id
+        )
+        let messages = try await client.listMessages(
+            conversationID: conversation.id
+        )
+        let branches = try await client.listConversationBranches(
+            conversationID: conversation.id
+        )
+        let branch = try XCTUnwrap(branches.first)
+
+        XCTAssertEqual(messages.map(\.role), roles)
+        XCTAssertEqual(
+            messages.map {
+                $0.text.components(separatedBy: "\n").count
+            },
+            lineCounts
+        )
+        XCTAssertTrue(
+            messages.allSatisfy {
+                $0.conversationID == conversation.id
+            }
+        )
+        XCTAssertEqual(
+            Array(messages.dropFirst().map(\.parentID)),
+            Array(messages.dropLast().map { Optional($0.id) })
+        )
+        XCTAssertEqual(branch.headMessageID, messages.last?.id)
+    }
+
+    func testFakeClientLoadsStableInitialConversationFixtures() async throws {
+        let conversation = CoreConversation(
+            id: "fixture-room",
+            characterID: "preview-librarian",
+            title: "합성 대화",
+            createdAt: "2026-07-27T00:00:00Z",
+            updatedAt: "2026-07-28T00:00:00Z"
+        )
+        let client = FakeCoreClient(
+            initialConversationFixtures: [
+                FakeConversationFixture(
+                    conversation: conversation,
+                    mode: .story,
+                    messages: [
+                        ChatMessage(role: .user, text: "첫 메시지"),
+                        ChatMessage(role: .assistant, text: "마지막 답장"),
+                    ]
+                ),
+            ]
+        )
+
+        let firstRead = try await client.listConversations()
+        let secondRead = try await client.listConversations()
+        let messages = try await client.listMessages(
+            conversationID: conversation.id
+        )
+        let branches = try await client.listConversationBranches(
+            conversationID: conversation.id
+        )
+        let state = try await client.getConversationState(
+            conversationID: conversation.id
+        )
+
+        XCTAssertEqual(firstRead, [conversation])
+        XCTAssertEqual(secondRead, firstRead)
+        XCTAssertEqual(
+            messages.map(\.id),
+            [
+                "fixture-room-fixture-1",
+                "fixture-room-fixture-2",
+            ]
+        )
+        XCTAssertEqual(messages.map(\.conversationID), [
+            conversation.id,
+            conversation.id,
+        ])
+        XCTAssertNil(messages.first?.parentID)
+        XCTAssertEqual(messages.last?.parentID, messages.first?.id)
+        XCTAssertEqual(branches.map(\.id), ["fixture-room-fixture-main"])
+        XCTAssertEqual(branches.first?.headMessageID, messages.last?.id)
+        XCTAssertEqual(state.selectedMode, .story)
+        XCTAssertEqual(state.activeBranchID, branches.first?.id)
+    }
+
     func testHealthRequiresWritableStoresAndNoPendingRecovery() {
         let health = HealthStatus(
             coreVersion: "test-core/1",

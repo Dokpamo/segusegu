@@ -123,6 +123,7 @@ enum ChatTimeline {
         formatter.timeZone = calendar.timeZone
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
+        formatter.doesRelativeDateFormatting = true
         return formatter.string(from: date)
     }
 
