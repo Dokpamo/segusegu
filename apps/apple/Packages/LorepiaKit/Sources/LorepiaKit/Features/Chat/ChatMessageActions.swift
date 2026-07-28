@@ -26,7 +26,10 @@ public enum ChatMessageAction: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Used where the platform draws the icon for us, such as context menus.
+    /// Used where the platform owns icon rasterization, such as context menus.
+    ///
+    /// LorePia-owned surfaces use `glyph`; native menus keep a system symbol
+    /// because their bridge does not reliably preserve an arbitrary Shape.
     public var systemImage: String {
         switch self {
         case .edit:

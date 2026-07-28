@@ -123,7 +123,7 @@ public struct SettingsView: View {
             }
             if let statusMessage = viewModel.statusMessage {
                 Section {
-                    Label(statusMessage, systemImage: "checkmark.circle")
+                    LorepiaGlyphLabel(statusMessage, glyph: .check)
                         .foregroundStyle(.secondary)
                 }
             }

@@ -5,8 +5,8 @@
 This directory contains two native SwiftUI applications in one Xcode
 workspace:
 
-- `LorepiaIOS` owns the iPhone and iPad app lifecycle, tab navigation,
-  document picking, and other iOS integration.
+- `LorepiaIOS` owns the iPhone and iPad app lifecycle, tab navigation, and
+  other iOS integration.
 - `LorepiaMac` owns the macOS app lifecycle, split-view navigation, menus,
   keyboard shortcuts, document picking, and drop handling.
 - `Packages/LorepiaKit` owns shared native state, view models, small SwiftUI
@@ -14,18 +14,27 @@ workspace:
   adapter.
 
 Rust remains the only owner of package parsing, domain rules, SQLite
-persistence, chat orchestration, and provider networking. Swift copies a
-security-scoped document into a bounded app-owned staging directory, then
-passes only that staged path to Rust. Neither Apple app parses a content
-package or accesses SQLite.
+persistence, chat orchestration, and provider networking. When a platform
+host exposes import, Swift copies a security-scoped document into a bounded
+app-owned staging directory, then passes only that staged path to Rust.
+Neither Apple app parses a content package or accesses SQLite.
 
 The implemented native vertical slices are:
 
+- iOS Home is intentionally reduced to one lower-screen `추가하기` action
+  that opens an otherwise empty Create tab. Conversation-list rows do not
+  render a separate chat/story mode badge.
+- Matching edit, copy, regenerate, branch, delete, and selection actions in
+  LorePia-owned surfaces use the LorePia-drawn glyph family. Platform symbols
+  remain for native menus and where that family has no semantic counterpart,
+  such as tabs, warnings, modes, and chevrons.
 - Library reload and character selection from the persisted Rust store.
 - Import staging with a 128 MiB maximum, inspection review, warning and block
   display, discard, commit, and Library refresh. A failed commit retains the
   Rust-owned inspection for retry or discard. A cancelled transport copy
-  removes its partial staging file.
+  removes its partial staging file. The shared flow remains available to
+  native hosts that expose import; the intentionally blank iOS Create tab
+  currently provides no document-picker or import entry point.
 - Conversation restore by character, persisted message reload, send,
   streaming delta polling, dropped-event recovery, generation and sequence
   filtering, and cancel. Chat and story mode plus branch selection live in the

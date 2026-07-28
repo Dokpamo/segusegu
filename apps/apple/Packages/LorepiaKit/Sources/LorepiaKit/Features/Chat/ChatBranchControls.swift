@@ -173,9 +173,9 @@ public struct ChatRoomSettingsSheet: View {
 
                 Section("대화 흐름") {
                     if branches.isEmpty {
-                        Label(
+                        LorepiaGlyphLabel(
                             "아직 분기가 없습니다",
-                            systemImage: "arrow.triangle.branch"
+                            glyph: .branch
                         )
                         .foregroundStyle(.secondary)
                     } else {
@@ -247,8 +247,7 @@ public struct ChatRoomSettingsSheet: View {
                 Spacer(minLength: LorepiaSpacing.compact)
 
                 if isCurrent {
-                    Image(systemName: "checkmark")
-                        .font(.body.weight(.semibold))
+                    LorepiaGlyphView(.check, size: 18)
                         .foregroundStyle(.tint)
                         .accessibilityHidden(true)
                 }
@@ -296,7 +295,7 @@ public struct ChatBranchToolbarControl: View {
         Button {
             isPresented = true
         } label: {
-            Label("대화 분기", systemImage: "arrow.triangle.branch")
+            LorepiaGlyphLabel("대화 분기", glyph: .branch)
         }
         .disabled(!isEnabled || branches.isEmpty)
         .accessibilityValue(
@@ -344,9 +343,10 @@ public struct ChatBranchSheet: View {
             Group {
                 if branches.isEmpty {
                     ContentUnavailableView {
-                        Label(
+                        LorepiaGlyphLabel(
                             "분기가 없습니다",
-                            systemImage: "arrow.triangle.branch"
+                            glyph: .branch,
+                            size: 24
                         )
                     } description: {
                         Text("메시지를 길게 눌러 원하는 지점에서 이야기를 나눌 수 있습니다.")
@@ -421,8 +421,7 @@ public struct ChatBranchSheet: View {
                 Spacer(minLength: LorepiaSpacing.compact)
 
                 if isCurrent {
-                    Image(systemName: "checkmark")
-                        .font(.body.weight(.semibold))
+                    LorepiaGlyphView(.check, size: 18)
                         .foregroundStyle(.tint)
                         .accessibilityHidden(true)
                 }

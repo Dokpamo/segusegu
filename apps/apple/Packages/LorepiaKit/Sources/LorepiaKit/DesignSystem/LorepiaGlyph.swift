@@ -152,6 +152,43 @@ public struct LorepiaGlyphView: View {
     }
 }
 
+/// Pairs a title with a LorePia-drawn glyph anywhere SwiftUI expects a label.
+///
+/// Use this instead of falling back to an SF Symbol when the custom family
+/// already has a semantic match. The icon follows Dynamic Type while keeping
+/// the title available to LorePia-owned label surfaces and toolbars.
+public struct LorepiaGlyphLabel: View {
+    private let title: String
+    private let glyph: LorepiaGlyph
+
+    @ScaledMetric(relativeTo: .body) private var scaledSize: CGFloat = 18
+
+    public init(
+        _ title: String,
+        glyph: LorepiaGlyph,
+        size: CGFloat = 18
+    ) {
+        self.title = title
+        self.glyph = glyph
+        _scaledSize = ScaledMetric(
+            wrappedValue: size,
+            relativeTo: .body
+        )
+    }
+
+    public var body: some View {
+        Label {
+            Text(title)
+        } icon: {
+            LorepiaGlyphView(glyph, size: resolvedSize)
+        }
+    }
+
+    private var resolvedSize: CGFloat {
+        min(max(scaledSize, 15), 28)
+    }
+}
+
 private struct LorepiaGlyphShape: Shape {
     let glyph: LorepiaGlyph
 

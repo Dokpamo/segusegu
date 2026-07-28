@@ -40,7 +40,11 @@ public struct ImportReviewView: View {
                     progress(title: "서재에 저장하는 중", detail: inspection.displayName)
                 case let .completed(character):
                     ContentUnavailableView {
-                        Label("가져오기 완료", systemImage: "checkmark.circle.fill")
+                        LorepiaGlyphLabel(
+                            "가져오기 완료",
+                            glyph: .check,
+                            size: 24
+                        )
                     } description: {
                         Text("\(character.name)을(를) 서재에 저장했습니다.")
                     } actions: {
@@ -86,9 +90,12 @@ public struct ImportReviewView: View {
             VStack(alignment: .leading, spacing: LorepiaSpacing.roomy) {
                 if let commitError {
                     VStack(alignment: .leading, spacing: LorepiaSpacing.compact) {
-                        Label("저장하지 못했습니다", systemImage: "arrow.clockwise.circle")
-                            .font(.headline)
-                            .foregroundStyle(.orange)
+                        LorepiaGlyphLabel(
+                            "저장하지 못했습니다",
+                            glyph: .regenerate
+                        )
+                        .font(.headline)
+                        .foregroundStyle(.orange)
                         Text(commitError)
                             .font(.callout)
                         Text("검사 결과는 유지되었습니다. 다시 저장하거나 안전하게 버릴 수 있습니다.")

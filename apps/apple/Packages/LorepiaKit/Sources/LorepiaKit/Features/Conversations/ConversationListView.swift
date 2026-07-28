@@ -51,7 +51,7 @@ public struct ConversationListView: View {
                     viewModel.clearCreationError()
                     showsNewConversation = true
                 } label: {
-                    Label("새 대화", systemImage: "square.and.pencil")
+                    LorepiaGlyphLabel("새 대화", glyph: .edit)
                 }
                 .accessibilityIdentifier("new-conversation-button")
             }
@@ -103,6 +103,14 @@ public struct ConversationListView: View {
                 .contentShape(Rectangle())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                .listRowInsets(
+                    EdgeInsets(
+                        top: 2,
+                        leading: LorepiaSpacing.standard,
+                        bottom: 2,
+                        trailing: LorepiaSpacing.standard
+                    )
+                )
                 .accessibilityHint("대화를 엽니다")
                 .accessibilityIdentifier(
                     "conversation-row-\(item.id)"
@@ -186,7 +194,7 @@ private struct ConversationListRow: View {
     let item: ConversationListItem
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .body) private var avatarSize: CGFloat = 56
+    @ScaledMetric(relativeTo: .body) private var avatarSize: CGFloat = 50
 
     var body: some View {
         Group {
@@ -196,70 +204,34 @@ private struct ConversationListRow: View {
                 standardLayout
             }
         }
-        .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
-        .padding(.vertical, LorepiaSpacing.tight)
-        .overlay {
-#if DEBUG
-            RoundedRectangle(
-                cornerRadius: LorepiaRadius.card,
-                style: .continuous
-            )
-            .stroke(
-                Color.red.opacity(0.65),
-                style: StrokeStyle(
-                    lineWidth: 1,
-                    dash: [5, 3]
-                )
-            )
-#endif
-        }
+        .frame(maxWidth: .infinity, minHeight: 50, alignment: .leading)
+        .padding(.vertical, 1)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
     }
 
     private var standardLayout: some View {
-        HStack(alignment: .top, spacing: LorepiaSpacing.snug) {
+        HStack(alignment: .center, spacing: LorepiaSpacing.compact) {
             avatar
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline, spacing: LorepiaSpacing.compact) {
-                    title
-                    Spacer(minLength: LorepiaSpacing.tight)
-                    timestamp
-                    Image(systemName: "chevron.right")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                        .accessibilityHidden(true)
-                }
-                Text(item.previewText)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .multilineTextAlignment(.leading)
-                if let mode = item.mode, mode == .story {
-                    modeLabel(mode)
-                        .padding(.top, 2)
-                }
-            }
+            textContent
+                .layoutPriority(1)
+            trailingAccessory
         }
     }
 
     private var accessibilityLayout: some View {
-        VStack(alignment: .leading, spacing: LorepiaSpacing.compact) {
+        VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: LorepiaSpacing.compact) {
                 avatar
-                title
+                textContent
             }
-            Text(item.previewText)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            HStack(spacing: LorepiaSpacing.compact) {
-                if let mode = item.mode {
-                    modeLabel(mode)
-                }
-                timestamp
-            }
+            trailingAccessory
+                .padding(
+                    .leading,
+                    resolvedAvatarSize + LorepiaSpacing.compact
+                )
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var avatar: some View {
@@ -274,12 +246,41 @@ private struct ConversationListRow: View {
         max(44, min(avatarSize, 72))
     }
 
+    private var textContent: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            title
+            Text(item.previewText)
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+                .fixedSize(
+                    horizontal: false,
+                    vertical: dynamicTypeSize.isAccessibilitySize
+                )
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var trailingAccessory: some View {
+        HStack(spacing: 2) {
+            timestamp
+            Image(systemName: "chevron.right")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+    }
+
     @ViewBuilder
     private var title: some View {
         Text(item.displayTitle)
-            .font(.headline)
+            .font(.title3.weight(.semibold))
             .foregroundStyle(.primary)
             .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : 1)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
@@ -290,13 +291,6 @@ private struct ConversationListRow: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
-    }
-
-    private func modeLabel(_ mode: ConversationMode) -> some View {
-        Label(mode.title, systemImage: mode.systemImage)
-            .font(.caption2)
-            .foregroundStyle(.secondary)
-            .labelStyle(.titleAndIcon)
     }
 
     private var accessibilityLabel: String {
@@ -403,8 +397,7 @@ private struct NewConversationSheet: View {
                                 .foregroundStyle(.primary)
                             Spacer(minLength: LorepiaSpacing.compact)
                             if selectedCharacterID == character.id {
-                                Image(systemName: "checkmark")
-                                    .fontWeight(.semibold)
+                                LorepiaGlyphView(.check, size: 18)
                                     .foregroundStyle(.tint)
                                     .accessibilityHidden(true)
                             }

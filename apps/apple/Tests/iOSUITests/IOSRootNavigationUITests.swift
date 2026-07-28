@@ -1,8 +1,266 @@
 import XCTest
+import Vision
 
 final class IOSRootNavigationUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
+    }
+
+    @MainActor
+    private func contentBounds(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> CGRect? {
+        let window = app.windows.firstMatch
+        let tabBar = app.tabBars.firstMatch
+        guard window.waitForExistence(timeout: 5),
+              tabBar.waitForExistence(timeout: 5)
+        else {
+            XCTFail(
+                "The app content bounds were not available.",
+                file: file,
+                line: line
+            )
+            return nil
+        }
+
+        let statusBar = app.statusBars.firstMatch
+        let contentMinY = statusBar.exists
+            ? statusBar.frame.maxY
+            : window.frame.minY
+        return CGRect(
+            x: window.frame.minX,
+            y: contentMinY,
+            width: window.frame.width,
+            height: max(0, tabBar.frame.minY - contentMinY)
+        )
+    }
+
+    @MainActor
+    private func visibleContentElements(
+        matching elementType: XCUIElement.ElementType,
+        in app: XCUIApplication,
+        contentBounds suppliedContentBounds: CGRect? = nil,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> [XCUIElement] {
+        guard let contentBounds = suppliedContentBounds ?? contentBounds(
+            in: app,
+            file: file,
+            line: line
+        ) else {
+            return []
+        }
+
+        return app.descendants(matching: elementType)
+            .allElementsBoundByIndex
+            .filter { element in
+                let frame = element.frame
+                return element.exists
+                    && frame.width > 0
+                    && frame.height > 0
+                    && frame.intersects(contentBounds)
+            }
+    }
+
+    @MainActor
+    private func recognizedFrame(
+        of expectedText: String,
+        in screenshot: XCUIScreenshot,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> CGRect? {
+        guard let cgImage = screenshot.image.cgImage else {
+            XCTFail(
+                "The UI screenshot did not expose a CGImage.",
+                file: file,
+                line: line
+            )
+            return nil
+        }
+
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.recognitionLanguages = ["ko-KR", "en-US"]
+        request.usesLanguageCorrection = true
+
+        do {
+            try VNImageRequestHandler(
+                cgImage: cgImage,
+                orientation: .up
+            ).perform([request])
+        } catch {
+            XCTFail(
+                "Korean text recognition failed: \(error)",
+                file: file,
+                line: line
+            )
+            return nil
+        }
+
+        let normalizedExpected = expectedText.filter {
+            !$0.isWhitespace
+        }
+        for observation in request.results ?? [] {
+            for candidate in observation.topCandidates(3) {
+                let normalizedCandidate = candidate.string.filter {
+                    !$0.isWhitespace
+                }
+                guard normalizedCandidate.contains(normalizedExpected) else {
+                    continue
+                }
+
+                let normalizedBounds: CGRect
+                if let range = candidate.string.range(of: expectedText),
+                   let textBounds = try? candidate.boundingBox(for: range)
+                {
+                    normalizedBounds = textBounds.boundingBox
+                } else {
+                    normalizedBounds = observation.boundingBox
+                }
+
+                let imageSize = screenshot.image.size
+                return CGRect(
+                    x: normalizedBounds.minX * imageSize.width,
+                    y: (1 - normalizedBounds.maxY) * imageSize.height,
+                    width: normalizedBounds.width * imageSize.width,
+                    height: normalizedBounds.height * imageSize.height
+                )
+            }
+        }
+
+        XCTFail(
+            "OCR did not find visible text: \(expectedText)",
+            file: file,
+            line: line
+        )
+        return nil
+    }
+
+    @MainActor
+    private func openPreviewChat(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Bool {
+        let chats = app.tabBars.buttons["채팅"]
+        guard chats.waitForExistence(timeout: 10) else {
+            XCTFail("The Chats tab did not appear.", file: file, line: line)
+            return false
+        }
+        chats.tap()
+
+        let newConversation = app.buttons["new-conversation-button"]
+        guard newConversation.waitForExistence(timeout: 5) else {
+            XCTFail(
+                "The new-conversation action did not appear.",
+                file: file,
+                line: line
+            )
+            return false
+        }
+        XCTAssertEqual(
+            newConversation.label,
+            "새 대화",
+            "The custom edit glyph must preserve the action label.",
+            file: file,
+            line: line
+        )
+        newConversation.tap()
+
+        let sheet = app.descendants(matching: .any)[
+            "new-conversation-sheet"
+        ]
+        guard sheet.waitForExistence(timeout: 5) else {
+            XCTFail(
+                "The new-conversation sheet did not appear.",
+                file: file,
+                line: line
+            )
+            return false
+        }
+
+        let firstPreviewCharacter = app.buttons[
+            "미리보기 안내자"
+        ].firstMatch
+        guard firstPreviewCharacter.waitForExistence(timeout: 5) else {
+            XCTFail(
+                "The first preview character did not appear.",
+                file: file,
+                line: line
+            )
+            return false
+        }
+        firstPreviewCharacter.tap()
+
+        let create = app.navigationBars["새 대화"].buttons["만들기"]
+        guard create.waitForExistence(timeout: 5), create.isEnabled else {
+            XCTFail(
+                "The conversation create action was not enabled.",
+                file: file,
+                line: line
+            )
+            return false
+        }
+        create.tap()
+
+        let composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        guard composer.waitForExistence(timeout: 5) else {
+            XCTFail("ChatView did not appear.", file: file, line: line)
+            return false
+        }
+        return true
+    }
+
+    @MainActor
+    private func assertBlankCreateScreen(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertTrue(
+            app.tabBars.buttons["생성"].isSelected,
+            "The Create tab must remain selected.",
+            file: file,
+            line: line
+        )
+        let prohibitedTypes: [(XCUIElement.ElementType, String)] = [
+            (.button, "buttons"),
+            (.staticText, "text"),
+            (.image, "images"),
+            (.textField, "text fields"),
+            (.secureTextField, "secure text fields"),
+            (.textView, "text views"),
+            (.switch, "switches"),
+            (.slider, "sliders"),
+            (.picker, "pickers"),
+            (.link, "links"),
+        ]
+        guard let contentBounds = contentBounds(
+            in: app,
+            file: file,
+            line: line
+        ) else {
+            return
+        }
+
+        for (elementType, description) in prohibitedTypes {
+            XCTAssertTrue(
+                visibleContentElements(
+                    matching: elementType,
+                    in: app,
+                    contentBounds: contentBounds,
+                    file: file,
+                    line: line
+                ).isEmpty,
+                "The blank Create tab must not expose \(description).",
+                file: file,
+                line: line
+            )
+        }
     }
 
     @MainActor
@@ -17,9 +275,26 @@ final class IOSRootNavigationUITests: XCTestCase {
         let settings = app.tabBars.buttons["설정"]
         XCTAssertTrue(home.waitForExistence(timeout: 10))
         XCTAssertTrue(home.isSelected)
-        XCTAssertTrue(
-            app.staticTexts["첫 이야기를 시작해 보세요"].waitForExistence(timeout: 5)
+
+        let add = app.buttons["home-add-button"]
+        let window = app.windows.firstMatch
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
+        let homeButtons = visibleContentElements(
+            matching: .button,
+            in: app
         )
+        XCTAssertEqual(homeButtons.count, 1)
+        XCTAssertEqual(homeButtons.first?.identifier, "home-add-button")
+        XCTAssertEqual(add.label, "추가하기")
+        XCTAssertGreaterThanOrEqual(add.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(add.frame.height, 44)
+        XCTAssertGreaterThan(add.frame.midY, window.frame.midY)
+        XCTAssertLessThan(add.frame.maxY, app.tabBars.firstMatch.frame.minY)
+
+        add.tap()
+        XCTAssertTrue(create.isSelected)
+        assertBlankCreateScreen(in: app)
 
         chats.tap()
         XCTAssertTrue(chats.isSelected)
@@ -29,9 +304,7 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         create.tap()
         XCTAssertTrue(create.isSelected)
-        XCTAssertTrue(
-            app.staticTexts["캐릭터 생성"].waitForExistence(timeout: 5)
-        )
+        assertBlankCreateScreen(in: app)
 
         settings.tap()
         XCTAssertTrue(settings.isSelected)
@@ -45,6 +318,9 @@ final class IOSRootNavigationUITests: XCTestCase {
         coreStatus.tap()
         XCTAssertTrue(
             app.navigationBars["코어 상태"].waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(
+            app.buttons["코어 상태 새로 고침"].waitForExistence(timeout: 5)
         )
         app.buttons["완료"].tap()
 
@@ -64,7 +340,7 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
-    func testRootActionsReflowAtAccessibilityTextSize() {
+    func testHomeAddActionRemainsAccessibleAtLargestTextSize() {
         let app = XCUIApplication()
         app.launchArguments = [
             "--lorepia-ui-test",
@@ -73,23 +349,103 @@ final class IOSRootNavigationUITests: XCTestCase {
         ]
         app.launch()
 
-        let createAction = app.buttons["캐릭터 생성"].firstMatch
-        let chatsAction = app.buttons["채팅 보기"].firstMatch
-        XCTAssertTrue(createAction.waitForExistence(timeout: 10))
-        XCTAssertTrue(chatsAction.waitForExistence(timeout: 5))
-        XCTAssertGreaterThan(chatsAction.frame.minY, createAction.frame.minY)
+        let add = app.buttons["home-add-button"]
+        let window = app.windows.firstMatch
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
+        let homeButtons = visibleContentElements(
+            matching: .button,
+            in: app
+        )
+        XCTAssertEqual(homeButtons.count, 1)
+        XCTAssertEqual(homeButtons.first?.identifier, "home-add-button")
+        XCTAssertEqual(add.label, "추가하기")
+        XCTAssertGreaterThanOrEqual(add.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(add.frame.height, 44)
+        XCTAssertGreaterThan(add.frame.midY, window.frame.midY)
+        XCTAssertLessThan(add.frame.maxY, app.tabBars.firstMatch.frame.minY)
 
-        createAction.tap()
+        add.tap()
         XCTAssertTrue(app.tabBars.buttons["생성"].isSelected)
-        XCTAssertTrue(
-            app.descendants(matching: .any)["create-manual-mode"]
-                .waitForExistence(timeout: 5)
+        assertBlankCreateScreen(in: app)
+    }
+
+    @MainActor
+    func testConversationRowsLeadTextHideStoryBadgeAndStayCompact() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-chat-bubble-showcase"]
+        app.launch()
+
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 10))
+        chats.tap()
+
+        let newestRow = app.descendants(matching: .any)[
+            "conversation-row-showcase-morning-walk"
+        ]
+        let storyRow = app.descendants(matching: .any)[
+            "conversation-row-showcase-last-scene"
+        ]
+        XCTAssertTrue(newestRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(storyRow.waitForExistence(timeout: 5))
+
+        let storyTitle = "마지막 장면부터 다시 시작해 보는 이야기"
+        let recentMessage =
+            "문이 닫히기 직전, 그녀가 뒤를 돌아 아주 작은 목소리로 이름을 불렀다."
+        XCTAssertTrue(storyRow.label.contains(storyTitle))
+        XCTAssertTrue(storyRow.label.contains(recentMessage))
+        XCTAssertTrue(storyRow.label.contains("스토리 모드"))
+        XCTAssertFalse(app.staticTexts["스토리 모드"].exists)
+        XCTAssertFalse(app.staticTexts["스토리"].exists)
+
+        let newestRowFrame = newestRow.frame
+        let storyRowFrame = storyRow.frame
+        XCTAssertGreaterThanOrEqual(newestRowFrame.height, 44)
+        XCTAssertGreaterThanOrEqual(storyRowFrame.height, 44)
+        XCTAssertLessThanOrEqual(newestRowFrame.height, 60)
+        XCTAssertLessThanOrEqual(storyRowFrame.height, 60)
+        XCTAssertLessThanOrEqual(
+            storyRowFrame.minY - newestRowFrame.maxY,
+            8
         )
-        XCTAssertTrue(app.descendants(matching: .any)["create-ai-mode"].exists)
-        app.swipeUp()
-        XCTAssertTrue(
-            app.buttons["파일에서 가져오기"].waitForExistence(timeout: 5)
+
+        let window = app.windows.firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
+        let screenshot = XCUIScreen.main.screenshot()
+        guard let titleFrame = recognizedFrame(
+            of: "새벽 산책",
+            in: screenshot
+        ),
+        let previewFrame = recognizedFrame(
+            of: "내 열 줄",
+            in: screenshot
+        ) else {
+            return
+        }
+        XCTAssertTrue(newestRowFrame.contains(titleFrame))
+        XCTAssertTrue(newestRowFrame.contains(previewFrame))
+        XCTAssertEqual(titleFrame.minX, previewFrame.minX, accuracy: 6)
+
+        let listContentLeading = max(
+            newestRowFrame.minX,
+            window.frame.minX + 16
         )
+        let expectedTextLeading = listContentLeading + 50 + 8
+        XCTAssertGreaterThan(titleFrame.minX, listContentLeading + 44)
+        XCTAssertEqual(
+            titleFrame.minX,
+            expectedTextLeading,
+            accuracy: 8
+        )
+
+        let textBlockFrame = titleFrame.union(previewFrame)
+        XCTAssertEqual(
+            textBlockFrame.midY,
+            newestRowFrame.midY,
+            accuracy: 8
+        )
+        XCTAssertGreaterThan(titleFrame.height, previewFrame.height)
+        XCTAssertLessThan(titleFrame.midY, previewFrame.midY)
     }
 
     @MainActor
@@ -98,8 +454,9 @@ final class IOSRootNavigationUITests: XCTestCase {
         app.launchArguments = ["--lorepia-native-navigation-ui-test"]
         app.launch()
 
-        let character = app.staticTexts["미리보기 안내자"].firstMatch
-        XCTAssertTrue(character.waitForExistence(timeout: 10))
+        guard openPreviewChat(in: app) else {
+            return
+        }
 
         let window = app.windows.firstMatch
         let leadingEdge = window.coordinate(
@@ -109,11 +466,9 @@ final class IOSRootNavigationUITests: XCTestCase {
             withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)
         )
 
-        character.tap()
-
-        let backButton = app.navigationBars.buttons["홈"]
+        let backButton = app.navigationBars.buttons["채팅"]
         XCTAssertTrue(backButton.waitForExistence(timeout: 5))
-        XCTAssertFalse(app.tabBars.buttons["홈"].exists)
+        XCTAssertFalse(app.tabBars.buttons["채팅"].exists)
 
         let cancellationPoint = window.coordinate(
             withNormalizedOffset: CGVector(dx: 0.12, dy: 0.5)
@@ -125,12 +480,17 @@ final class IOSRootNavigationUITests: XCTestCase {
             thenHoldForDuration: 0.1
         )
         XCTAssertTrue(backButton.exists)
-        XCTAssertFalse(app.tabBars.buttons["홈"].exists)
+        XCTAssertFalse(app.tabBars.buttons["채팅"].exists)
 
         leadingEdge.press(forDuration: 0.05, thenDragTo: destination)
 
-        XCTAssertTrue(app.tabBars.buttons["홈"].waitForExistence(timeout: 5))
-        XCTAssertTrue(character.waitForExistence(timeout: 5))
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 5))
+        XCTAssertTrue(chats.isSelected)
+        XCTAssertTrue(
+            app.descendants(matching: .any)["conversation-list-screen"]
+                .waitForExistence(timeout: 5)
+        )
     }
 
     @MainActor
@@ -139,9 +499,9 @@ final class IOSRootNavigationUITests: XCTestCase {
         app.launchArguments = ["--lorepia-native-navigation-ui-test"]
         app.launch()
 
-        let character = app.staticTexts["미리보기 안내자"].firstMatch
-        XCTAssertTrue(character.waitForExistence(timeout: 10))
-        character.tap()
+        guard openPreviewChat(in: app) else {
+            return
+        }
 
         let windowBounds = app.windows.firstMatch.frame
         let composer = app.descendants(matching: .any)[
@@ -373,9 +733,9 @@ final class IOSRootNavigationUITests: XCTestCase {
         app.launchArguments = ["--lorepia-native-navigation-ui-test"]
         app.launch()
 
-        let character = app.staticTexts["미리보기 안내자"].firstMatch
-        XCTAssertTrue(character.waitForExistence(timeout: 10))
-        character.tap()
+        guard openPreviewChat(in: app) else {
+            return
+        }
 
         let window = app.windows.firstMatch
         XCTAssertTrue(window.waitForExistence(timeout: 5))
@@ -544,15 +904,15 @@ final class IOSRootNavigationUITests: XCTestCase {
         app.launchArguments = ["--lorepia-native-navigation-ui-test"]
         app.launch()
 
-        let character = app.staticTexts["미리보기 안내자"].firstMatch
-        XCTAssertTrue(character.waitForExistence(timeout: 10))
-        character.tap()
+        guard openPreviewChat(in: app) else {
+            return
+        }
 
         let settings = app.buttons[
             "chat-room-settings-trigger-toolbar"
         ]
         XCTAssertTrue(settings.waitForExistence(timeout: 5))
-        let backButton = app.navigationBars.buttons["홈"]
+        let backButton = app.navigationBars.buttons["채팅"]
         let windowBounds = app.windows.firstMatch.frame
         XCTAssertTrue(backButton.waitForExistence(timeout: 5))
         if #available(iOS 26.0, *) {
@@ -1388,8 +1748,10 @@ final class IOSRootNavigationUITests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(edit.waitForExistence(timeout: 5))
         XCTAssertTrue(edit.isHittable)
+        XCTAssertEqual(edit.label, "편집")
         XCTAssertTrue(regenerate.waitForExistence(timeout: 5))
         XCTAssertTrue(regenerate.isHittable)
+        XCTAssertEqual(regenerate.label, "재생성")
 
         let copy = app.buttons.matching(
             NSPredicate(
@@ -1398,6 +1760,7 @@ final class IOSRootNavigationUITests: XCTestCase {
             )
         ).firstMatch
         XCTAssertTrue(copy.isHittable)
+        XCTAssertEqual(copy.label, "복사")
         copy.tap()
         XCTAssertTrue(app.buttons["복사됨"].waitForExistence(timeout: 2))
 

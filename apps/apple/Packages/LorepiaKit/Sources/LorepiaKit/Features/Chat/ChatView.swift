@@ -828,8 +828,7 @@ private struct ChatForkMarker: View {
     }
 
     private var node: some View {
-        Image(systemName: "arrow.triangle.branch")
-            .font(.caption2.weight(.semibold))
+        LorepiaGlyphView(.branch, size: 15)
             .foregroundStyle(LorepiaColor.thread)
             .frame(
                 width: ChatThreadRail.nodeSize,
