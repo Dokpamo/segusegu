@@ -815,12 +815,12 @@ final class IOSRootNavigationUITests: XCTestCase {
         )
         XCTAssertEqual(
             focusedSurfaceBounds.minX - windowBounds.minX,
-            14,
+            expectedSurfaceHorizontalInset,
             accuracy: 1
         )
         XCTAssertEqual(
             windowBounds.maxX - focusedSurfaceBounds.maxX,
-            14,
+            expectedSurfaceHorizontalInset,
             accuracy: 1
         )
         XCTAssertEqual(tools.frame.height, 44, accuracy: 1)
