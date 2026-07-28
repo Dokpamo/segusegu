@@ -955,6 +955,41 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
+    func testChatBackButtonReturnsToConversationList() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-chat-bubble-showcase"]
+        app.launch()
+
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 10))
+        chats.tap()
+
+        let conversationRow = app.descendants(matching: .any)[
+            "conversation-row-showcase-morning-walk"
+        ]
+        XCTAssertTrue(conversationRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(conversationRow.isHittable)
+        conversationRow.tap()
+
+        let composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        let backButton = app.navigationBars.buttons["채팅"]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertTrue(backButton.waitForExistence(timeout: 5))
+
+        backButton.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["conversation-list-screen"]
+                .waitForExistence(timeout: 5)
+        )
+        XCTAssertTrue(composer.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(conversationRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(conversationRow.isHittable)
+    }
+
+    @MainActor
     func testChatSupportsNativeEdgeSwipeBack() {
         let app = XCUIApplication()
         app.launchArguments = ["--lorepia-native-navigation-ui-test"]

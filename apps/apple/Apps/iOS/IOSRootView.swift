@@ -22,6 +22,12 @@ struct IOSRootView: View {
         settingsViewModel = environment.settingsViewModel
     }
 
+    private var chatPushTransaction: Transaction {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        return transaction
+    }
+
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
@@ -42,7 +48,9 @@ struct IOSRootView: View {
                         guard chatNavigationPath.isEmpty else {
                             return
                         }
-                        chatNavigationPath.append(item)
+                        withTransaction(chatPushTransaction) {
+                            chatNavigationPath.append(item)
+                        }
                     },
                     onRequestCharacter: {
                         selectedTab = .create
@@ -162,6 +170,8 @@ private extension View {
 }
 
 private struct IOSHomeView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let onAdd: () -> Void
 
     var body: some View {
@@ -177,6 +187,11 @@ private struct IOSHomeView: View {
                         .frame(minWidth: 180)
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(
+                    colorScheme == .light
+                        ? Color.black
+                        : Color.accentColor
+                )
                 .controlSize(.large)
                 .frame(minHeight: 44)
                 .position(
