@@ -664,8 +664,22 @@ final class IOSRootNavigationUITests: XCTestCase {
             windowBounds.maxX - restingSurfaceBounds.maxX
         let restingSurfaceBottomInset =
             windowBounds.maxY - restingSurfaceBounds.maxY
-        XCTAssertEqual(restingSurfaceLeadingInset, 14, accuracy: 1)
-        XCTAssertEqual(restingSurfaceTrailingInset, 14, accuracy: 1)
+        // iOS 26 reports the Liquid Glass effect's inset accessibility
+        // bounds. Earlier fallback rendering reports the 12 pt layout rim.
+        let expectedSurfaceHorizontalInset: CGFloat =
+            ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26
+                ? 14
+                : 12
+        XCTAssertEqual(
+            restingSurfaceLeadingInset,
+            expectedSurfaceHorizontalInset,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            restingSurfaceTrailingInset,
+            expectedSurfaceHorizontalInset,
+            accuracy: 1
+        )
         XCTAssertEqual(restingSurfaceBottomInset, 36, accuracy: 2)
 
         let restingLeadingInset =
@@ -1118,6 +1132,10 @@ final class IOSRootNavigationUITests: XCTestCase {
         composer.tap()
         XCTAssertTrue(model.waitForExistence(timeout: 5))
         XCTAssertTrue(mode.waitForExistence(timeout: 5))
+        // `tap()` can return before an older simulator finishes presenting
+        // its software keyboard. Accept one key before sampling the anchored
+        // rail so line growth is never compared across two keyboard states.
+        composer.typeText("가")
         XCTAssertEqual(composerSurface.value as? String, openComposerState)
         let unexpectedStateChange = XCTNSPredicateExpectation(
             predicate: NSPredicate(
