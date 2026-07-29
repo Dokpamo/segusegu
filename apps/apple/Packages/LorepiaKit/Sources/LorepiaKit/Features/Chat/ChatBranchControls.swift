@@ -69,13 +69,13 @@ public struct ChatRoomSettingsTrigger: View {
     public var body: some View {
         switch style {
         case .toolbar:
+            // A toolbar cannot rasterize an arbitrary Shape the way it does an
+            // SF Symbol, so a Label here falls back to its text. The glyph goes
+            // in directly and the name stays with VoiceOver.
             Button(action: action) {
-                Label {
-                    Text("대화 설정")
-                } icon: {
-                    LorepiaGlyphView(.moreVertical, size: 18)
-                }
+                LorepiaGlyphView(.settings, size: 23)
             }
+            .help("대화 설정")
             .disabled(!isEnabled)
             .chatRoomSettingsAccessibility(
                 mode: mode,

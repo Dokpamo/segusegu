@@ -171,7 +171,7 @@ private struct IOSHomeView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                Color(.systemBackground)
+                LorepiaColor.paper
                     .ignoresSafeArea()
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
@@ -200,7 +200,7 @@ private struct IOSHomeView: View {
 
 private struct IOSCreateView: View {
     var body: some View {
-        Color(.systemBackground)
+        LorepiaColor.paper
             .ignoresSafeArea()
             .allowsHitTesting(false)
             .accessibilityHidden(true)

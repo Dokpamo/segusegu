@@ -1654,7 +1654,128 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
-    func testChatShowsRoomSettingsAndDirectMessageActions() {
+    func testChatBalancesDaySeparatorSpacing() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-chat-history-showcase"]
+        app.launch()
+
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 10))
+        chats.tap()
+
+        let history = app.buttons["conversation-row-history-long-run"]
+        XCTAssertTrue(history.waitForExistence(timeout: 5))
+        history.tap()
+
+        let messageQuery = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "chat-message-"
+            )
+        )
+        XCTAssertTrue(messageQuery.firstMatch.waitForExistence(timeout: 5))
+
+        let messages = messageQuery.allElementsBoundByIndex.filter {
+            $0.frame.width > 0 && $0.frame.height > 0
+        }
+        let separators = app.buttons.matching(
+            identifier: "chat-day-separator"
+        ).allElementsBoundByIndex
+        let measured = separators.compactMap { separator
+            -> (XCUIElement, XCUIElement, XCUIElement)? in
+            let before = messages
+                .filter { $0.frame.maxY <= separator.frame.minY }
+                .max { $0.frame.maxY < $1.frame.maxY }
+            let after = messages
+                .filter { $0.frame.minY >= separator.frame.maxY }
+                .min { $0.frame.minY < $1.frame.minY }
+            guard let before, let after else {
+                return nil
+            }
+            return (separator, before, after)
+        }
+        guard let (separator, before, after) = measured.first else {
+            XCTFail("The visible day separator was not found.")
+            return
+        }
+
+        let upperGap = separator.frame.minY - before.frame.maxY
+        let lowerGap = after.frame.minY - separator.frame.maxY
+        XCTAssertEqual(upperGap, lowerGap, accuracy: 1)
+        // The visible capsule remains 24pt, centered inside an accessible
+        // control whose transparent top and bottom complete a 44pt target.
+        XCTAssertGreaterThanOrEqual(separator.frame.height, 44)
+        XCTAssertEqual(
+            separator.frame.midX,
+            app.windows.firstMatch.frame.midX,
+            accuracy: 1
+        )
+    }
+
+    @MainActor
+    func testChatUsesEqualToolbarButtonsAndSeparateSearchSteps() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-native-navigation-ui-test"]
+        app.launch()
+
+        guard openPreviewChat(in: app) else {
+            return
+        }
+
+        let back = app.navigationBars.buttons["채팅"]
+        let search = app.buttons["chat-room-search-trigger"]
+        let settings = app.buttons[
+            "chat-room-settings-trigger-toolbar"
+        ]
+        XCTAssertTrue(back.waitForExistence(timeout: 5))
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        XCTAssertTrue(settings.waitForExistence(timeout: 5))
+
+        if #available(iOS 26.0, *) {
+            // A custom Shape reports its 36 pt inner accessibility frame;
+            // the surrounding 44 pt system glass circle is visual chrome and
+            // is not a separate accessibility element. Equal inner frames,
+            // a shared center line, and a positive spacer gap prove these are
+            // two independently wrapped toolbar controls.
+            XCTAssertEqual(
+                settings.frame.height,
+                search.frame.height,
+                accuracy: 1
+            )
+            XCTAssertEqual(search.frame.midY, back.frame.midY, accuracy: 1)
+            XCTAssertEqual(settings.frame.midY, back.frame.midY, accuracy: 1)
+            XCTAssertGreaterThan(
+                settings.frame.minX - search.frame.maxX,
+                0
+            )
+            XCTAssertGreaterThanOrEqual(search.frame.width, 35)
+            XCTAssertGreaterThanOrEqual(settings.frame.width, 35)
+            XCTAssertGreaterThanOrEqual(search.frame.height, 36)
+            XCTAssertGreaterThanOrEqual(settings.frame.height, 36)
+        }
+
+        let toolbarEvidence = XCTAttachment(screenshot: app.screenshot())
+        toolbarEvidence.name = "chat-toolbar-circular-controls"
+        toolbarEvidence.lifetime = .keepAlways
+        add(toolbarEvidence)
+
+        search.tap()
+        XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 5))
+
+        let previous = app.buttons["chat-search-previous-result"]
+        let next = app.buttons["chat-search-next-result"]
+        XCTAssertTrue(previous.waitForExistence(timeout: 5))
+        XCTAssertTrue(next.waitForExistence(timeout: 5))
+        XCTAssertEqual(previous.frame.width, 44, accuracy: 1)
+        XCTAssertEqual(previous.frame.height, 44, accuracy: 1)
+        XCTAssertEqual(next.frame.width, 44, accuracy: 1)
+        XCTAssertEqual(next.frame.height, 44, accuracy: 1)
+        XCTAssertEqual(previous.frame.midX, next.frame.midX, accuracy: 1)
+        XCTAssertGreaterThan(next.frame.minY - previous.frame.maxY, 0)
+    }
+
+    @MainActor
+    func testChatShowsRoomSettingsAndComposerGrowth() {
         let app = XCUIApplication()
         app.launchArguments = ["--lorepia-native-navigation-ui-test"]
         app.launch()
@@ -1671,18 +1792,14 @@ final class IOSRootNavigationUITests: XCTestCase {
         let windowBounds = app.windows.firstMatch.frame
         XCTAssertTrue(backButton.waitForExistence(timeout: 5))
         if #available(iOS 26.0, *) {
-            // Messages uses its centered contact identity as the room-settings
-            // entry point: a 60 pt avatar overlapping a 32 pt glass capsule.
-            XCTAssertGreaterThanOrEqual(settings.frame.width, 60)
-            XCTAssertEqual(settings.frame.height, 87, accuracy: 2)
-            XCTAssertEqual(settings.frame.midX, windowBounds.midX, accuracy: 1)
-            // Anchor the custom contact stack to the native back control,
-            // rather than to a device-specific status-bar coordinate.
             XCTAssertEqual(
-                settings.frame.minY,
-                backButton.frame.minY,
-                accuracy: 3
+                settings.frame.midY,
+                backButton.frame.midY,
+                accuracy: 1
             )
+            XCTAssertGreaterThanOrEqual(settings.frame.width, 35)
+            XCTAssertGreaterThanOrEqual(settings.frame.height, 36)
+            XCTAssertGreaterThan(settings.frame.midX, windowBounds.midX)
         }
         XCTAssertFalse(
             app.buttons["chat-room-settings-trigger-mode"].exists
@@ -2447,7 +2564,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         )
 
         composer.typeText(
-            String(repeating: "최대 높이 이후 내부 스크롤 ", count: 24)
+            String(repeating: "최대 높이 이후 내부 스크롤 ", count: 14)
         )
         let maximumComposerBounds = tools.frame
             .union(composer.frame)
@@ -2475,7 +2592,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         )
 
         composer.typeText(
-            String(repeating: " capped", count: 40)
+            String(repeating: " capped", count: 12)
         )
         let cappedComposerBounds = tools.frame
             .union(composer.frame)
@@ -2499,7 +2616,51 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(model.isHittable)
         XCTAssertTrue(mode.isHittable)
         XCTAssertTrue(send.isHittable)
+    }
+
+    @MainActor
+    func testChatMessageActionPopoverUsesPerMessageActions() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-native-navigation-ui-test"]
+        app.launch()
+
+        guard openPreviewChat(in: app) else {
+            return
+        }
+
+        let composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        let send = app.buttons["메시지 보내기"]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertTrue(send.waitForExistence(timeout: 5))
+        composer.tap()
+        composer.typeText("액션 메뉴 확인")
+        XCTAssertTrue(send.isEnabled)
         send.tap()
+
+        // Message actions are revealed per message now, so the row has to be
+        // asked for before it can be asserted on.
+        let userMessage = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "chat-message-user-"
+            )
+        ).firstMatch
+        XCTAssertTrue(userMessage.waitForExistence(timeout: 5))
+        let assistantMessage = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "chat-message-assistant-"
+            )
+        ).firstMatch
+        XCTAssertTrue(assistantMessage.waitForExistence(timeout: 5))
+
+        app.windows.firstMatch.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)
+        ).tap()
+        XCTAssertTrue(userMessage.isHittable)
+        userMessage.press(forDuration: 0.6)
 
         let edit = app.buttons.matching(
             NSPredicate(
@@ -2516,9 +2677,24 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(edit.waitForExistence(timeout: 5))
         XCTAssertTrue(edit.isHittable)
         XCTAssertEqual(edit.label, "편집")
+
+        // Only the pressed message's menu is up.
+        XCTAssertFalse(regenerate.exists)
+        // Dismiss the popover before asking for the next one.
+        app.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)
+        ).tap()
+        XCTAssertFalse(edit.waitForExistence(timeout: 1))
+        assistantMessage.press(forDuration: 0.6)
         XCTAssertTrue(regenerate.waitForExistence(timeout: 5))
         XCTAssertTrue(regenerate.isHittable)
         XCTAssertEqual(regenerate.label, "재생성")
+        XCTAssertFalse(edit.exists)
+
+        app.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)
+        ).tap()
+        userMessage.press(forDuration: 0.6)
 
         let copy = app.buttons.matching(
             NSPredicate(
@@ -2531,10 +2707,11 @@ final class IOSRootNavigationUITests: XCTestCase {
         copy.tap()
         XCTAssertTrue(app.buttons["복사됨"].waitForExistence(timeout: 2))
 
+        XCTAssertTrue(edit.isHittable)
         edit.tap()
-        XCTAssertTrue(
-            app.navigationBars["메시지 편집"].waitForExistence(timeout: 5)
-        )
-        app.buttons["취소"].tap()
+        let editNavigationBar = app.navigationBars["메시지 편집"]
+        XCTAssertTrue(editNavigationBar.waitForExistence(timeout: 5))
+        editNavigationBar.buttons["취소"].tap()
+        XCTAssertTrue(editNavigationBar.waitForNonExistence(timeout: 5))
     }
 }

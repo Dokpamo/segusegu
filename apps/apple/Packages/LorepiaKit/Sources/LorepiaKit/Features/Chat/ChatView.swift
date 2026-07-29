@@ -26,6 +26,8 @@ public struct ChatView: View {
     @State private var editingMessage: ChatMessage?
     @State private var deletingMessage: ChatMessage?
     @State private var copiedMessageID: String?
+    @State private var revealedActionsMessageID: String?
+    @State private var revealedAt: Date?
     @State private var copyFeedback = 0
     @State private var composerEditorHeight: CGFloat = 0
     /// Restored history is not newly arrived mail. Until the first transcript
@@ -33,7 +35,19 @@ public struct ChatView: View {
     /// animating in, so opening a room never looks like it is rearranging.
     @State private var hasSettledInitialLoad = false
     @State private var initialLoadSettleGeneration: UInt = 0
+    @State private var isSearchActive = false
+    @State private var dayPickerAnchor: ChatDayPickerAnchor?
+    @State private var floatingDayLabel: String?
+    @State private var floatingDay: Date?
+    @State private var dayMarkers: [ChatDayMarker] = []
+    @State private var isTranscriptMovementActive = false
+    @State private var isTranscriptScrolling = false
+    @State private var scrollIdleGeneration: UInt = 0
+    @State private var searchQuery = ""
+    @State private var activeMatchID: String?
+    @State private var pendingScrollTargetID: String?
     @FocusState private var isComposerFocused: Bool
+    @FocusState private var isSearchFocused: Bool
 
     public init(
         viewModel: ChatViewModel,
@@ -66,14 +80,33 @@ public struct ChatView: View {
                 ChatSurface.background.ignoresSafeArea()
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                if viewModel.character != nil {
+                // Searching borrows the keyboard, so the composer steps aside
+                // rather than competing for it, and the match navigator takes
+                // the same place the way a find bar does.
+                if !isSearchActive, viewModel.character != nil {
                     composer(
                         restingSafeAreaInset:
                             geometry.safeAreaInsets.bottom
                     )
                 }
             }
+            .overlay(alignment: .bottomTrailing) {
+                if isSearchActive {
+                    chatSearchNavigator
+                }
+            }
+            .chatConversationSearch(
+                text: $searchQuery,
+                isPresented: $isSearchActive
+            )
+            .onChange(of: isSearchActive) { _, active in
+                if !active {
+                    searchQuery = ""
+                    activeMatchID = nil
+                }
+            }
             .toolbar {
+#if os(macOS)
                 if let character = viewModel.character {
                     ToolbarItem(placement: .principal) {
                         ChatToolbarIdentity(
@@ -85,8 +118,34 @@ public struct ChatView: View {
                         }
                     }
                 }
+#else
+                // Ours rather than the system's search button, so it can keep
+                // a fixed place beside settings while still using native
+                // toolbar chrome.
+                if viewModel.conversation != nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            openSearch()
+                        } label: {
+                            LorepiaGlyphView(.search, size: 23)
+                        }
+                        .accessibilityLabel("대화 내 검색")
+                        .accessibilityIdentifier("chat-room-search-trigger")
+                    }
+                }
+#endif
 
-#if os(macOS)
+#if os(iOS) && compiler(>=6.2)
+                if #available(iOS 26.0, *),
+                   viewModel.conversation != nil
+                {
+                    ToolbarSpacer(
+                        .fixed,
+                        placement: .primaryAction
+                    )
+                }
+#endif
+
                 if viewModel.conversation != nil {
                     ToolbarItem(placement: .primaryAction) {
                         ChatRoomSettingsTrigger(
@@ -98,8 +157,8 @@ public struct ChatView: View {
                         }
                     }
                 }
-#endif
             }
+            .chatRoomTitle(name: viewModel.character?.name)
             .sheet(isPresented: $isRoomSettingsPresented) {
                 ChatRoomSettingsSheet(
                     mode: viewModel.mode,
@@ -115,6 +174,19 @@ public struct ChatView: View {
                     Task {
                         await viewModel.selectBranch(id: branchID)
                     }
+                }
+            }
+            .sheet(item: $dayPickerAnchor) { anchor in
+                ChatDayPickerSheet(
+                    availableDays: ChatTimeline.messageDays(
+                        in: viewModel.messages,
+                        calendar: timelineCalendar
+                    ),
+                    selectedDay: anchor.day,
+                    calendar: timelineCalendar,
+                    locale: locale
+                ) { day in
+                    jumpToDay(day)
                 }
             }
             .sheet(item: $editingMessage) { message in
@@ -187,11 +259,12 @@ public struct ChatView: View {
                             id: \.element.id
                         ) { index, message in
                             let previous = messageBefore(index)
-                            let separatorKind = ChatTimeline.separatorKind(
-                                before: message,
-                                after: previous,
-                                calendar: timelineCalendar
-                            )
+                            let needsSeparator =
+                                ChatTimeline.needsDateSeparator(
+                                    before: message,
+                                    after: previous,
+                                    calendar: timelineCalendar
+                                )
                             let joinsPrevious = ChatTimeline.canGroup(
                                 previous: previous,
                                 current: message,
@@ -199,10 +272,9 @@ public struct ChatView: View {
                             )
 
                             if
-                                let separatorKind,
+                                needsSeparator,
                                 let separatorText = ChatTimeline.separatorText(
                                     for: message,
-                                    kind: separatorKind,
                                     calendar: timelineCalendar,
                                     locale: locale
                                 ),
@@ -213,74 +285,37 @@ public struct ChatView: View {
                                         locale: locale
                                     )
                             {
-                                ChatTimeSeparator(
+                                ChatDaySeparator(
                                     text: separatorText,
                                     accessibilityText: accessibilityText
-                                )
-                                .padding(.top, index == 0 ? 2 : 16)
-                                .padding(.bottom, 4)
+                                ) {
+                                    presentDayPicker(anchoredAt: message)
+                                }
+                                .background {
+                                    dayMarkerReporter(
+                                        for: message,
+                                        label: separatorText
+                                    )
+                                    // The Button owns 10pt of transparent
+                                    // touch padding on each edge. Measure only
+                                    // the visible capsule so its floating
+                                    // hand-off still happens at the same spot.
+                                    .padding(.vertical, 10)
+                                }
+                                // Above the slot the resting marker carries
+                                // this day, so the separator stops drawing
+                                // instead of being seen sliding off the top.
+                                .opacity(separatorOpacity(forDayOf: message))
                                 .transition(.opacity)
                             }
 
-                            VStack(spacing: 0) {
-                                ChatBubble(
-                                    message: message,
-                                    maximumWidth: maximumBubbleWidth(
-                                        in: geometry.size.width
-                                    ),
-                                    storyMaximumWidth: maximumStoryWidth(
-                                        in: geometry.size.width
-                                    ),
-                                    mode: viewModel.mode
-                                )
-                                .contentShape(Rectangle())
-                                .chatMessageContextMenu(
-                                    message: message,
-                                    isMutationEnabled:
-                                        viewModel.canMutateMessage(message)
-                                ) { action in
-                                    handleMessageAction(
-                                        action,
-                                        for: message
-                                    )
-                                }
-
-                                if !ChatMessageActionPresentation.actions(
-                                    for: message.role
-                                ).isEmpty {
-                                    ChatMessageActionRow(
-                                        message: message,
-                                        isMutationEnabled:
-                                            viewModel.canMutateMessage(message),
-                                        isCopied:
-                                            copiedMessageID == message.id
-                                    ) { action in
-                                        handleMessageAction(
-                                            action,
-                                            for: message
-                                        )
-                                    }
-                                    .frame(
-                                        maxWidth: messageActionMaximumWidth(
-                                            for: message,
-                                            in: geometry.size.width
-                                        ),
-                                        alignment: messageActionRowAlignment(
-                                            for: message
-                                        )
-                                    )
-                                    .frame(
-                                        maxWidth: .infinity,
-                                        alignment:
-                                            messageActionContainerAlignment(
-                                                for: message
-                                            )
-                                    )
-                                }
-                            }
+                            messageRow(
+                                message: message,
+                                width: geometry.size.width
+                            )
                             .padding(
                                 .top,
-                                separatorKind != nil
+                                needsSeparator
                                     ? 0
                                     : (joinsPrevious ? 2 : 10)
                             )
@@ -345,6 +380,48 @@ public struct ChatView: View {
                 }
                 .chatDefaultBottomAnchor()
                 .coordinateSpace(name: ChatCoordinateSpace.name)
+                .chatScrollActivity { isActive in
+                    isTranscriptMovementActive = isActive
+                    if isActive {
+                        noteTranscriptScrolled()
+                    }
+                }
+                .overlay(alignment: .top) {
+                    if let floatingDayLabel, let floatingDay {
+                        Button {
+                            presentDayPicker(on: floatingDay)
+                        } label: {
+                            ChatDayCapsule(
+                                text: floatingDayLabel,
+                                showsChevron: true,
+                                isElevated: true
+                            )
+                            .padding(.top, FloatingMarker.top)
+                            .frame(minHeight: 44, alignment: .top)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .opacity(floatingMarkerIsVisible ? 1 : 0)
+                        .allowsHitTesting(floatingMarkerIsVisible)
+                        // The separators in the transcript carry the same
+                        // label and the same action, so this transient copy
+                        // stays out of the accessibility tree.
+                        .accessibilityHidden(true)
+                        // Only arriving and leaving are worth animating. The
+                        // hand-off itself is a swap between identical
+                        // capsules in the same place, so it needs no motion.
+                        .animation(
+                            reduceMotion ? nil : .easeOut(duration: 0.2),
+                            value: isTranscriptScrolling
+                        )
+                    }
+                }
+                .onPreferenceChange(ChatDayMarkerPreferenceKey.self) { markers in
+                    updateFloatingDay(with: markers)
+                    if isTranscriptMovementActive {
+                        noteTranscriptScrolled()
+                    }
+                }
                 .chatInteractiveKeyboardDismissal()
                 .onPreferenceChange(ChatLayoutPreferenceKey.self) { metrics in
                     let observation = ChatBottomObservation(
@@ -401,6 +478,20 @@ public struct ChatView: View {
                         // starting a new animation for every token.
                         scrollToBottom(proxy, animated: false)
                     }
+                }
+                .onChange(of: pendingScrollTargetID) { _, target in
+                    guard let target else {
+                        return
+                    }
+                    // Landing on a match means leaving the live tail, so the
+                    // transcript stops chasing new messages until it returns.
+                    followsLatest = false
+                    withAnimation(
+                        reduceMotion ? nil : .easeInOut(duration: 0.24)
+                    ) {
+                        proxy.scrollTo(target, anchor: .center)
+                    }
+                    pendingScrollTargetID = nil
                 }
                 .onChange(of: geometry.size) { _, _ in
                     guard followsLatest else {
@@ -460,6 +551,7 @@ public struct ChatView: View {
         .simultaneousGesture(
             TapGesture().onEnded {
                 dismissComposerKeyboard()
+                hideActions()
             }
         )
     }
@@ -617,6 +709,414 @@ public struct ChatView: View {
         )
     }
 
+    /// One message: the bubble, and the action row it reveals when asked.
+    @ViewBuilder
+    private func messageRow(
+        message: ChatMessage,
+        width: CGFloat
+    ) -> some View {
+        VStack(spacing: 0) {
+            ChatBubble(
+                message: message,
+                maximumWidth: maximumBubbleWidth(in: width),
+                storyMaximumWidth: maximumStoryWidth(in: width),
+                mode: viewModel.mode,
+                highlight: searchHighlight,
+                isActiveMatch: activeMatchID == message.id
+            )
+            .contentShape(Rectangle())
+            .accessibilityIdentifier(
+                "chat-message-\(message.role.rawValue)-\(message.id)"
+            )
+            .onLongPressGesture(minimumDuration: 0.35) {
+                revealActions(for: message)
+            }
+            // A popover leaves the transcript where it is: no row is inserted
+            // under the message, so nothing below it moves.
+            .chatMessageActionPopover(
+                isPresented: Binding(
+                    get: { revealedActionsMessageID == message.id },
+                    set: { presented in
+                        if !presented {
+                            revealedActionsMessageID = nil
+                        }
+                    }
+                ),
+                message: message,
+                isMutationEnabled: viewModel.canMutateMessage(message),
+                isCopied: copiedMessageID == message.id
+            ) { action in
+                handleMessageAction(action, for: message)
+            }
+            // VoiceOver never performs a long press, so the same actions stay
+            // reachable from the message itself.
+            .accessibilityActions {
+                ForEach(
+                    ChatMessageActionPresentation.actions(for: message.role)
+                        .filter { action in
+                            action == .copy
+                                ? !message.text.isEmpty
+                                : viewModel.canMutateMessage(message)
+                        }
+                ) { action in
+                    Button(action.title) {
+                        handleMessageAction(action, for: message)
+                    }
+                }
+            }
+
+        }
+    }
+
+    private var searchHighlight: String {
+        guard isSearchActive else {
+            return ""
+        }
+        return searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Per-message actions
+
+    private func revealActions(for message: ChatMessage) {
+        guard !ChatMessageActionPresentation.actions(
+            for: message.role
+        ).isEmpty else {
+            return
+        }
+        dismissComposerKeyboard()
+#if os(iOS)
+        UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+#endif
+        revealedAt = Date()
+        withAnimation(
+            reduceMotion ? nil : .snappy(duration: 0.24, extraBounce: 0.08)
+        ) {
+            revealedActionsMessageID =
+                revealedActionsMessageID == message.id ? nil : message.id
+        }
+    }
+
+    private func hideActions() {
+        guard revealedActionsMessageID != nil else {
+            return
+        }
+        // Lifting the finger that opened the row also lands as a tap on the
+        // transcript, which would close it in the same frame.
+        if let revealedAt, Date().timeIntervalSince(revealedAt) < 0.6 {
+            return
+        }
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.2)) {
+            revealedActionsMessageID = nil
+        }
+    }
+
+    // MARK: - Jumping to a day
+
+    /// Publishes where this day's separator sits in the viewport.
+    @ViewBuilder
+    private func dayMarkerReporter(
+        for message: ChatMessage,
+        label: String
+    ) -> some View {
+        if let date = ChatTimeline.date(from: message.createdAt) {
+            let day = timelineCalendar.startOfDay(for: date)
+            GeometryReader { geometry in
+                Color.clear.preference(
+                    key: ChatDayMarkerPreferenceKey.self,
+                    value: [
+                        ChatDayMarker(
+                            day: day,
+                            label: label,
+                            minY: geometry.frame(
+                                in: .named(ChatCoordinateSpace.name)
+                            ).minY
+                        ),
+                    ]
+                )
+            }
+        }
+    }
+
+    /// The slot the floating marker rests in, measured from the top of the
+    /// viewport: its own top padding plus its height.
+    private enum FloatingMarker {
+        static let top = LorepiaSpacing.compact
+        static let height: CGFloat = 24
+        static var slotBottom: CGFloat {
+            top + height
+        }
+    }
+
+    /// A separator hides the moment it reaches the slot: from there on the
+    /// resting marker shows the same capsule in the same place, so the two
+    /// swap without anything appearing to move or slip away.
+    private func separatorOpacity(forDayOf message: ChatMessage) -> Double {
+        guard
+            isTranscriptScrolling,
+            let date = ChatTimeline.date(from: message.createdAt)
+        else {
+            return 1
+        }
+        let day = timelineCalendar.startOfDay(for: date)
+        guard let minY = dayMarkers.first(where: { $0.day == day })?.minY
+        else {
+            return 1
+        }
+        return minY <= FloatingMarker.top ? 0 : 1
+    }
+
+    /// Whether the resting marker is drawn at all.
+    ///
+    /// It never leaves early: the arriving separator climbs all the way into
+    /// the slot, and only when the two capsules sit exactly on top of each
+    /// other does the separator stop drawing and this one take over its day.
+    /// Same capsule, same place, so the exchange cannot be seen.
+    private var floatingMarkerIsVisible: Bool {
+        isTranscriptScrolling
+    }
+
+    private var floatingMarkerThreshold: CGFloat {
+        FloatingMarker.top
+    }
+
+    /// The day the top of the transcript has scrolled into.
+    ///
+    /// The transcript is lazy, so only nearby separators report at all. An
+    /// empty report means no day boundary is close, which leaves the day
+    /// unchanged rather than unknown.
+    private func updateFloatingDay(with markers: [ChatDayMarker]) {
+        let ordered = markers.sorted { $0.minY < $1.minY }
+        dayMarkers = ordered
+        guard let topmost = ordered.first else {
+            return
+        }
+        if let index = ChatTimeline.enteredMarkerIndex(
+            markerOffsets: ordered.map(\.minY),
+            threshold: floatingMarkerThreshold
+        ) {
+            floatingDay = ordered[index].day
+            floatingDayLabel = ordered[index].label
+            return
+        }
+        // The topmost separator still sits below the edge, so it opens the
+        // next day: what fills the top is the day before it.
+        floatingDay = ChatTimeline.dayBefore(
+            topmost.day,
+            in: viewModel.messages,
+            calendar: timelineCalendar
+        )
+        floatingDayLabel = floatingDay.map {
+            ChatTimeline.dayLabel(
+                for: $0,
+                calendar: timelineCalendar,
+                locale: locale
+            )
+        }
+    }
+
+    /// The marker rides the scroll and leaves once it settles.
+    private func noteTranscriptScrolled() {
+        if !isTranscriptScrolling {
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) {
+                isTranscriptScrolling = true
+            }
+        }
+        scrollIdleGeneration &+= 1
+        let generation = scrollIdleGeneration
+        Task { @MainActor in
+            do {
+                try await Task.sleep(for: .milliseconds(700))
+            } catch {
+                return
+            }
+            guard generation == scrollIdleGeneration else {
+                return
+            }
+            withAnimation(reduceMotion ? nil : .easeOut(duration: 0.28)) {
+                isTranscriptScrolling = false
+            }
+        }
+    }
+
+    private func presentDayPicker(anchoredAt message: ChatMessage) {
+        guard let date = ChatTimeline.date(from: message.createdAt) else {
+            return
+        }
+        presentDayPicker(on: timelineCalendar.startOfDay(for: date))
+    }
+
+    private func presentDayPicker(on day: Date) {
+        isComposerFocused = false
+        dayPickerAnchor = ChatDayPickerAnchor(day: day)
+    }
+
+    private func jumpToDay(_ day: Date) {
+        guard let messageID = ChatTimeline.firstMessageID(
+            on: day,
+            in: viewModel.messages,
+            calendar: timelineCalendar
+        ) else {
+            return
+        }
+        jump(to: messageID)
+    }
+
+    // MARK: - Searching the open conversation
+
+    /// Messages on the active branch containing the query, oldest first.
+    private var searchMatchIDs: [String] {
+        let query = searchQuery.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard !query.isEmpty else {
+            return []
+        }
+        return viewModel.messages
+            .filter { $0.text.localizedCaseInsensitiveContains(query) }
+            .map(\.id)
+    }
+
+    private var activeMatchPosition: Int? {
+        guard let activeMatchID else {
+            return nil
+        }
+        return searchMatchIDs.firstIndex(of: activeMatchID)
+    }
+
+    private var searchStatusLabel: String? {
+        guard !searchQuery.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        ).isEmpty else {
+            return nil
+        }
+        let matches = searchMatchIDs
+        guard !matches.isEmpty else {
+            return "결과 없음"
+        }
+        guard let position = activeMatchPosition else {
+            return "\(matches.count)"
+        }
+        return "\(position + 1)/\(matches.count)"
+    }
+
+    /// Typing lands on the newest match, the one nearest where the transcript
+    /// already is, and the chevrons walk out from there.
+    private func syncActiveMatch() {
+        let matches = searchMatchIDs
+        guard let newest = matches.last else {
+            activeMatchID = nil
+            return
+        }
+        guard let activeMatchID, matches.contains(activeMatchID) else {
+            jumpToMatch(newest)
+            return
+        }
+    }
+
+    /// The way through the matches: a pair stacked at the trailing edge, off
+    /// to the side of the transcript rather than across the bottom of it.
+    /// The field itself belongs to the navigation bar now.
+    private var chatSearchNavigator: some View {
+        VStack(spacing: LorepiaSpacing.compact) {
+            if let searchStatusLabel {
+                Text(searchStatusLabel)
+                    .font(.caption)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("chat-room-search-status")
+            }
+
+            VStack(spacing: LorepiaSpacing.compact) {
+                // Older matches sit above, so up walks back through the
+                // conversation and down returns toward the newest.
+                searchStepButton(
+                    systemImage: "chevron.up",
+                    label: "이전 결과",
+                    offset: -1
+                )
+
+                searchStepButton(
+                    systemImage: "chevron.down",
+                    label: "다음 결과",
+                    offset: 1
+                )
+            }
+        }
+        .padding(.trailing, listInset)
+        .padding(.bottom, LorepiaSpacing.standard)
+        // Branch changes, edits, deletion, and regeneration can replace the
+        // result set without changing the query. Reconcile the active landing
+        // point against the matches themselves.
+        .onChange(of: searchMatchIDs) { _, _ in
+            syncActiveMatch()
+        }
+    }
+
+    private func searchStepButton(
+        systemImage: String,
+        label: String,
+        offset: Int
+    ) -> some View {
+        Button {
+            stepMatch(by: offset)
+        } label: {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .chatSearchStepSurface(isInteractive: searchMatchIDs.count >= 2)
+        .disabled(searchMatchIDs.count < 2)
+        .accessibilityLabel(label)
+        .accessibilityIdentifier(
+            offset < 0
+                ? "chat-search-previous-result"
+                : "chat-search-next-result"
+        )
+    }
+
+    private func openSearch() {
+        isComposerFocused = false
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) {
+            isSearchActive = true
+        }
+        isSearchFocused = true
+    }
+
+    private func closeSearch() {
+        isSearchFocused = false
+        searchQuery = ""
+        activeMatchID = nil
+        withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) {
+            isSearchActive = false
+        }
+    }
+
+    /// Walks the match list. Without a landing point yet, the newest match is
+    /// the one closest to where the transcript already sits.
+    private func stepMatch(by offset: Int) {
+        let matches = searchMatchIDs
+        guard !matches.isEmpty else {
+            return
+        }
+        guard let current = activeMatchPosition else {
+            jumpToMatch(matches[matches.count - 1])
+            return
+        }
+        let next = (current + offset + matches.count) % matches.count
+        jumpToMatch(matches[next])
+    }
+
+    private func jumpToMatch(_ messageID: String) {
+        activeMatchID = messageID
+        jump(to: messageID)
+    }
+
+    private func jump(to messageID: String) {
+        pendingScrollTargetID = messageID
+    }
+
     /// Messages the conversation forks at, with how many branches leave them.
     private var forkCounts: [String: Int] {
         var counts: [String: Int] = [:]
@@ -633,6 +1133,12 @@ public struct ChatView: View {
         _ action: ChatMessageAction,
         for message: ChatMessage
     ) {
+        // The row has done its job once an action is taken; copy keeps it up
+        // long enough to show the checkmark it swaps in.
+        if action != .copy {
+            hideActions()
+        }
+
         switch action {
         case .edit:
             guard message.role == .user,
@@ -987,6 +1493,9 @@ struct ChatBranchSummary: Equatable {
     let description: String
 }
 
+#if os(macOS)
+/// The window-title identity for the Mac room, where the navigation bar's
+/// title and subtitle lines do not exist.
 private struct ChatToolbarIdentity: View {
     let character: LibraryCharacter
     let branch: ChatBranchSummary?
@@ -997,47 +1506,6 @@ private struct ChatToolbarIdentity: View {
     @ScaledMetric(relativeTo: .caption) private var scaledSymbolSize = 15
 
     var body: some View {
-#if os(iOS)
-        Button(action: action) {
-            VStack(spacing: -5) {
-                avatar(size: 60)
-
-                HStack(spacing: 5) {
-                    Text(character.name)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .layoutPriority(1)
-
-                    if let branch {
-                        Text(branch.label)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                }
-                .font(.headline)
-                .padding(.horizontal, 12)
-                .frame(height: 32)
-                .chatContactHeaderSurface(isInteractive: isEnabled)
-            }
-            .fixedSize(horizontal: false, vertical: true)
-            // Navigation chrome keeps a stable Messages-like silhouette while
-            // the full, untruncated identity remains available to VoiceOver.
-            .dynamicTypeSize(.xSmall ... .xxxLarge)
-        }
-        .buttonStyle(.plain)
-        .offset(y: 21)
-        .disabled(!isEnabled)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(branch?.description ?? "")
-        .accessibilityHint("응답 모드와 대화 분기를 설정합니다")
-        .accessibilityIdentifier("chat-room-settings-trigger-toolbar")
-#else
         ViewThatFits(in: .vertical) {
             VStack(spacing: 1) {
                 compactSymbol
@@ -1059,15 +1527,6 @@ private struct ChatToolbarIdentity: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(character.name)
-#endif
-    }
-
-    private func avatar(size: CGFloat) -> some View {
-        LorepiaAvatar(
-            symbolName: character.symbolName,
-            seed: character.id,
-            size: size
-        )
     }
 
     private var compactSymbol: some View {
@@ -1093,6 +1552,7 @@ private struct ChatToolbarIdentity: View {
         "\(character.name), 대화 설정"
     }
 }
+#endif
 
 private struct ChatComposer: View {
     @Binding var draft: String
@@ -1761,6 +2221,8 @@ private struct ChatBubble: View {
     let maximumWidth: CGFloat
     let storyMaximumWidth: CGFloat
     let mode: ConversationMode
+    var highlight: String = ""
+    var isActiveMatch = false
 
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
 
@@ -1768,6 +2230,7 @@ private struct ChatBubble: View {
     @ScaledMetric(relativeTo: .body) private var scaledVerticalPadding = 7
     @ScaledMetric(relativeTo: .body) private var scaledStoryLineSpacing = 5
     @ScaledMetric(relativeTo: .body) private var scaledStoryVerticalPadding = 7
+    @ScaledMetric(relativeTo: .caption2) private var scaledTimestampDrop = 1
 
     var body: some View {
         Group {
@@ -1781,6 +2244,93 @@ private struct ChatBubble: View {
                 bubble
             }
         }
+    }
+
+    /// The message text with its timestamp riding at the end of the last line.
+    ///
+    /// The stamp is concatenated a second time as a clear run so the layout
+    /// engine reserves exactly its width: it stays on the last line when there
+    /// is room and drops to a line of its own when there is not. The visible
+    /// stamp is then overlaid on that reserved space.
+    @ViewBuilder
+    private var bubbleBody: some View {
+        let text = Text(highlightedText)
+            .font(.body)
+
+        if let timeLabel {
+            (
+                text
+                    + Text("\u{2005}\u{2005}")
+                    + Text(timeLabel)
+                        .font(.caption2)
+                        .foregroundStyle(.clear)
+            )
+            // Selection is deliberately off inside bubbles: it claims the
+            // long press the action row is opened with, and copying whole
+            // messages is what that row is for.
+            .overlay(alignment: .bottomTrailing) {
+                Text(timeLabel)
+                    .font(.caption2)
+                    .foregroundStyle(timestampStyle)
+                    // Riding a few points below the last baseline lets the
+                    // stamp sit in the bubble's bottom inset, so it reads as
+                    // metadata rather than as the tail of the sentence.
+                    .offset(y: scaledTimestampDrop)
+                    .accessibilityHidden(true)
+            }
+        } else {
+            text
+        }
+    }
+
+    /// The message text with search hits marked.
+    ///
+    /// The bubble the search has landed on burns brighter than the rest, so
+    /// stepping through results is legible without moving anything.
+    private var highlightedText: AttributedString {
+        highlightedText(in: message.text.isEmpty ? "…" : message.text)
+    }
+
+    private func highlightedText(in source: String) -> AttributedString {
+        guard !highlight.isEmpty else {
+            return AttributedString(source)
+        }
+
+        var result = AttributedString()
+        var remainder = Substring(source)
+        while let hit = remainder.range(
+            of: highlight,
+            options: [.caseInsensitive, .diacriticInsensitive]
+        ) {
+            result += AttributedString(remainder[..<hit.lowerBound])
+            var marked = AttributedString(remainder[hit])
+            // The landed-on hit takes a solid band; both sides keep dark text,
+            // which reads over either bubble fill.
+            marked.backgroundColor = LorepiaColor.highlight
+                .opacity(isActiveMatch ? 1 : 0.4)
+            if isActiveMatch {
+                marked.foregroundColor = .black
+            }
+            result += marked
+            remainder = remainder[hit.upperBound...]
+        }
+        result += AttributedString(remainder)
+        return result
+    }
+
+    /// Only settled messages carry a time. A streaming reply has no send time
+    /// yet, and its status line already says what it is doing.
+    private var timeLabel: String? {
+        guard message.status == .complete,
+              let date = ChatTimeline.date(from: message.createdAt)
+        else {
+            return nil
+        }
+        return date.formatted(.dateTime.hour().minute())
+    }
+
+    private var timestampStyle: Color {
+        .secondary
     }
 
     private var isStoryProse: Bool {
@@ -1798,9 +2348,7 @@ private struct ChatBubble: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(message.text.isEmpty ? "…" : message.text)
-                    .font(.body)
-                    .textSelection(.enabled)
+                bubbleBody
                 if message.status != .complete {
                     Text(statusText)
                         .font(.caption2)
@@ -1808,7 +2356,11 @@ private struct ChatBubble: View {
                 }
             }
             .padding(.horizontal, horizontalPadding)
-            .padding(.vertical, verticalPadding)
+            // Korean glyphs sit low in the line box, so equal padding leaves
+            // the ink noticeably higher than it looks. The two halves are
+            // shifted until the gaps above and below the text read the same.
+            .padding(.top, verticalPadding - lineBoxOpticalShift)
+            .padding(.bottom, verticalPadding + lineBoxOpticalShift)
             .foregroundStyle(foregroundStyle)
             .background(backgroundStyle, in: bubbleShape)
             .frame(maxWidth: maximumWidth, alignment: alignment)
@@ -1824,7 +2376,7 @@ private struct ChatBubble: View {
 
     private var storyProse: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(message.text.isEmpty ? "…" : message.text)
+            Text(highlightedText)
                 .font(.system(.body, design: .serif))
                 .lineSpacing(scaledStoryLineSpacing)
                 .textSelection(.enabled)
@@ -1852,7 +2404,7 @@ private struct ChatBubble: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(message.text.isEmpty ? "…" : message.text)
+                Text(highlightedText)
                     .font(.system(.body, design: .serif))
                     .lineSpacing(scaledStoryLineSpacing)
                     .foregroundStyle(LorepiaColor.loreAccent)
@@ -1873,7 +2425,11 @@ private struct ChatBubble: View {
     }
 
     private var notice: some View {
-        Text(message.text.isEmpty ? statusText : message.text)
+        Text(
+            highlightedText(
+                in: message.text.isEmpty ? statusText : message.text
+            )
+        )
             .font(.caption)
             .foregroundStyle(.secondary)
             .multilineTextAlignment(.center)
@@ -1902,17 +2458,29 @@ private struct ChatBubble: View {
         min(max(scaledHorizontalPadding, 12), 20)
     }
 
+    /// Half the measured gap between the ink's top and bottom margins.
+    ///
+    /// The stamp is the lowest ink in the bubble, so the bottom carries a
+    /// little extra to keep its margin level with the text's at the top.
+    private var lineBoxOpticalShift: CGFloat {
+        1.0
+    }
+
     private var verticalPadding: CGFloat {
         min(max(scaledVerticalPadding, 7), 16)
     }
 
+    /// Both sides read as body text.
+    ///
+    /// The reply is what gets read; the reader's own line only has to be
+    /// found again. Neither is worth spending legibility on white-on-colour.
     private var foregroundStyle: Color {
-        message.role == .user ? .white : .primary
+        .primary
     }
 
     private var backgroundStyle: Color {
         message.role == .user
-            ? LorepiaColor.loreFill
+            ? LorepiaColor.outgoingFill
             : ChatSurface.incomingMessage
     }
 
@@ -1943,22 +2511,14 @@ private struct ChatBubble: View {
             "안내"
         }
         let status = message.status == .complete ? "" : ", \(statusText)"
-        return "\(speaker): \(message.text)\(status)"
+        let timestamp =
+            mode != .story
+                && (message.role == .user || message.role == .assistant)
+                ? timeLabel.map { ", \($0)" } ?? ""
+                : ""
+        return "\(speaker): \(message.text)\(status)\(timestamp)"
     }
 
-}
-
-private struct ChatTimeSeparator: View {
-    let text: String
-    let accessibilityText: String
-
-    var body: some View {
-        Text(text)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity)
-            .accessibilityLabel(accessibilityText)
-    }
 }
 
 struct ChatBubbleShape: Shape {
@@ -2107,20 +2667,17 @@ private enum ChatCoordinateSpace {
 }
 
 private enum ChatSurface {
+    /// The reading canvas the palette defines, on both platforms. iOS used to
+    /// substitute `systemBackground` here, which quietly discarded the warm
+    /// page the design system was built around.
     static var background: Color {
-#if os(iOS)
-        Color(uiColor: .systemBackground)
-#else
         LorepiaColor.paper
-#endif
     }
 
+    /// One value on both platforms now that the palette carries the same
+    /// neutral the system gray was standing in for.
     static var incomingMessage: Color {
-#if os(iOS)
-        Color(uiColor: .systemGray5)
-#else
         LorepiaColor.incomingFill
-#endif
     }
 }
 
@@ -2200,10 +2757,88 @@ private extension View {
 #endif
     }
 
+    /// The system's own search field, so it looks and behaves like search
+    /// everywhere else: iOS 26 keeps it collapsed in the toolbar until it is
+    /// asked for, and older versions show it under the title.
+    @ViewBuilder
+    func chatConversationSearch(
+        text: Binding<String>,
+        isPresented: Binding<Bool>
+    ) -> some View {
+        searchable(
+            text: text,
+            isPresented: isPresented,
+            prompt: "대화 내 검색"
+        )
+        .chatSearchToolbarBehavior()
+    }
+
+    /// The field stays out of the bar until the toolbar's own search button
+    /// asks for it, so search and settings can sit together in one group.
+    @ViewBuilder
+    func chatSearchToolbarBehavior() -> some View {
+#if os(iOS) && compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            toolbar(removing: .search)
+        } else {
+            self
+        }
+#else
+        self
+#endif
+    }
+
+    /// Names the room in the navigation bar. macOS keeps its principal
+    /// identity view, where the window title is already spoken for.
+    @ViewBuilder
+    func chatRoomTitle(name: String?) -> some View {
+#if os(iOS)
+        navigationTitle(name ?? "")
+#else
+        self
+#endif
+    }
+
     @ViewBuilder
     func chatInteractiveKeyboardDismissal() -> some View {
 #if os(iOS)
         scrollDismissesKeyboard(.interactively)
+#else
+        self
+#endif
+    }
+
+    /// Layout preferences also move during initial anchoring, keyboard
+    /// changes, and message insertion. Only a real scroll phase (or the
+    /// platform fallback drag) may reveal the floating day marker.
+    @ViewBuilder
+    func chatScrollActivity(
+        onChange: @escaping (Bool) -> Void
+    ) -> some View {
+#if os(iOS)
+        if #available(iOS 18.0, *) {
+            onScrollPhaseChange { _, phase in
+                onChange(phase.isScrolling)
+            }
+        } else {
+            simultaneousGesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { _ in onChange(true) }
+                    .onEnded { _ in onChange(false) }
+            )
+        }
+#elseif os(macOS)
+        if #available(macOS 15.0, *) {
+            onScrollPhaseChange { _, phase in
+                onChange(phase.isScrolling)
+            }
+        } else {
+            simultaneousGesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { _ in onChange(true) }
+                    .onEnded { _ in onChange(false) }
+            )
+        }
 #else
         self
 #endif
@@ -2235,6 +2870,22 @@ private extension View {
             .regularMaterial,
             in: ChatComposerFieldGlassShape()
         )
+#endif
+    }
+
+    @ViewBuilder
+    func chatSearchStepSurface(isInteractive: Bool) -> some View {
+#if os(iOS) && compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            glassEffect(
+                .regular.interactive(isInteractive),
+                in: Circle()
+            )
+        } else {
+            background(.regularMaterial, in: Circle())
+        }
+#else
+        background(.regularMaterial, in: Circle())
 #endif
     }
 

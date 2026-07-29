@@ -1,0 +1,3 @@
+/* 앱 이름은 한국어 로케일에서도 브랜드 표기를 유지합니다. */
+"CFBundleDisplayName" = "LorePia";
+"CFBundleName" = "LorePia";

@@ -7,9 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		07F238E3A46EBB41C2F8836F /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 314595ED7FB306F62C341FCC /* InfoPlist.strings */; };
 		10D83B4C02AFED03A96BCF0D /* MacAppDirectories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A35C7CBD006B3128DA4A902 /* MacAppDirectories.swift */; };
 		2C355A7772333F8C8605236A /* IOSRootNavigationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E41E1457FDA2CDC8845D0DCC /* IOSRootNavigationUITests.swift */; };
 		3810B7313788DAAC05176FC8 /* IOSRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A45762D2D7B3E1DF310A20 /* IOSRootView.swift */; };
+		3DF9624BD3606BE2187E66CE /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = FCC5E85B2329CE037F9166EF /* InfoPlist.strings */; };
 		41722AF3C28BC6C878BD9C42 /* LorepiaKit in Frameworks */ = {isa = PBXBuildFile; productRef = B4F98EFF844DA48F3BD42DCA /* LorepiaKit */; };
 		59684055EF28F6E22B302AD9 /* LorepiaIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D200A9BA20E638B86090AFDE /* LorepiaIOSApp.swift */; };
 		8B99119D5827C87E46258EAD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3C7F2B15C8B231EE7AE6DE3E /* Assets.xcassets */; };
@@ -34,9 +36,11 @@
 		1691DB10016F7816F6113AA6 /* LorepiaKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LorepiaKit; path = Packages/LorepiaKit; sourceTree = SOURCE_ROOT; };
 		1AE3E1A4207AC29C5A9008F0 /* LorepiaMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LorepiaMac.entitlements; sourceTree = "<group>"; };
 		2A35C7CBD006B3128DA4A902 /* MacAppDirectories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAppDirectories.swift; sourceTree = "<group>"; };
+		390A3F6FFBB099EC677F64A2 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		3C7F2B15C8B231EE7AE6DE3E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4B612B0C94ACE1ED2D771A39 /* LorepiaIOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LorepiaIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5DFB3C809D238012ED100246 /* LorepiaIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LorepiaIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		61B7B5E8F709EDF6FDF0F853 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		6AD0E6C48AEE69F698C6BE3F /* IOSAppDirectories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSAppDirectories.swift; sourceTree = "<group>"; };
 		72F25FDD6952F3DB69049BCF /* MacRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacRootView.swift; sourceTree = "<group>"; };
 		A6A45762D2D7B3E1DF310A20 /* IOSRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSRootView.swift; sourceTree = "<group>"; };
@@ -95,6 +99,7 @@
 		2F5F1E6905C1EEC00FF262D9 /* macOS */ = {
 			isa = PBXGroup;
 			children = (
+				FCC5E85B2329CE037F9166EF /* InfoPlist.strings */,
 				1AE3E1A4207AC29C5A9008F0 /* LorepiaMac.entitlements */,
 				15A968E2201C7BED416CAE67 /* LorepiaMacApp.swift */,
 				2A35C7CBD006B3128DA4A902 /* MacAppDirectories.swift */,
@@ -132,6 +137,7 @@
 		FC5871C11CD1AC8DB1381CA9 /* iOS */ = {
 			isa = PBXGroup;
 			children = (
+				314595ED7FB306F62C341FCC /* InfoPlist.strings */,
 				3C7F2B15C8B231EE7AE6DE3E /* Assets.xcassets */,
 				6AD0E6C48AEE69F698C6BE3F /* IOSAppDirectories.swift */,
 				A6A45762D2D7B3E1DF310A20 /* IOSRootView.swift */,
@@ -168,6 +174,7 @@
 			buildConfigurationList = 64099FC55BB122389E349F3E /* Build configuration list for PBXNativeTarget "LorepiaMac" */;
 			buildPhases = (
 				BAE51FC6295D65FF2D7590B0 /* Sources */,
+				A94C8C88741A5866E33A5D05 /* Resources */,
 				116019722BB48C7A72C73179 /* Frameworks */,
 			);
 			buildRules = (
@@ -215,11 +222,11 @@
 				};
 			};
 			buildConfigurationList = A65E0F960CE7F05B50CBF9CB /* Build configuration list for PBXProject "Lorepia" */;
-			developmentRegion = en;
+			developmentRegion = ko;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				Base,
-				en,
+				ko,
 			);
 			mainGroup = 03063F0C83552FAB40D37F58;
 			minimizedProjectReferenceProxies = 1;
@@ -244,6 +251,15 @@
 			buildActionMask = 2147483647;
 			files = (
 				8B99119D5827C87E46258EAD /* Assets.xcassets in Resources */,
+				07F238E3A46EBB41C2F8836F /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A94C8C88741A5866E33A5D05 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3DF9624BD3606BE2187E66CE /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -287,6 +303,25 @@
 			targetProxy = B140FB3C663EE129A6860FC4 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		314595ED7FB306F62C341FCC /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				390A3F6FFBB099EC677F64A2 /* ko */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		FCC5E85B2329CE037F9166EF /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				61B7B5E8F709EDF6FDF0F853 /* ko */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		1DE967CB404B0875A0AD1E8F /* Release */ = {

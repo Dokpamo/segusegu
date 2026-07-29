@@ -178,6 +178,7 @@ public struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .lorepiaCanvas()
         .disabled(viewModel.isLoading)
         .overlay {
             if viewModel.isLoading {

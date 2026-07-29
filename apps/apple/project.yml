@@ -5,6 +5,10 @@ options:
     iOS: "17.0"
     macOS: "14.0"
   createIntermediateGroups: true
+  # Every string in the app is Korean, so Korean is the development language.
+  # Dates and times follow the resolved app language, which keeps them on
+  # 오전/오후 instead of falling back to an English AM/PM.
+  developmentLanguage: ko
   groupSortPosition: top
   minimumXcodeGenVersion: 2.44.0
 packages:

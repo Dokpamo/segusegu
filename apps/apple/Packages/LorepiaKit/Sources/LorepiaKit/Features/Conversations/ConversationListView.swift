@@ -36,6 +36,10 @@ public struct ConversationListView: View {
                 conversationList
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // The list sits on the same page the rooms do, so the tab does not
+        // switch from paper to white on the way in.
+        .background(LorepiaColor.paper.ignoresSafeArea())
         .animation(
             reduceMotion ? nil : .easeInOut(duration: 0.18),
             value: contentState
@@ -116,6 +120,7 @@ public struct ConversationListView: View {
             }
         }
         .listStyle(.plain)
+        .lorepiaCanvas()
         .refreshable {
             await viewModel.refresh()
         }

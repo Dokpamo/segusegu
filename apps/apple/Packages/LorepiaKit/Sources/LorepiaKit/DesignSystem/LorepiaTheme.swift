@@ -28,28 +28,30 @@ public enum LorepiaRadius {
 /// chrome — toolbars, tab bars, and the composer surface — deliberately keeps
 /// the system material so it stays consistent with the platform.
 public enum LorepiaColor {
-    /// The reading canvas. Warm rather than pure white for long sessions.
+    /// The reading canvas. Warm rather than pure white for long sessions —
+    /// and warm in the dark too, where a blue-leaning charcoal would drop the
+    /// paper identity the moment the lights go out.
     public static let paper = adaptive(
         light: 0xF7F3EC,
-        dark: 0x121116,
+        dark: 0x17150F,
         lightIncreasedContrast: 0xFFFDF8,
-        darkIncreasedContrast: 0x08080B
+        darkIncreasedContrast: 0x0B0A07
     )
 
     /// Raised content sitting on `paper`, such as cards.
     public static let paperRaised = adaptive(
         light: 0xFFFFFF,
-        dark: 0x1C1B21,
+        dark: 0x211E17,
         lightIncreasedContrast: 0xFFFFFF,
-        darkIncreasedContrast: 0x22212A
+        darkIncreasedContrast: 0x28241C
     )
 
     /// Fill for incoming messages. Borderless, like the platform's own bubbles.
     public static let incomingFill = adaptive(
         light: 0xEFE9DE,
-        dark: 0x26242B,
+        dark: 0x2B2721,
         lightIncreasedContrast: 0xE1D8C6,
-        darkIncreasedContrast: 0x36333D
+        darkIncreasedContrast: 0x3A352C
     )
 
     /// Fill for outgoing messages and primary controls. Pairs with white text.
@@ -58,6 +60,18 @@ public enum LorepiaColor {
         dark: 0x5B4FD6,
         lightIncreasedContrast: 0x2F2380,
         darkIncreasedContrast: 0x4234B9
+    )
+
+    /// Fill for outgoing messages.
+    ///
+    /// Grey rather than a hue: the reader wrote these and only needs to find
+    /// them again, which the trailing edge already does. Keeping colour out
+    /// of them leaves the reply the only tinted surface worth reading.
+    public static let outgoingFill = adaptive(
+        light: 0xDFDDD8,
+        dark: 0x343029,
+        lightIncreasedContrast: 0xCBC8C2,
+        darkIncreasedContrast: 0x444037
     )
 
     /// The same brand hue, legible as text or a symbol on `paper`.
@@ -98,6 +112,26 @@ public enum LorepiaColor {
         dark: 0xF0906F,
         lightIncreasedContrast: 0x8E3717,
         darkIncreasedContrast: 0xFFB69B
+    )
+
+    /// The day marker's capsule. It is chrome, so it stays a neutral warm
+    /// grey — and in the dark it steps down instead of becoming the brightest
+    /// block on a page whose text it is only labelling.
+    public static let dayMarker = adaptive(
+        light: 0x8C8880,
+        dark: 0x413C33,
+        lightIncreasedContrast: 0x6C6960,
+        darkIncreasedContrast: 0x565046
+    )
+
+    /// The band behind a search hit. Amber reads as "found" while staying in
+    /// the paper palette's warmth, and stays clear of the branch and
+    /// generation hues that already carry meaning.
+    public static let highlight = adaptive(
+        light: 0xF2C14E,
+        dark: 0xC08A1E,
+        lightIncreasedContrast: 0xE0A521,
+        darkIncreasedContrast: 0xD9A230
     )
 }
 

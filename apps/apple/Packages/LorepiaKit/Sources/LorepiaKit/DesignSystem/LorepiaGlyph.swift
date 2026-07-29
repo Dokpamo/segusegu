@@ -18,6 +18,8 @@ public enum LorepiaGlyph: String, CaseIterable, Sendable {
     case settings
     case waveform
     case check
+    case search
+    case close
 
     static let grid: CGFloat = 24
 
@@ -25,7 +27,7 @@ public enum LorepiaGlyph: String, CaseIterable, Sendable {
         switch self {
         case
             .edit, .copy, .branch, .plus, .send, .moreVertical, .delete,
-            .shield, .settings, .waveform:
+            .shield, .settings, .waveform, .search, .close:
             2
         case .regenerate, .check:
             1.8
@@ -356,6 +358,19 @@ public enum LorepiaGlyph: String, CaseIterable, Sendable {
             path.move(to: CGPoint(x: 5, y: 12.5))
             path.addLine(to: CGPoint(x: 10, y: 17.5))
             path.addLine(to: CGPoint(x: 19, y: 6.5))
+
+        case .search:
+            path.addEllipse(
+                in: CGRect(x: 4, y: 4, width: 13.6, height: 13.6)
+            )
+            path.move(to: CGPoint(x: 15.7, y: 15.7))
+            path.addLine(to: CGPoint(x: 20.6, y: 20.6))
+
+        case .close:
+            path.move(to: CGPoint(x: 5.4, y: 5.4))
+            path.addLine(to: CGPoint(x: 18.6, y: 18.6))
+            path.move(to: CGPoint(x: 18.6, y: 5.4))
+            path.addLine(to: CGPoint(x: 5.4, y: 18.6))
         }
     }
 
