@@ -17,7 +17,9 @@ struct ChatComposerEditor: UIViewRepresentable {
     let focus: FocusState<Bool>.Binding
     let placeholder: String
     let isEnabled: Bool
+    let minimumLines: Int
     let maximumLines: Int
+    let automaticFocusID: String?
     let animatesHeightChanges: Bool
     let onSubmit: () -> Void
     let onEndEditing: () -> Void
@@ -32,6 +34,10 @@ struct ChatComposerEditor: UIViewRepresentable {
 
         textView.delegate = context.coordinator
         textView.text = text
+        textView.selectedRange = NSRange(
+            location: text.utf16.count,
+            length: 0
+        )
         textView.font = UIFont.preferredFont(forTextStyle: .body)
         textView.adjustsFontForContentSizeCategory = true
         textView.backgroundColor = .clear
@@ -112,6 +118,14 @@ struct ChatComposerEditor: UIViewRepresentable {
         }
 
         context.coordinator.synchronizeFocus(in: textView)
+        context.coordinator.requestAutomaticFocus(in: textView)
+    }
+
+    static func dismantleUIView(
+        _ host: ChatComposerEditorHost,
+        coordinator: Coordinator
+    ) {
+        coordinator.cancelAutomaticFocus()
     }
 
     func sizeThatFits(
@@ -124,6 +138,7 @@ struct ChatComposerEditor: UIViewRepresentable {
         }
         let measurement = host.measure(
             width: width,
+            minimumLines: minimumLines,
             maximumLines: maximumLines
         )
         return CGSize(width: width, height: measurement.height)
@@ -136,6 +151,8 @@ struct ChatComposerEditor: UIViewRepresentable {
 
         private var lastReportedHeight: CGFloat = 0
         private var lastRequestedFocus = false
+        private var lastAutomaticFocusID: String?
+        private var automaticFocusTask: Task<Void, Never>?
 
         init(parent: ChatComposerEditor) {
             self.parent = parent
@@ -148,6 +165,7 @@ struct ChatComposerEditor: UIViewRepresentable {
         }
 
         func textViewDidEndEditing(_ textView: UITextView) {
+            cancelAutomaticFocus()
             if parent.focus.wrappedValue {
                 parent.focus.wrappedValue = false
             }
@@ -160,17 +178,73 @@ struct ChatComposerEditor: UIViewRepresentable {
                 if !textView.isFirstResponder {
                     textView.becomeFirstResponder()
                 }
-            } else if
-                lastRequestedFocus,
-                textView.isFirstResponder
-            {
+            } else if lastRequestedFocus {
+                cancelAutomaticFocus()
                 // A native tap reaches the delegate before SwiftUI publishes
                 // its FocusState mutation. Only a real true-to-false request
                 // should resign; treating that transient initial false as an
                 // instruction makes the keyboard immediately flicker away.
-                textView.resignFirstResponder()
+                if textView.isFirstResponder {
+                    textView.resignFirstResponder()
+                }
             }
             lastRequestedFocus = requestedFocus
+        }
+
+        func requestAutomaticFocus(in textView: UITextView) {
+            guard let focusID = parent.automaticFocusID else {
+                cancelAutomaticFocus()
+                lastAutomaticFocusID = nil
+                return
+            }
+            guard focusID != lastAutomaticFocusID else {
+                return
+            }
+
+            lastAutomaticFocusID = focusID
+            automaticFocusTask?.cancel()
+            automaticFocusTask = Task { @MainActor [weak self, weak textView] in
+                for attempt in 0 ..< 8 {
+                    if attempt > 0 {
+                        do {
+                            try await Task.sleep(for: .milliseconds(100))
+                        } catch {
+                            return
+                        }
+                    } else {
+                        await Task.yield()
+                    }
+
+                    guard !Task.isCancelled,
+                          let self,
+                          let textView,
+                          self.parent.automaticFocusID == focusID,
+                          self.parent.isEnabled
+                    else {
+                        return
+                    }
+                    guard textView.window != nil else {
+                        continue
+                    }
+
+                    self.parent.focus.wrappedValue = true
+                    if textView.becomeFirstResponder() {
+                        self.automaticFocusTask = nil
+                        return
+                    }
+                }
+                guard let self,
+                      self.parent.automaticFocusID == focusID
+                else {
+                    return
+                }
+                self.automaticFocusTask = nil
+            }
+        }
+
+        func cancelAutomaticFocus() {
+            automaticFocusTask?.cancel()
+            automaticFocusTask = nil
         }
 
         func textViewDidChange(_ textView: UITextView) {
@@ -215,6 +289,7 @@ struct ChatComposerEditor: UIViewRepresentable {
 
             let measurement = host.measure(
                 width: width,
+                minimumLines: parent.minimumLines,
                 maximumLines: parent.maximumLines
             )
             host.updateScrolling(
@@ -363,13 +438,23 @@ final class ChatComposerEditorHost: UIView {
         placeholderLabel.isHidden = !textView.text.isEmpty
     }
 
-    func measure(width: CGFloat, maximumLines: Int) -> Measurement {
+    func measure(
+        width: CGFloat,
+        minimumLines: Int,
+        maximumLines: Int
+    ) -> Measurement {
         let font =
             textView.font ?? UIFont.preferredFont(forTextStyle: .body)
         let lineHeight = font.lineHeight
         let insets = textView.textContainerInset.top
             + textView.textContainerInset.bottom
-        let minimumHeight = pixelCeil(lineHeight + insets)
+        let boundedMinimumLines = min(
+            max(minimumLines, 1),
+            max(maximumLines, 1)
+        )
+        let minimumHeight = pixelCeil(
+            lineHeight * CGFloat(boundedMinimumLines) + insets
+        )
         let maximumHeight = pixelCeil(
             lineHeight * CGFloat(max(maximumLines, 1)) + insets
         )

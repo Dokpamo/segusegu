@@ -24,7 +24,7 @@ public enum LorepiaRadius {
 /// Content-layer colors for LorePia.
 ///
 /// These describe the reading surface only: the page, message fills, and the
-/// two accents that carry meaning (branching and generation). Navigation
+/// accent colors that carry product meaning. Navigation
 /// chrome — toolbars, tab bars, and the composer surface — deliberately keeps
 /// the system material so it stays consistent with the platform.
 public enum LorepiaColor {
@@ -82,30 +82,6 @@ public enum LorepiaColor {
         darkIncreasedContrast: 0xCFC6FF
     )
 
-    /// Reserved for branching. Nothing else uses this hue.
-    public static let thread = adaptive(
-        light: 0x0F6E56,
-        dark: 0x6FD6C4,
-        lightIncreasedContrast: 0x06452F,
-        darkIncreasedContrast: 0x9DEBDB
-    )
-
-    /// Tinted background behind branch affordances.
-    public static let threadSoft = adaptive(
-        light: 0xE1F5EE,
-        dark: 0x12332B,
-        lightIncreasedContrast: 0xCDEEE1,
-        darkIncreasedContrast: 0x18443A
-    )
-
-    /// The rail drawn beside the timeline where a conversation can fork.
-    public static let threadRail = adaptive(
-        light: 0xC7DBD1,
-        dark: 0x354942,
-        lightIncreasedContrast: 0xA6C4B7,
-        darkIncreasedContrast: 0x4A635A
-    )
-
     /// Reserved for generation in progress and for stopping it.
     public static let ember = adaptive(
         light: 0xC4562E,
@@ -125,8 +101,8 @@ public enum LorepiaColor {
     )
 
     /// The band behind a search hit. Amber reads as "found" while staying in
-    /// the paper palette's warmth, and stays clear of the branch and
-    /// generation hues that already carry meaning.
+    /// the paper palette's warmth, and stays clear of the generation hue
+    /// that already carries meaning.
     public static let highlight = adaptive(
         light: 0xF2C14E,
         dark: 0xC08A1E,

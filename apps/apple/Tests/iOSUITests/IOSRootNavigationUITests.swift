@@ -2656,9 +2656,14 @@ final class IOSRootNavigationUITests: XCTestCase {
         ).firstMatch
         XCTAssertTrue(assistantMessage.waitForExistence(timeout: 5))
 
+        composer.tap()
+        composer.typeText("보존할 일반 초안")
         app.windows.firstMatch.coordinate(
             withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)
         ).tap()
+        XCTAssertTrue(
+            String(describing: composer.value).contains("보존할 일반 초안")
+        )
         XCTAssertTrue(userMessage.isHittable)
         userMessage.press(forDuration: 0.6)
 
@@ -2709,9 +2714,190 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         XCTAssertTrue(edit.isHittable)
         edit.tap()
-        let editNavigationBar = app.navigationBars["메시지 편집"]
-        XCTAssertTrue(editNavigationBar.waitForExistence(timeout: 5))
-        editNavigationBar.buttons["취소"].tap()
-        XCTAssertTrue(editNavigationBar.waitForNonExistence(timeout: 5))
+
+        let composerSurface = app.descendants(matching: .any)[
+            "chat-composer-surface"
+        ]
+        let editCancel = app.buttons["chat-composer-edit-cancel"]
+        let editSave = app.buttons["chat-composer-edit-save"]
+        let editExpand = app.buttons["chat-composer-edit-expand"]
+        XCTAssertTrue(editCancel.waitForExistence(timeout: 5))
+        XCTAssertTrue(editSave.waitForExistence(timeout: 5))
+        XCTAssertTrue(editExpand.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            composerSurface.value as? String,
+            "메시지 편집 중"
+        )
+        XCTAssertTrue(
+            String(describing: composer.value).contains("액션 메뉴 확인")
+        )
+        XCTAssertFalse(app.navigationBars["메시지 편집"].exists)
+
+        // The existing composer becomes the focused editor; it is no longer
+        // presented inside a separate navigation sheet or requires another tap.
+        composer.typeText(" 수정 취소")
+        let editedDraft = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "value CONTAINS %@",
+                "수정 취소"
+            ),
+            object: composer
+        )
+        wait(for: [editedDraft], timeout: 2)
+
+        editCancel.tap()
+        XCTAssertTrue(editSave.waitForNonExistence(timeout: 5))
+        XCTAssertEqual(composerSurface.value as? String, "입력 준비")
+        XCTAssertTrue(
+            String(describing: composer.value).contains("보존할 일반 초안")
+        )
+        XCTAssertTrue(userMessage.label.contains("액션 메뉴 확인"))
+        XCTAssertFalse(userMessage.label.contains("수정 취소"))
+    }
+
+    @MainActor
+    func testInlineMessageEditorExpandsAndCollapsesAboveAnchoredRail() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-native-navigation-ui-test"]
+        app.launch()
+
+        guard openPreviewChat(in: app) else {
+            return
+        }
+
+        let composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        let send = app.buttons["메시지 보내기"]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertTrue(send.waitForExistence(timeout: 5))
+
+        composer.tap()
+        composer.typeText("확대 축소 확인")
+        XCTAssertTrue(send.isEnabled)
+        send.tap()
+
+        let userMessage = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "chat-message-user-"
+            )
+        ).firstMatch
+        XCTAssertTrue(userMessage.waitForExistence(timeout: 5))
+        app.windows.firstMatch.coordinate(
+            withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)
+        ).tap()
+        XCTAssertTrue(userMessage.isHittable)
+        userMessage.press(forDuration: 0.6)
+
+        let edit = app.buttons.matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "chat-message-action-edit-user-"
+            )
+        ).firstMatch
+        XCTAssertTrue(edit.waitForExistence(timeout: 5))
+        edit.tap()
+
+        let composerSurface = app.descendants(matching: .any)[
+            "chat-composer-surface"
+        ]
+        let editCancel = app.buttons["chat-composer-edit-cancel"]
+        let editSave = app.buttons["chat-composer-edit-save"]
+        let editExpand = app.buttons["chat-composer-edit-expand"]
+        XCTAssertTrue(composerSurface.waitForExistence(timeout: 5))
+        XCTAssertTrue(editCancel.waitForExistence(timeout: 5))
+        XCTAssertTrue(editSave.waitForExistence(timeout: 5))
+        XCTAssertTrue(editExpand.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            composerSurface.value as? String,
+            "메시지 편집 중"
+        )
+
+        let collapsedSurface = composerSurface.frame
+        let collapsedField = composer.frame
+        editExpand.tap()
+
+        let editCollapse = app.buttons["chat-composer-edit-collapse"]
+        XCTAssertTrue(editCollapse.waitForExistence(timeout: 5))
+        XCTAssertTrue(editExpand.waitForNonExistence(timeout: 2))
+        let expandedHeight = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                composerSurface.frame.height
+                    > collapsedSurface.height + 8
+            },
+            object: composerSurface
+        )
+        wait(for: [expandedHeight], timeout: 2)
+        let expandedSurface = composerSurface.frame
+        let expandedField = composer.frame
+        XCTAssertGreaterThan(
+            expandedField.height,
+            collapsedField.height + 8
+        )
+        XCTAssertGreaterThan(
+            expandedSurface.height,
+            collapsedSurface.height + 8
+        )
+        XCTAssertEqual(
+            expandedSurface.maxY,
+            collapsedSurface.maxY,
+            accuracy: 3
+        )
+        // The native editor remains first responder across the height change.
+        composer.typeText(" 포커스 유지")
+        XCTAssertTrue(
+            String(describing: composer.value).contains(
+                "포커스 유지"
+            )
+        )
+
+        editCollapse.tap()
+        XCTAssertTrue(editExpand.waitForExistence(timeout: 5))
+        XCTAssertTrue(editCollapse.waitForNonExistence(timeout: 2))
+        let collapsedHeight = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                abs(
+                    composerSurface.frame.height
+                        - collapsedSurface.height
+                ) <= 3
+            },
+            object: composerSurface
+        )
+        wait(for: [collapsedHeight], timeout: 2)
+        XCTAssertEqual(
+            composer.frame.height,
+            collapsedField.height,
+            accuracy: 3
+        )
+        XCTAssertEqual(
+            composerSurface.frame.height,
+            collapsedSurface.height,
+            accuracy: 3
+        )
+        XCTAssertEqual(
+            composerSurface.frame.maxY,
+            collapsedSurface.maxY,
+            accuracy: 3
+        )
+        XCTAssertEqual(
+            composerSurface.value as? String,
+            "메시지 편집 중"
+        )
+        XCTAssertTrue(editSave.isEnabled)
+
+        editSave.tap()
+        XCTAssertTrue(editSave.waitForNonExistence(timeout: 5))
+        XCTAssertEqual(composerSurface.value as? String, "입력 준비")
+
+        let editedMessage = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format:
+                    "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                "chat-message-user-",
+                "포커스 유지"
+            )
+        ).firstMatch
+        XCTAssertTrue(editedMessage.waitForExistence(timeout: 10))
     }
 }

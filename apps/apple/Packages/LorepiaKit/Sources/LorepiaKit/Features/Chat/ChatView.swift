@@ -23,7 +23,7 @@ public struct ChatView: View {
     @State private var isNearBottom = true
     @State private var lastBottomObservation: ChatBottomObservation?
     @State private var isRoomSettingsPresented = false
-    @State private var editingMessage: ChatMessage?
+    @State private var inlineEditSession: ChatInlineEditSession?
     @State private var deletingMessage: ChatMessage?
     @State private var copiedMessageID: String?
     @State private var revealedActionsMessageID: String?
@@ -189,18 +189,6 @@ public struct ChatView: View {
                     jumpToDay(day)
                 }
             }
-            .sheet(item: $editingMessage) { message in
-                ChatMessageEditSheet(
-                    messageID: message.id,
-                    text: message.text,
-                    isEnabled: viewModel.canMutateMessage(message)
-                ) { messageID, text in
-                    await viewModel.editUserMessage(
-                        messageID: messageID,
-                        replacementText: text
-                    )
-                }
-            }
             .confirmationDialog(
                 "이 메시지부터 삭제할까요?",
                 isPresented: Binding(
@@ -231,9 +219,16 @@ public struct ChatView: View {
                 await viewModel.resumeEventPolling()
                 await viewModel.refreshProviderSelection()
             }
+            .onChange(of: viewModel.conversation?.id) { _, _ in
+                discardInlineEdit()
+            }
+            .onChange(of: viewModel.activeBranchID) { _, _ in
+                discardInlineEdit()
+            }
             .onDisappear {
                 initialLoadSettleGeneration &+= 1
                 isComposerFocused = false
+                discardInlineEdit()
                 viewModel.pauseEventPolling()
             }
         }
@@ -562,7 +557,7 @@ public struct ChatView: View {
     private var threadRail: some View {
         if showsThreadRail {
             Capsule()
-                .fill(LorepiaColor.threadRail)
+                .fill(Color.secondary.opacity(0.22))
                 .frame(width: ChatThreadRail.width)
                 .padding(.leading, (railGutter - ChatThreadRail.width) / 2)
                 .padding(.vertical, LorepiaSpacing.tight)
@@ -626,31 +621,49 @@ public struct ChatView: View {
         restingSafeAreaInset: CGFloat
     ) -> some View {
         ChatComposer(
-            draft: $viewModel.draft,
+            draft: composerDraft,
             measuredEditorHeight: $composerEditorHeight,
             focus: $isComposerFocused,
             placeholder: composerPlaceholder,
-            isEnabled: viewModel.canEditDraft,
-            canUseTools: viewModel.canManageBranches,
-            canChangeMode: viewModel.canManageBranches,
+            isEnabled: composerIsEnabled,
+            canUseTools:
+                inlineEditSession == nil && viewModel.canManageBranches,
+            canChangeMode:
+                inlineEditSession == nil && viewModel.canManageBranches,
             canChangeProviderProfile:
-                viewModel.canChangeProviderProfile,
-            canSubmit: viewModel.canSubmit,
-            isGenerating: viewModel.isGenerating,
+                inlineEditSession == nil
+                    && viewModel.canChangeProviderProfile,
+            canSubmit: composerCanSubmit,
+            isGenerating:
+                inlineEditSession == nil && viewModel.isGenerating,
+            editSessionID: inlineEditSession?.token,
+            isEditExpanded: inlineEditSession?.isExpanded ?? false,
+            isEditSaving: inlineEditSession?.isSaving ?? false,
+            editSaveFailed: inlineEditSession?.saveFailed ?? false,
             mode: viewModel.mode,
             providerProfiles: viewModel.providerProfiles,
             selectedProviderProfileID:
                 viewModel.selectedProviderProfileID,
             restingSafeAreaInset: restingSafeAreaInset,
             onSubmit: {
-                Task {
-                    await viewModel.submitMessage()
+                if inlineEditSession == nil {
+                    Task {
+                        await viewModel.submitMessage()
+                    }
+                } else {
+                    saveInlineEdit()
                 }
             },
             onCancel: {
                 Task {
                     await viewModel.cancelGeneration()
                 }
+            },
+            onCancelEdit: {
+                cancelInlineEdit()
+            },
+            onToggleEditExpansion: {
+                toggleInlineEditExpansion()
             },
             onModeChange: { mode in
                 Task {
@@ -1146,7 +1159,7 @@ public struct ChatView: View {
             else {
                 return
             }
-            editingMessage = message
+            beginInlineEdit(message)
         case .copy:
             copyToClipboard(
                 message.text,
@@ -1244,6 +1257,9 @@ public struct ChatView: View {
     }
 
     private var composerPlaceholder: String {
+        if inlineEditSession != nil {
+            return "메시지 편집"
+        }
         if viewModel.conversation == nil {
             return "대화를 준비하는 중입니다"
         }
@@ -1251,6 +1267,157 @@ public struct ChatView: View {
             return "응답을 기다리는 중입니다"
         }
         return "메시지"
+    }
+
+    private var composerDraft: Binding<String> {
+        guard let editSession = inlineEditSession else {
+            return Binding(
+                get: {
+                    viewModel.draft
+                },
+                set: { newValue in
+                    viewModel.draft = newValue
+                }
+            )
+        }
+
+        let token = editSession.token
+        let fallbackDraft = editSession.draft
+        return Binding(
+            get: {
+                guard let currentSession = inlineEditSession,
+                      currentSession.token == token
+                else {
+                    return fallbackDraft
+                }
+                return currentSession.draft
+            },
+            set: { newValue in
+                guard var currentSession = inlineEditSession,
+                      currentSession.token == token
+                else {
+                    return
+                }
+                currentSession.draft = newValue
+                currentSession.saveFailed = false
+                inlineEditSession = currentSession
+            }
+        )
+    }
+
+    private var composerIsEnabled: Bool {
+        guard let session = inlineEditSession else {
+            return viewModel.canEditDraft
+        }
+        return !session.isSaving && inlineEditTarget(for: session) != nil
+    }
+
+    private var composerCanSubmit: Bool {
+        guard let session = inlineEditSession else {
+            return viewModel.canSubmit
+        }
+        return !session.isSaving
+            && !session.draft.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ).isEmpty
+            && inlineEditTarget(for: session) != nil
+    }
+
+    private func inlineEditTarget(
+        for session: ChatInlineEditSession
+    ) -> ChatMessage? {
+        guard viewModel.conversation?.id == session.conversationID,
+              viewModel.activeBranchID == session.branchID,
+              let message = viewModel.messages.first(where: {
+                  $0.id == session.messageID && $0.role == .user
+              }),
+              viewModel.canMutateMessage(message)
+        else {
+            return nil
+        }
+        return message
+    }
+
+    private func beginInlineEdit(_ message: ChatMessage) {
+        guard message.role == .user,
+              viewModel.canMutateMessage(message),
+              let conversationID = viewModel.conversation?.id,
+              let branchID = viewModel.activeBranchID
+        else {
+            return
+        }
+
+        inlineEditSession = ChatInlineEditSession(
+            token: UUID(),
+            conversationID: conversationID,
+            branchID: branchID,
+            messageID: message.id,
+            draft: message.text
+        )
+        composerEditorHeight = 0
+        isComposerFocused = false
+    }
+
+    private func cancelInlineEdit() {
+        guard inlineEditSession?.isSaving != true else {
+            return
+        }
+        discardInlineEdit()
+    }
+
+    private func discardInlineEdit() {
+        guard inlineEditSession != nil else {
+            return
+        }
+        inlineEditSession = nil
+        composerEditorHeight = 0
+    }
+
+    private func toggleInlineEditExpansion() {
+        guard var session = inlineEditSession,
+              !session.isSaving
+        else {
+            return
+        }
+        session.isExpanded.toggle()
+        inlineEditSession = session
+    }
+
+    private func saveInlineEdit() {
+        guard var session = inlineEditSession,
+              composerCanSubmit
+        else {
+            return
+        }
+
+        let replacementText = session.draft.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        let token = session.token
+        session.isSaving = true
+        session.saveFailed = false
+        inlineEditSession = session
+
+        Task {
+            let succeeded = await viewModel.editUserMessage(
+                messageID: session.messageID,
+                replacementText: replacementText
+            )
+            guard var currentSession = inlineEditSession,
+                  currentSession.token == token
+            else {
+                return
+            }
+
+            if succeeded {
+                discardInlineEdit()
+            } else {
+                currentSession.isSaving = false
+                currentSession.saveFailed = true
+                inlineEditSession = currentSession
+                isComposerFocused = true
+            }
+        }
     }
 
     private var listInset: CGFloat {
@@ -1381,7 +1548,7 @@ private struct ChatForkMarker: View {
                 node
                 Text("여기서 \(count + 1)개로 갈라짐")
                     .font(.caption)
-                    .foregroundStyle(LorepiaColor.thread)
+                    .foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             }
             .frame(minHeight: 44)
@@ -1396,12 +1563,12 @@ private struct ChatForkMarker: View {
 
     private var node: some View {
         LorepiaGlyphView(.branch, size: 15)
-            .foregroundStyle(LorepiaColor.thread)
+            .foregroundStyle(.secondary)
             .frame(
                 width: ChatThreadRail.nodeSize,
                 height: ChatThreadRail.nodeSize
             )
-            .background(LorepiaColor.threadSoft, in: Circle())
+            .background(LorepiaColor.incomingFill, in: Circle())
             .overlay {
                 Circle().strokeBorder(ChatSurface.background, lineWidth: 2)
             }
@@ -1554,6 +1721,17 @@ private struct ChatToolbarIdentity: View {
 }
 #endif
 
+private struct ChatInlineEditSession {
+    let token: UUID
+    let conversationID: String
+    let branchID: String
+    let messageID: String
+    var draft: String
+    var isExpanded = false
+    var isSaving = false
+    var saveFailed = false
+}
+
 private struct ChatComposer: View {
     @Binding var draft: String
     @Binding var measuredEditorHeight: CGFloat
@@ -1573,12 +1751,18 @@ private struct ChatComposer: View {
     let canChangeProviderProfile: Bool
     let canSubmit: Bool
     let isGenerating: Bool
+    let editSessionID: UUID?
+    let isEditExpanded: Bool
+    let isEditSaving: Bool
+    let editSaveFailed: Bool
     let mode: ConversationMode
     let providerProfiles: [ProviderProfile]
     let selectedProviderProfileID: String?
     let restingSafeAreaInset: CGFloat
     let onSubmit: () -> Void
     let onCancel: () -> Void
+    let onCancelEdit: () -> Void
+    let onToggleEditExpansion: () -> Void
     let onModeChange: (ConversationMode) -> Void
     let onProviderProfileChange: (String) -> Void
     let onOpenConversationSettings: () -> Void
@@ -1654,7 +1838,9 @@ private struct ChatComposer: View {
             .frame(maxWidth: .infinity)
 #else
         HStack(alignment: .bottom, spacing: 8) {
-            toolsMenu
+            if !isEditing {
+                toolsMenu
+            }
             inputSurface
         }
         .frame(maxWidth: .infinity)
@@ -1667,10 +1853,18 @@ private struct ChatComposer: View {
         iosInputSurface
 #else
         HStack(alignment: .bottom, spacing: 0) {
+            if isEditing {
+                editCancelControl
+            }
+
             messageField
-                .padding(.leading, fieldPadding)
+                .padding(.leading, isEditing ? 2 : fieldPadding)
                 .padding(.trailing, 2)
                 .padding(.vertical, verticalInset)
+
+            if isEditing {
+                editExpansionControl
+            }
 
             sendControl
         }
@@ -1730,19 +1924,27 @@ private struct ChatComposer: View {
         )
         .accessibilityElement(children: .contain)
         .accessibilityLabel("메시지 입력 영역")
-        .accessibilityValue("입력 준비")
+        .accessibilityValue(isEditing ? "메시지 편집 중" : "입력 준비")
         .accessibilityIdentifier("chat-composer-surface")
         .chatSendFeedback(trigger: sendFeedback)
     }
 
     private var composerControlRail: some View {
         HStack(spacing: 0) {
-            toolsMenu
-            modelMenuControl
-            modeMenuControl
+            if isEditing {
+                editCancelControl
+                editStatus
+            } else {
+                toolsMenu
+                modelMenuControl
+                modeMenuControl
+            }
 
             Spacer(minLength: 4)
 
+            if isEditing {
+                editExpansionControl
+            }
             sendControl
         }
         .padding(.horizontal, controlRailHorizontalInset)
@@ -1763,13 +1965,16 @@ private struct ChatComposer: View {
             focus: focus,
             placeholder: placeholder,
             isEnabled: isEnabled,
+            minimumLines: minimumEditorLines,
             maximumLines: maximumEditorLines,
+            automaticFocusID: editSessionID?.uuidString,
             animatesHeightChanges: !reduceMotion,
             onSubmit: submit,
             onEndEditing: {
                 setSoftwareKeyboardVisible(false)
             }
         )
+        .id(editorIdentity)
         .frame(
             height: max(
                 measuredEditorHeight,
@@ -1783,9 +1988,10 @@ private struct ChatComposer: View {
             text: $draft,
             axis: .vertical
         )
-        .lineLimit(1 ... 5)
+        .lineLimit(minimumEditorLines ... maximumEditorLines)
         .submitLabel(.send)
         .focused(focus)
+        .id(editorIdentity)
         .accessibilityIdentifier("chat-composer-field")
         .accessibilityLabel(placeholder)
         .disabled(!isEnabled)
@@ -1795,7 +2001,18 @@ private struct ChatComposer: View {
 
     @ViewBuilder
     private var sendControl: some View {
-        if isGenerating {
+        if isEditing {
+            Button(action: submit) {
+                editSaveLabel
+            }
+            .buttonStyle(ChatComposerSendButtonStyle())
+            .disabled(!canSubmit)
+            .accessibilityLabel(
+                isEditSaving ? "편집 저장 중" : "편집 저장"
+            )
+            .accessibilityHint("수정한 메시지로 새 대화 흐름을 만듭니다")
+            .accessibilityIdentifier("chat-composer-edit-save")
+        } else if isGenerating {
             Button(action: onCancel) {
                 cancelLabel
             }
@@ -1811,6 +2028,67 @@ private struct ChatComposer: View {
             .disabled(!canSubmit)
             .accessibilityLabel("메시지 보내기")
         }
+    }
+
+    private var editCancelControl: some View {
+        Button(action: onCancelEdit) {
+            LorepiaGlyphView(.close, size: 17)
+                .frame(
+                    width: ChatComposerMetrics.control,
+                    height: ChatComposerMetrics.control
+                )
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .disabled(isEditSaving)
+        .accessibilityLabel("편집 취소")
+        .accessibilityHint("수정 내용을 버리고 원래 작성 중이던 메시지로 돌아갑니다")
+        .accessibilityIdentifier("chat-composer-edit-cancel")
+    }
+
+    private var editExpansionControl: some View {
+        Button(action: onToggleEditExpansion) {
+            LorepiaGlyphView(
+                isEditExpanded ? .collapse : .expand,
+                size: 18
+            )
+            .frame(
+                width: ChatComposerMetrics.control,
+                height: ChatComposerMetrics.control
+            )
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .disabled(isEditSaving)
+        .accessibilityLabel(
+            isEditExpanded ? "편집창 축소" : "편집창 확대"
+        )
+        .accessibilityHint(
+            isEditExpanded
+                ? "메시지 편집창의 높이를 줄입니다"
+                : "메시지 편집창의 높이를 늘립니다"
+        )
+        .accessibilityIdentifier(
+            isEditExpanded
+                ? "chat-composer-edit-collapse"
+                : "chat-composer-edit-expand"
+        )
+    }
+
+    private var editStatus: some View {
+        Text(editSaveFailed ? "저장 실패" : "메시지 편집")
+            .font(.caption.weight(.medium))
+            .foregroundStyle(editSaveFailed ? Color.red : Color.secondary)
+            .lineLimit(1)
+            .accessibilityIdentifier(
+                editSaveFailed
+                    ? "chat-message-edit-failure"
+                    : "chat-composer-edit-status"
+            )
     }
 
     @ViewBuilder
@@ -2009,18 +2287,44 @@ private struct ChatComposer: View {
         focus.wrappedValue
     }
 
-#if os(iOS)
-    private var maximumEditorLines: Int {
-        if verticalSizeClass == .compact {
-            return 4
-        }
-        if dynamicTypeSize.isAccessibilitySize {
-            return 6
-        }
-        return 10
+    private var isEditing: Bool {
+        editSessionID != nil
     }
 
+    private var editorIdentity: String {
+        editSessionID.map { "edit-\($0.uuidString)" } ?? "compose"
+    }
+
+    private var minimumEditorLines: Int {
+        guard isEditing, isEditExpanded else {
+            return 1
+        }
+#if os(iOS)
+        if verticalSizeClass == .compact
+            || dynamicTypeSize.isAccessibilitySize
+        {
+            return 4
+        }
 #endif
+        return 6
+    }
+
+    private var maximumEditorLines: Int {
+        if isEditing, !isEditExpanded {
+            return 4
+        }
+#if os(iOS)
+        if verticalSizeClass == .compact {
+            return isEditing ? 6 : 4
+        }
+        if dynamicTypeSize.isAccessibilitySize {
+            return isEditing ? 8 : 6
+        }
+        return 10
+#else
+        return isEditing ? 10 : 5
+#endif
+    }
 
     private func constrainedWidth(for availableWidth: CGFloat) -> CGFloat {
         let insetWidth = max(
@@ -2126,6 +2430,35 @@ private struct ChatComposer: View {
             )
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
+    }
+
+    private var editSaveLabel: some View {
+        ZStack {
+            Circle()
+                .fill(sendBackgroundStyle)
+                .frame(
+                    width: ChatComposerMetrics.control * 22 / 24,
+                    height: ChatComposerMetrics.control * 22 / 24
+                )
+
+            if isEditSaving {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(.white)
+            } else {
+                LorepiaGlyphView(
+                    .check,
+                    size: ChatComposerMetrics.control * 0.58
+                )
+                .foregroundStyle(sendForegroundStyle)
+            }
+        }
+        .frame(
+            width: ChatComposerMetrics.control,
+            height: ChatComposerMetrics.control
+        )
+        .frame(minWidth: 44, minHeight: 44)
+        .contentShape(Rectangle())
     }
 
     private var cancelLabel: some View {

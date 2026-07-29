@@ -165,9 +165,6 @@ public struct ChatMessageActionMenu: View {
         if action == .copy, isCopied {
             return LorepiaColor.loreAccent
         }
-        if action == .branch {
-            return LorepiaColor.thread
-        }
         return .primary
     }
 
@@ -256,14 +253,9 @@ public struct ChatMessageActionRow: View {
         min(max(scaledGlyphSize, 15), 18) * 1.25
     }
 
-    /// Branching keeps its own hue everywhere it appears, so the action row
-    /// matches the fork marker and the branch controls.
     private func color(for action: ChatMessageAction) -> Color {
         if action == .copy, isCopied {
             return LorepiaColor.loreAccent
-        }
-        if action == .branch {
-            return LorepiaColor.thread
         }
         return Color.secondary
     }
@@ -370,100 +362,6 @@ private struct ChatMessageActionButtonStyle: ButtonStyle {
     }
 }
 
-public struct ChatMessageEditSheet: View {
-    private let messageID: String
-    private let isEnabled: Bool
-    private let onSave: (String, String) async -> Bool
-
-    @Environment(\.dismiss) private var dismiss
-    @State private var draft: String
-    @State private var isSaving = false
-    @State private var saveFailed = false
-
-    public init(
-        messageID: String,
-        text: String,
-        isEnabled: Bool = true,
-        onSave: @escaping (String, String) async -> Bool
-    ) {
-        self.messageID = messageID
-        self.isEnabled = isEnabled
-        self.onSave = onSave
-        _draft = State(initialValue: text)
-    }
-
-    public var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextEditor(text: $draft)
-                        .frame(minHeight: 120)
-                        .disabled(!isEnabled)
-                        .accessibilityLabel("메시지 내용")
-                } footer: {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("편집하면 원래 대화는 유지되고 새 흐름에서 응답을 생성합니다.")
-                        if saveFailed {
-                            Label(
-                                "저장하지 못했습니다. 설정과 연결 상태를 확인한 뒤 다시 시도하세요.",
-                                systemImage: "exclamationmark.circle"
-                            )
-                            .foregroundStyle(.red)
-                            .accessibilityIdentifier(
-                                "chat-message-edit-failure"
-                            )
-                        }
-                    }
-                }
-            }
-            .navigationTitle("메시지 편집")
-            .chatMessageActionNavigationTitleDisplayMode()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("취소") {
-                        dismiss()
-                    }
-                }
-
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("저장") {
-                        let text = draft.trimmingCharacters(
-                            in: .whitespacesAndNewlines
-                        )
-                        isSaving = true
-                        saveFailed = false
-                        Task {
-                            if await onSave(messageID, text) {
-                                dismiss()
-                            } else {
-                                isSaving = false
-                                saveFailed = true
-                            }
-                        }
-                    }
-                    .disabled(
-                        !isEnabled
-                            || isSaving
-                            || draft.trimmingCharacters(
-                                in: .whitespacesAndNewlines
-                            ).isEmpty
-                    )
-                }
-            }
-            .disabled(isSaving)
-            .overlay {
-                if isSaving {
-                    ProgressView()
-                        .controlSize(.small)
-                        .accessibilityLabel("메시지 저장 중")
-                }
-            }
-        }
-        .chatMessageActionSheetPresentation()
-        .accessibilityIdentifier("chat-message-edit-sheet")
-    }
-}
-
 public extension View {
     /// The action row as a popover anchored to the message.
     ///
@@ -553,25 +451,6 @@ private extension View {
             options: .nonRepeating.speed(1.6),
             isActive: isActive
         )
-#endif
-    }
-
-    @ViewBuilder
-    func chatMessageActionNavigationTitleDisplayMode() -> some View {
-#if os(iOS)
-        navigationBarTitleDisplayMode(.inline)
-#else
-        self
-#endif
-    }
-
-    @ViewBuilder
-    func chatMessageActionSheetPresentation() -> some View {
-#if os(iOS)
-        presentationDetents([.medium, .large])
-            .presentationDragIndicator(.visible)
-#else
-        self
 #endif
     }
 }

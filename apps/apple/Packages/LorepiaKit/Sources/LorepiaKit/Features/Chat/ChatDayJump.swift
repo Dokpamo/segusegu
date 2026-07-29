@@ -253,7 +253,7 @@ struct ChatDayPickerSheet: View {
                     if isSelected {
                         Circle().fill(LorepiaColor.loreFill)
                     } else if isAvailable {
-                        Circle().fill(LorepiaColor.thread.opacity(0.16))
+                        Circle().fill(Color.primary.opacity(0.08))
                     }
                 }
         }
