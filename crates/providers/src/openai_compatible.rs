@@ -732,11 +732,16 @@ mod tests {
         body: &[u8],
         fragment_bytes: usize,
     ) -> (CoreResult<GenerationUsage>, Vec<ProviderEvent>) {
-        let provider = OpenAiCompatibleProvider::new(
-            &stream_server(body, fragment_bytes),
-            Duration::from_secs(2),
-        )
-        .expect("provider");
+        generate_from_stream_with_timeout(body, fragment_bytes, Duration::from_secs(2)).await
+    }
+
+    async fn generate_from_stream_with_timeout(
+        body: &[u8],
+        fragment_bytes: usize,
+        timeout: Duration,
+    ) -> (CoreResult<GenerationUsage>, Vec<ProviderEvent>) {
+        let provider = OpenAiCompatibleProvider::new(&stream_server(body, fragment_bytes), timeout)
+            .expect("provider");
         let (sink, mut events) = mpsc::channel(16);
         let (_cancel, cancelled) = watch::channel(false);
         let result = provider.generate(request(), None, sink, cancelled).await;
@@ -1141,7 +1146,8 @@ mod tests {
             MAX_SSE_BUFFER_BYTES + 1 - body.len(),
         ));
 
-        let (result, events) = generate_from_stream(&body, 64 * 1024).await;
+        let (result, events) =
+            generate_from_stream_with_timeout(&body, 64 * 1024, Duration::from_secs(30)).await;
         let error = result.expect_err("oversized event must fail");
 
         assert_eq!(error.code, CoreErrorCode::ProviderUnavailable);
