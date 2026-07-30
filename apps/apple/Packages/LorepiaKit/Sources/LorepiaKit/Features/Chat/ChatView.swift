@@ -58,10 +58,6 @@ public struct ChatView: View {
     @State private var pendingScrollTargetID: String?
     @FocusState private var isComposerFocused: Bool
     @FocusState private var isFullscreenComposerFocused: Bool
-#if os(iOS)
-    @StateObject private var fallbackSearchPresenter =
-        ChatFallbackSearchPresenter()
-#endif
 
     public init(
         viewModel: ChatViewModel,
@@ -113,19 +109,6 @@ public struct ChatView: View {
                         chatSearchNavigator
                     }
                 }
-                .chatConversationSearch(
-                    text: $searchQuery,
-                    isPresented: $isSearchActive,
-                    isAvailable: viewModel.conversation != nil
-                )
-#if os(iOS)
-                .onChange(
-                    of: viewModel.character?.name,
-                    initial: true
-                ) { _, name in
-                    fallbackSearchPresenter.updateTitle(name ?? "")
-                }
-#endif
                 .onChange(of: isSearchActive) { _, active in
                     if !active {
                         searchQuery = ""
@@ -179,6 +162,11 @@ public struct ChatView: View {
 #endif
                 }
                 .chatRoomTitle(name: viewModel.character?.name)
+                .chatConversationSearch(
+                    text: $searchQuery,
+                    isPresented: $isSearchActive,
+                    isAvailable: viewModel.conversation != nil
+                )
                 .sheet(isPresented: $isRoomSettingsPresented) {
                     ChatRoomSettingsSheet(
                         mode: viewModel.mode,
@@ -1379,9 +1367,6 @@ public struct ChatView: View {
 
     private func openSearch() {
         isComposerFocused = false
-#if os(iOS)
-        fallbackSearchPresenter.setSearching(true)
-#endif
         var transaction = Transaction(animation: nil)
         transaction.disablesAnimations = true
         withTransaction(transaction) {
@@ -1390,40 +1375,22 @@ public struct ChatView: View {
     }
 
 #if os(iOS)
-    /// Keep the principal and trailing controls mounted for the lifetime of
-    /// the room. A retained presenter changes the UIKit field directly because
-    /// iOS 18 can skip representable updates inside an existing toolbar slot.
+    /// Keep the trailing slot mounted while the room is loading. The fallback
+    /// field is installed separately on the navigation item's center slot.
     @ToolbarContentBuilder
     private func chatFallbackSearchToolbar(
         isAvailable: Bool
     ) -> some ToolbarContent {
-        ToolbarItem(placement: .principal) {
-            ChatToolbarPrincipalControl(
-                title: viewModel.character?.name ?? "",
-                text: $searchQuery,
-                presenter: fallbackSearchPresenter
-            )
-            .frame(
-                minWidth: 120,
-                idealWidth: 220,
-                maxWidth: 220,
-                minHeight: 36,
-                maxHeight: 36
-            )
-            .transaction { transaction in
-                transaction.animation = nil
-                transaction.disablesAnimations = true
-            }
-        }
-
-        if isAvailable {
-            ToolbarItem(placement: .topBarTrailing) {
-                chatToolbarSearchControl
+        ToolbarItem(placement: .topBarTrailing) {
+            chatToolbarSearchControl
+                .opacity(isAvailable ? 1 : 0)
+                .allowsHitTesting(isAvailable)
+                .disabled(!isAvailable)
+                .accessibilityHidden(!isAvailable)
                 .transaction { transaction in
                     transaction.animation = nil
                     transaction.disablesAnimations = true
                 }
-            }
         }
     }
 
@@ -1462,8 +1429,6 @@ public struct ChatView: View {
     }
 
     private func closeSearch() {
-        fallbackSearchPresenter.setSearching(false)
-        fallbackSearchPresenter.updateText("")
         var transaction = Transaction(animation: nil)
         transaction.disablesAnimations = true
         withTransaction(transaction) {
@@ -2075,100 +2040,426 @@ public struct ChatView: View {
 }
 
 #if os(iOS)
-/// Retains the principal UIKit view across SwiftUI toolbar updates. The search
-/// button talks to this object directly, so presentation never depends on an
-/// iOS 18 representable update being delivered.
-@MainActor
-private final class ChatFallbackSearchPresenter: ObservableObject {
-    private weak var container: ChatToolbarPrincipalContainer?
-    private var isSearching = false
-    private var title = ""
-
-    func attach(_ container: ChatToolbarPrincipalContainer) {
-        guard self.container !== container else {
-            return
-        }
-        self.container?.applyPresentation(isSearching: false)
-        self.container = container
-        container.updateTitle(title)
-        container.applyPresentation(isSearching: isSearching)
-    }
-
-    func detach(_ container: ChatToolbarPrincipalContainer) {
-        guard self.container === container else {
-            return
-        }
-        container.applyPresentation(isSearching: false)
-        self.container = nil
-    }
-
-    func setSearching(_ isSearching: Bool) {
-        self.isSearching = isSearching
-        container?.applyPresentation(isSearching: isSearching)
-    }
-
-    func updateTitle(_ title: String) {
-        self.title = title
-        container?.updateTitle(title)
-    }
-
-    func updateText(_ text: String) {
-        container?.updateText(text)
-    }
-}
-
-private struct ChatToolbarPrincipalControl: UIViewRepresentable {
-    let title: String
+/// Resolves the navigation item SwiftUI is actually displaying and replaces
+/// only its center title view. The probe is mounted from ChatView's first
+/// render; conversation loading gates installation, not bridge lifetime.
+private struct ChatNavigationSearchBridge: UIViewRepresentable {
     @Binding var text: String
-    let presenter: ChatFallbackSearchPresenter
+    @Binding var isPresented: Bool
+    let isAvailable: Bool
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text, presenter: presenter)
+        Coordinator(text: $text)
     }
 
-    func makeUIView(context: Context) -> ChatToolbarPrincipalContainer {
-        let container = ChatToolbarPrincipalContainer()
-        container.searchField.addTarget(
-            context.coordinator,
-            action: #selector(Coordinator.textDidChange(_:)),
-            for: .editingChanged
-        )
-        presenter.attach(container)
-        return container
+    func makeUIView(context: Context) -> ChatNavigationSearchProbeView {
+        let probe = ChatNavigationSearchProbeView()
+        probe.onHierarchyChange = {
+            [weak coordinator = context.coordinator, weak probe] in
+            guard let probe else {
+                return
+            }
+            coordinator?.probeHierarchyChanged(probe)
+        }
+        return probe
     }
 
     func updateUIView(
-        _ container: ChatToolbarPrincipalContainer,
+        _ probe: ChatNavigationSearchProbeView,
         context: Context
     ) {
-        context.coordinator.text = $text
-        presenter.attach(container)
-        presenter.updateTitle(title)
-        container.update(title: title, text: text)
+        context.coordinator.reconcile(
+            text: text,
+            binding: $text,
+            requested: isAvailable && isPresented,
+            probe: probe
+        )
     }
 
     static func dismantleUIView(
-        _ container: ChatToolbarPrincipalContainer,
+        _ probe: ChatNavigationSearchProbeView,
         coordinator: Coordinator
     ) {
-        coordinator.presenter?.detach(container)
+        probe.onHierarchyChange = nil
+        coordinator.dispose()
     }
 
     @MainActor
     final class Coordinator: NSObject {
-        var text: Binding<String>
-        weak var presenter: ChatFallbackSearchPresenter?
+        private var text: Binding<String>
+        private weak var probe: ChatNavigationSearchProbeView?
+        private weak var installedItem: UINavigationItem?
+        private weak var installedNavigationBar: UINavigationBar?
+        private var previousTitleView: UIView?
+        private var requested = false
+        private var revision: UInt = 0
+        private var installSequenceRevision: UInt?
+        private var isRepairScheduled = false
+        private var repairAttemptCount = 0
+        private var isTransitionRepairRegistered = false
+        private var isMutatingTitleView = false
+        private let searchField = FocusableSearchTextField()
 
-        init(
-            text: Binding<String>,
-            presenter: ChatFallbackSearchPresenter
-        ) {
+        init(text: Binding<String>) {
             self.text = text
-            self.presenter = presenter
+            super.init()
+
+            searchField.placeholder = "대화 내 검색"
+            searchField.accessibilityLabel = "대화 내 검색"
+            searchField.accessibilityIdentifier = "chat-room-search-field"
+            searchField.isAccessibilityElement = true
+            searchField.accessibilityElementsHidden = false
+            searchField.autocapitalizationType = .none
+            searchField.autocorrectionType = .no
+            searchField.clearButtonMode = .whileEditing
+            searchField.returnKeyType = .search
+            searchField.font = .preferredFont(forTextStyle: .body)
+            searchField.adjustsFontForContentSizeCategory = true
+            searchField.setContentHuggingPriority(
+                .defaultLow,
+                for: .horizontal
+            )
+            searchField.setContentCompressionResistancePriority(
+                .defaultLow,
+                for: .horizontal
+            )
+            searchField.addTarget(
+                self,
+                action: #selector(textDidChange(_:)),
+                for: .editingChanged
+            )
+            searchField.canRequestFocus = { [weak self] in
+                guard let self else {
+                    return false
+                }
+                return self.requested
+                    && self.installedItem?.titleView === self.searchField
+            }
+            searchField.onHierarchyChange = { [weak self] in
+                self?.searchFieldHierarchyChanged()
+            }
+        }
+
+        func reconcile(
+            text: String,
+            binding: Binding<String>,
+            requested: Bool,
+            probe: ChatNavigationSearchProbeView
+        ) {
+            self.text = binding
+            self.probe = probe
+            if searchField.text != text {
+                searchField.text = text
+            }
+
+            if requested != self.requested {
+                self.requested = requested
+                revision &+= 1
+                installSequenceRevision = nil
+                isRepairScheduled = false
+                repairAttemptCount = 0
+                isTransitionRepairRegistered = false
+            }
+
+            guard requested else {
+                removeInstallation()
+                return
+            }
+
+            installIfPossible(from: probe)
+            scheduleInstallSequence(from: probe)
+        }
+
+        func probeHierarchyChanged(_ probe: ChatNavigationSearchProbeView) {
+            self.probe = probe
+            guard probe.window != nil else {
+                removeInstallation()
+                return
+            }
+            guard requested else {
+                return
+            }
+            installIfPossible(from: probe)
+        }
+
+        func dispose() {
+            requested = false
+            revision &+= 1
+            installSequenceRevision = nil
+            isRepairScheduled = false
+            repairAttemptCount = 0
+            isTransitionRepairRegistered = false
+            searchField.onHierarchyChange = nil
+            removeInstallation()
+            probe = nil
+        }
+
+        private func scheduleInstallSequence(
+            from probe: ChatNavigationSearchProbeView
+        ) {
+            let scheduled = revision
+            guard installSequenceRevision != scheduled else {
+                return
+            }
+            installSequenceRevision = scheduled
+
+            for delay in [0.0, 0.05, 0.2] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    [weak self, weak probe] in
+                    guard let self,
+                          let probe,
+                          self.requested,
+                          self.revision == scheduled
+                    else {
+                        return
+                    }
+                    self.installIfPossible(from: probe)
+                }
+            }
+        }
+
+        private func scheduleRepair(
+            from probe: ChatNavigationSearchProbeView
+        ) {
+            guard !isRepairScheduled,
+                  repairAttemptCount < 12
+            else {
+                return
+            }
+            isRepairScheduled = true
+            repairAttemptCount += 1
+            let scheduled = revision
+
+            DispatchQueue.main.async { [weak self, weak probe] in
+                guard let self else {
+                    return
+                }
+                self.isRepairScheduled = false
+                guard let probe,
+                      self.requested,
+                      self.revision == scheduled
+                else {
+                    return
+                }
+                self.installIfPossible(from: probe)
+            }
+        }
+
+        private func installIfPossible(
+            from probe: ChatNavigationSearchProbeView
+        ) {
+            guard requested,
+                  let (item, navigationBar) = navigationTarget(for: probe)
+            else {
+                return
+            }
+
+            if installedItem !== item {
+                removeInstallation()
+                installedItem = item
+                installedNavigationBar = navigationBar
+                previousTitleView = item.titleView
+            } else if item.titleView !== searchField {
+                // SwiftUI may reconcile navigationTitle after this bridge.
+                // Preserve its newest title view so close restores ownership.
+                previousTitleView = item.titleView
+            }
+
+            searchField.requestsFocus = true
+            searchField.frame = CGRect(x: 0, y: 0, width: 220, height: 36)
+
+            let isAttachedToNavigationBar =
+                searchField.window === navigationBar.window
+                    && searchField.isDescendant(of: navigationBar)
+            let needsInstallation =
+                item.titleView !== searchField
+                    || !isAttachedToNavigationBar
+            if needsInstallation {
+                isMutatingTitleView = true
+                UIView.performWithoutAnimation {
+                    if item.titleView === searchField,
+                       !isAttachedToNavigationBar
+                    {
+                        item.titleView = nil
+                    }
+                    item.titleView = searchField
+                }
+                isMutatingTitleView = false
+                UIView.performWithoutAnimation {
+                    navigationBar.setNeedsLayout()
+                    navigationBar.layoutIfNeeded()
+                }
+            }
+
+            searchField.requestFocusWhenReady()
+            guard needsInstallation else {
+                return
+            }
+
+            DispatchQueue.main.async { [weak self, weak item] in
+                guard let self,
+                      let item,
+                      self.requested
+                else {
+                    return
+                }
+                guard let navigationBar = self.installedNavigationBar,
+                      item.titleView === self.searchField,
+                      self.searchField.window != nil,
+                      self.searchField.isDescendant(of: navigationBar)
+                else {
+                    if let probe = self.probe {
+                        self.scheduleRepair(from: probe)
+                    }
+                    return
+                }
+                self.repairAttemptCount = 0
+                UIAccessibility.post(
+                    notification: .layoutChanged,
+                    argument: self.searchField
+                )
+            }
+        }
+
+        private func navigationTarget(
+            for probe: ChatNavigationSearchProbeView
+        ) -> (UINavigationItem, UINavigationBar)? {
+            guard let window = probe.window,
+                  let navigationController =
+                      navigationController(for: probe),
+                  navigationController.navigationBar.window === window
+            else {
+                return nil
+            }
+            if let transitionCoordinator =
+                navigationController.transitionCoordinator
+            {
+                scheduleRepair(
+                    after: transitionCoordinator,
+                    from: probe
+                )
+                return nil
+            }
+            guard let item = navigationController.navigationBar.topItem
+            else {
+                return nil
+            }
+            return (item, navigationController.navigationBar)
+        }
+
+        private func scheduleRepair(
+            after transitionCoordinator:
+                any UIViewControllerTransitionCoordinator,
+            from probe: ChatNavigationSearchProbeView
+        ) {
+            guard !isTransitionRepairRegistered else {
+                return
+            }
+            isTransitionRepairRegistered = true
+            let scheduled = revision
+
+            let registered = transitionCoordinator.animate(
+                alongsideTransition: nil
+            ) { [weak self, weak probe] context in
+                let wasCancelled = context.isCancelled
+                DispatchQueue.main.async {
+                    guard let self else {
+                        return
+                    }
+                    self.isTransitionRepairRegistered = false
+                    guard let probe,
+                          wasCancelled,
+                          self.requested,
+                          self.revision == scheduled,
+                          probe.window != nil
+                    else {
+                        return
+                    }
+                    self.installIfPossible(from: probe)
+                    self.scheduleRepair(from: probe)
+                }
+            }
+
+            guard registered else {
+                isTransitionRepairRegistered = false
+                scheduleRepair(from: probe)
+                return
+            }
+        }
+
+        private func navigationController(
+            for probe: ChatNavigationSearchProbeView
+        ) -> UINavigationController? {
+            var responder: UIResponder? = probe
+            while let current = responder {
+                if let navigationController =
+                    current as? UINavigationController
+                {
+                    return navigationController
+                }
+                if let viewController = current as? UIViewController {
+                    if let navigationController =
+                        viewController.navigationController
+                    {
+                        return navigationController
+                    }
+                    var parent = viewController.parent
+                    while let controller = parent {
+                        if let navigationController =
+                            controller as? UINavigationController
+                        {
+                            return navigationController
+                        }
+                        if let navigationController =
+                            controller.navigationController
+                        {
+                            return navigationController
+                        }
+                        parent = controller.parent
+                    }
+                }
+                responder = current.next
+            }
+            return nil
+        }
+
+        private func searchFieldHierarchyChanged() {
+            guard !isMutatingTitleView,
+                  requested,
+                  let probe
+            else {
+                return
+            }
+            scheduleRepair(from: probe)
+        }
+
+        private func removeInstallation() {
+            searchField.requestsFocus = false
+            if searchField.isFirstResponder {
+                searchField.resignFirstResponder()
+            }
+
+            if let installedItem,
+               installedItem.titleView === searchField
+            {
+                let navigationBar = installedNavigationBar
+                let titleView = previousTitleView
+                isMutatingTitleView = true
+                UIView.performWithoutAnimation {
+                    installedItem.titleView = titleView
+                    navigationBar?.setNeedsLayout()
+                    navigationBar?.layoutIfNeeded()
+                }
+                isMutatingTitleView = false
+            }
+
+            installedItem = nil
+            installedNavigationBar = nil
+            previousTitleView = nil
         }
 
         @objc
-        func textDidChange(_ textField: UISearchTextField) {
+        private func textDidChange(_ textField: UISearchTextField) {
             let value = textField.text ?? ""
             if text.wrappedValue != value {
                 text.wrappedValue = value
@@ -2177,64 +2468,15 @@ private struct ChatToolbarPrincipalControl: UIViewRepresentable {
     }
 }
 
-private final class ChatToolbarPrincipalContainer: UIView {
-    let searchField = FocusableSearchTextField()
-
-    private let titleLabel = UILabel()
+private final class ChatNavigationSearchProbeView: UIView {
+    var onHierarchyChange: (() -> Void)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-
+        backgroundColor = .clear
+        isUserInteractionEnabled = false
         isAccessibilityElement = false
-
-        titleLabel.font = .preferredFont(forTextStyle: .headline)
-        titleLabel.adjustsFontForContentSizeCategory = true
-        titleLabel.numberOfLines = 1
-        titleLabel.lineBreakMode = .byTruncatingTail
-        titleLabel.textAlignment = .center
-        titleLabel.accessibilityTraits.insert(.header)
-        titleLabel.setContentHuggingPriority(
-            .defaultLow,
-            for: .horizontal
-        )
-        titleLabel.setContentCompressionResistancePriority(
-            .defaultLow,
-            for: .horizontal
-        )
-
-        searchField.placeholder = "대화 내 검색"
-        searchField.accessibilityLabel = "대화 내 검색"
-        searchField.accessibilityIdentifier = "chat-room-search-field"
-        searchField.autocapitalizationType = .none
-        searchField.autocorrectionType = .no
-        searchField.clearButtonMode = .whileEditing
-        searchField.returnKeyType = .search
-        searchField.font = .preferredFont(forTextStyle: .body)
-        searchField.adjustsFontForContentSizeCategory = true
-        searchField.setContentHuggingPriority(
-            .defaultLow,
-            for: .horizontal
-        )
-        searchField.setContentCompressionResistancePriority(
-            .defaultLow,
-            for: .horizontal
-        )
-
-        for view in [titleLabel, searchField] {
-            view.translatesAutoresizingMaskIntoConstraints = false
-            addSubview(view)
-        }
-        NSLayoutConstraint.activate([
-            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
-            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
-            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-            searchField.leadingAnchor.constraint(equalTo: leadingAnchor),
-            searchField.trailingAnchor.constraint(equalTo: trailingAnchor),
-            searchField.topAnchor.constraint(equalTo: topAnchor),
-            searchField.bottomAnchor.constraint(equalTo: bottomAnchor),
-        ])
-
-        applyPresentation(isSearching: false)
+        accessibilityElementsHidden = true
     }
 
     @available(*, unavailable)
@@ -2242,54 +2484,35 @@ private final class ChatToolbarPrincipalContainer: UIView {
         fatalError("init(coder:) is unavailable")
     }
 
-    func update(title: String, text: String) {
-        updateTitle(title)
-        updateText(text)
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        onHierarchyChange?()
     }
 
-    func updateTitle(_ title: String) {
-        titleLabel.text = title
-        titleLabel.accessibilityLabel = title
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        onHierarchyChange?()
     }
 
-    func updateText(_ text: String) {
-        if searchField.text != text {
-            searchField.text = text
-        }
-    }
-
-    func applyPresentation(isSearching: Bool) {
-        searchField.requestsFocus = isSearching
-
-        UIView.performWithoutAnimation {
-            if !isSearching, searchField.isFirstResponder {
-                searchField.resignFirstResponder()
-            }
-
-            titleLabel.isHidden = isSearching
-            titleLabel.isAccessibilityElement = !isSearching
-            titleLabel.accessibilityElementsHidden = isSearching
-            searchField.isHidden = !isSearching
-            searchField.isUserInteractionEnabled = isSearching
-            searchField.isAccessibilityElement = isSearching
-            searchField.accessibilityElementsHidden = !isSearching
-            layoutIfNeeded()
-        }
-
-        guard isSearching else {
-            return
-        }
-        searchField.requestFocusWhenReady()
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        onHierarchyChange?()
     }
 }
 
-/// The field is mounted before presentation. A one-turn fallback covers the
-/// initial navigation-bar attachment without moving the toolbar or animating.
+/// The field is installed before focus is requested. A one-turn fallback
+/// covers the navigation bar attaching it to the window.
 private final class FocusableSearchTextField: UISearchTextField {
     var requestsFocus = false
+    var canRequestFocus: () -> Bool = { true }
+    var onHierarchyChange: (() -> Void)?
+
+    override var intrinsicContentSize: CGSize {
+        CGSize(width: 220, height: 36)
+    }
 
     func requestFocusWhenReady() {
-        guard requestsFocus else {
+        guard requestsFocus, canRequestFocus() else {
             return
         }
         if window != nil, !isFirstResponder {
@@ -2298,6 +2521,7 @@ private final class FocusableSearchTextField: UISearchTextField {
         DispatchQueue.main.async { [weak self] in
             guard let self,
                   self.requestsFocus,
+                  self.canRequestFocus(),
                   self.window != nil,
                   !self.isFirstResponder
             else {
@@ -2309,7 +2533,13 @@ private final class FocusableSearchTextField: UISearchTextField {
 
     override func didMoveToWindow() {
         super.didMoveToWindow()
+        onHierarchyChange?()
         requestFocusWhenReady()
+    }
+
+    override func didMoveToSuperview() {
+        super.didMoveToSuperview()
+        onHierarchyChange?()
     }
 }
 #endif
@@ -4120,9 +4350,9 @@ private extension View {
         isAvailable: Bool
     ) -> some View {
 #if os(iOS)
-        if isAvailable {
 #if compiler(>=6.2)
-            if #available(iOS 26.0, *) {
+        if #available(iOS 26.0, *) {
+            if isAvailable {
                 searchable(
                     text: text,
                     isPresented: isPresented,
@@ -4133,12 +4363,24 @@ private extension View {
             } else {
                 self
             }
-#else
-            self
-#endif
         } else {
-            self
+            background {
+                ChatNavigationSearchBridge(
+                    text: text,
+                    isPresented: isPresented,
+                    isAvailable: isAvailable
+                )
+            }
         }
+#else
+        background {
+            ChatNavigationSearchBridge(
+                text: text,
+                isPresented: isPresented,
+                isAvailable: isAvailable
+            )
+        }
+#endif
 #else
         searchable(
             text: text,
