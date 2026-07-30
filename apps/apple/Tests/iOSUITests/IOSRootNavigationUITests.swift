@@ -895,7 +895,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(
             storyTitleFrame.minX,
             expectedTextLeading,
-            accuracy: 1.5
+            accuracy: ocrLeadingTolerance
         )
         XCTAssertEqual(
             storyTitleFrame.minX,
@@ -3028,7 +3028,7 @@ final class IOSRootNavigationUITests: XCTestCase {
             accuracy: 1
         )
 
-        // A multiline TextField keeps one native 1...10 configuration.
+        // The multiline editor keeps one native compact 1...5 configuration.
         // Dismissing the keyboard keeps the accessory rail and rendered draft
         // height instead of clipping the editor to one line.
         let multilineDraftValue = String(describing: composer.value)
@@ -3170,21 +3170,16 @@ final class IOSRootNavigationUITests: XCTestCase {
         composer.typeText(
             String(repeating: "최대 높이 이후 내부 스크롤 ", count: 14)
         )
+        let expand = app.buttons["chat-composer-expand"]
+        XCTAssertTrue(expand.waitForExistence(timeout: 5))
+        XCTAssertTrue(expand.isHittable)
         let maximumComposerBounds = tools.frame
             .union(composer.frame)
             .union(send.frame)
             .union(model.frame)
             .union(mode.frame)
-        XCTAssertGreaterThan(
-            maximumComposerBounds.height,
-            grownComposerBounds.height + 20
-        )
-        // Ten regular body lines should grow substantially beyond the
-        // two-line focused state; the former six-line cap cannot satisfy this.
-        XCTAssertGreaterThan(
-            maximumComposerBounds.height,
-            focusedComposerBounds.height + 100
-        )
+        // The compact editor stops at five visual lines and exposes fullscreen
+        // expansion instead of continuing to grow.
         XCTAssertLessThan(
             maximumComposerBounds.height,
             windowBounds.height * 0.4

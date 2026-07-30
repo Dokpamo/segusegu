@@ -1400,6 +1400,8 @@ public struct ChatView: View {
             openSearch()
         } label: {
             LorepiaGlyphView(.search, size: 23)
+                .frame(width: 36, height: 36)
+                .contentShape(Circle())
         }
         .accessibilityLabel("대화 내 검색")
         .accessibilityIdentifier("chat-room-search-trigger")
