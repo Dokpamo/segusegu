@@ -20,6 +20,34 @@ CREATE TABLE messages (
     )
 );
 
+WITH migration_order AS (
+    SELECT
+        message.id,
+        message.conversation_id,
+        message.role,
+        message.content,
+        message.status,
+        message.generation_id,
+        message.created_at,
+        CASE
+            WHEN message.role = 'assistant' THEN parent.created_at
+            ELSE message.created_at
+        END AS turn_created_at,
+        CASE
+            WHEN message.role = 'assistant' THEN parent.id
+            ELSE message.id
+        END AS turn_id,
+        CASE
+            WHEN message.role = 'assistant' THEN 1
+            ELSE 0
+        END AS turn_position
+    FROM messages_legacy_v2 AS message
+    LEFT JOIN messages_legacy_v2 AS parent
+      ON message.role = 'assistant'
+     AND parent.conversation_id = message.conversation_id
+     AND parent.id = message.parent_id
+     AND parent.role = 'user'
+)
 INSERT INTO messages (
     id,
     conversation_id,
@@ -35,14 +63,14 @@ SELECT
     conversation_id,
     LAG(id) OVER (
         PARTITION BY conversation_id
-        ORDER BY created_at, id
+        ORDER BY turn_created_at, turn_id, turn_position, created_at, id
     ),
     role,
     content,
     status,
     generation_id,
     created_at
-FROM messages_legacy_v2;
+FROM migration_order;
 
 DROP TABLE messages_legacy_v2;
 
@@ -88,10 +116,16 @@ SELECT
     NULL,
     NULL,
     (
-        SELECT messages.id
-        FROM messages
-        WHERE messages.conversation_id = conversations.id
-        ORDER BY messages.created_at DESC, messages.id DESC
+        SELECT message.id
+        FROM messages AS message
+        WHERE message.conversation_id = conversations.id
+          AND NOT EXISTS (
+            SELECT 1
+            FROM messages AS child
+            WHERE child.conversation_id = message.conversation_id
+              AND child.parent_id = message.id
+          )
+        ORDER BY message.created_at DESC, message.id DESC
         LIMIT 1
     ),
     conversations.created_at,
@@ -163,25 +197,29 @@ INSERT INTO generations (
     finished_at
 )
 SELECT
-    generation_id,
-    conversation_id,
-    'branch:' || conversation_id,
-    parent_id,
-    id,
+    assistant.generation_id,
+    assistant.conversation_id,
+    'branch:' || assistant.conversation_id,
+    user_message.id,
+    assistant.id,
     'chat',
     '',
-    CASE status
+    CASE assistant.status
         WHEN 'pending' THEN 'running'
-        ELSE status
+        ELSE assistant.status
     END,
     NULL,
     NULL,
     NULL,
-    created_at,
+    assistant.created_at,
     CASE
-        WHEN status = 'pending' THEN NULL
-        ELSE created_at
+        WHEN assistant.status = 'pending' THEN NULL
+        ELSE assistant.created_at
     END
-FROM messages
-WHERE role = 'assistant'
-  AND generation_id IS NOT NULL;
+FROM messages AS assistant
+JOIN messages AS user_message
+  ON user_message.conversation_id = assistant.conversation_id
+ AND user_message.id = assistant.parent_id
+ AND user_message.role = 'user'
+WHERE assistant.role = 'assistant'
+  AND assistant.generation_id IS NOT NULL;

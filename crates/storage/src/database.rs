@@ -1775,6 +1775,17 @@ fn validate_legacy_messages_for_branch_migration(connection: &Connection) -> Cor
              WHERE role NOT IN ('system', 'user', 'assistant')
                 OR status NOT IN ('pending', 'complete', 'cancelled', 'failed')
                 OR (role = 'assistant' AND generation_id IS NULL)
+                OR (role = 'assistant' AND parent_id IS NULL)
+                OR (
+                  role = 'assistant'
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM messages AS parent
+                    WHERE parent.conversation_id = messages.conversation_id
+                      AND parent.id = messages.parent_id
+                      AND parent.role = 'user'
+                  )
+                )
                 OR (role <> 'assistant' AND generation_id IS NOT NULL)
                 OR (role <> 'assistant' AND status <> 'complete')",
             [],
@@ -1811,17 +1822,43 @@ fn validate_legacy_messages_for_branch_migration(connection: &Connection) -> Cor
     }
     let inconsistent_parent_count = connection
         .query_row(
-            "SELECT COUNT(*)
-             FROM (
+            "WITH migration_order AS (
+               SELECT message.id,
+                      message.conversation_id,
+                      message.parent_id,
+                      message.role,
+                      message.created_at,
+                      CASE
+                        WHEN message.role = 'assistant' THEN parent.created_at
+                        ELSE message.created_at
+                      END AS turn_created_at,
+                      CASE
+                        WHEN message.role = 'assistant' THEN parent.id
+                        ELSE message.id
+                      END AS turn_id,
+                      CASE
+                        WHEN message.role = 'assistant' THEN 1
+                        ELSE 0
+                      END AS turn_position
+               FROM messages AS message
+               LEFT JOIN messages AS parent
+                 ON message.role = 'assistant'
+                AND parent.conversation_id = message.conversation_id
+                AND parent.id = message.parent_id
+                AND parent.role = 'user'
+             ),
+             lineage AS (
                SELECT parent_id,
                       LAG(id) OVER (
                         PARTITION BY conversation_id
-                        ORDER BY created_at, id
+                        ORDER BY turn_created_at, turn_id, turn_position, created_at, id
                       ) AS expected_parent_id
-               FROM messages
+               FROM migration_order
              )
+             SELECT COUNT(*)
+             FROM lineage
              WHERE parent_id IS NOT NULL
-               AND parent_id <> expected_parent_id",
+               AND parent_id IS NOT expected_parent_id",
             [],
             |row| row.get::<_, u64>(0),
         )
@@ -1981,16 +2018,63 @@ fn apply_recovery_transaction(
         transaction
             .execute(
                 "UPDATE conversation_branches
-                 SET head_message_id = (
-                       SELECT parent_id
-                       FROM messages
-                       WHERE messages.id = conversation_branches.head_message_id
-                     ),
+                 SET head_message_id = CASE
+                       WHEN head_message_id IN (
+                         SELECT id
+                         FROM messages
+                         WHERE role = 'assistant' AND status = 'pending'
+                       )
+                       THEN (
+                         SELECT parent_id
+                         FROM messages
+                         WHERE messages.id = conversation_branches.head_message_id
+                       )
+                       ELSE head_message_id
+                     END,
+                     fork_message_id = CASE
+                       WHEN fork_message_id IN (
+                         SELECT id
+                         FROM messages
+                         WHERE role = 'assistant' AND status = 'pending'
+                       )
+                       THEN (
+                         SELECT parent_id
+                         FROM messages
+                         WHERE messages.id = conversation_branches.fork_message_id
+                       )
+                       ELSE fork_message_id
+                     END,
                      updated_at = ?1
                  WHERE head_message_id IN (
-                   SELECT id FROM messages WHERE status = 'pending'
-                 )",
+                         SELECT id
+                         FROM messages
+                         WHERE role = 'assistant' AND status = 'pending'
+                       )
+                    OR fork_message_id IN (
+                         SELECT id
+                         FROM messages
+                         WHERE role = 'assistant' AND status = 'pending'
+                       )",
                 [&recovered_at],
+            )
+            .map_err(storage_db_error)?;
+        transaction
+            .execute(
+                "UPDATE messages AS child
+                 SET parent_id = (
+                   SELECT pending.parent_id
+                   FROM messages AS pending
+                   WHERE pending.id = child.parent_id
+                     AND pending.conversation_id = child.conversation_id
+                     AND pending.role = 'assistant'
+                     AND pending.status = 'pending'
+                 )
+                 WHERE child.parent_id IN (
+                   SELECT id
+                   FROM messages
+                   WHERE role = 'assistant' AND status = 'pending'
+                 )",
+                [],
             )
             .map_err(storage_db_error)?;
         transaction
@@ -3210,6 +3294,91 @@ mod tests {
         (root, storage, conversation, state.active_branch_id)
     }
 
+    fn version_two_database(root: &std::path::Path) -> Connection {
+        fs::create_dir_all(root.join("db")).expect("db directory");
+        let connection =
+            Connection::open(root.join("db/lorepia.sqlite3")).expect("legacy database");
+        connection
+            .execute_batch(MIGRATION_0001)
+            .expect("initial schema");
+        connection
+            .execute(
+                "INSERT INTO schema_migrations(version, applied_at) VALUES (1, ?1)",
+                ["2026-01-01T00:00:00Z"],
+            )
+            .expect("version one");
+        connection
+            .execute_batch(MIGRATION_0002)
+            .expect("second migration");
+        connection
+            .execute(
+                "INSERT INTO schema_migrations(version, applied_at) VALUES (2, ?1)",
+                ["2026-01-01T00:00:00Z"],
+            )
+            .expect("version two");
+        connection
+            .execute(
+                "INSERT INTO content_sources
+                 (sha256, relative_path, size_bytes, created_at)
+                 VALUES (?1, ?2, 1, ?3)",
+                params![
+                    "a".repeat(64),
+                    format!("sources/sha256/aa/{}", "a".repeat(64)),
+                    "2026-01-01T00:00:00Z"
+                ],
+            )
+            .expect("legacy source");
+        connection
+            .execute(
+                "INSERT INTO characters
+                 (id, name, description, source_hash, avatar_asset_hash, created_at)
+                 VALUES ('character', 'Legacy', 'Legacy character', ?1, NULL, ?2)",
+                params!["a".repeat(64), "2026-01-01T00:00:00Z"],
+            )
+            .expect("legacy character");
+        connection
+            .execute(
+                "INSERT INTO conversations
+                 (id, character_id, title, created_at, updated_at)
+                 VALUES ('conversation', 'character', 'Legacy room', ?1, ?2)",
+                params!["2026-01-01T00:00:00Z", "2026-01-01T00:00:04Z"],
+            )
+            .expect("legacy conversation");
+        connection
+    }
+
+    fn insert_legacy_message(
+        connection: &Connection,
+        row: (
+            &str,
+            Option<&str>,
+            &str,
+            &str,
+            &str,
+            Option<&str>,
+            &str,
+        ),
+    ) {
+        let (id, parent_id, role, content, status, generation_id, created_at) = row;
+        connection
+            .execute(
+                "INSERT INTO messages
+                 (id, conversation_id, parent_id, role, content, status,
+                  generation_id, created_at)
+                 VALUES (?1, 'conversation', ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![
+                    id,
+                    parent_id,
+                    role,
+                    content,
+                    status,
+                    generation_id,
+                    created_at
+                ],
+            )
+            .expect("legacy message");
+    }
+
     #[test]
     fn usage_overflow_can_be_compensated_and_the_branch_accepts_another_generation() {
         let (_root, storage, conversation, branch_id) = imported_storage();
@@ -3947,101 +4116,48 @@ mod tests {
     }
 
     #[test]
-    #[allow(clippy::too_many_lines)]
-    fn version_two_timeline_migrates_to_one_safe_default_branch() {
+    fn version_two_equal_timestamps_preserve_generation_parent_lineage() {
         let root = tempdir().expect("temp root");
-        fs::create_dir_all(root.path().join("db")).expect("db directory");
-        let connection =
-            Connection::open(root.path().join("db/lorepia.sqlite3")).expect("legacy database");
-        connection
-            .execute_batch(MIGRATION_0001)
-            .expect("initial schema");
-        connection
-            .execute(
-                "INSERT INTO schema_migrations(version, applied_at) VALUES (1, ?1)",
-                ["2026-01-01T00:00:00Z"],
-            )
-            .expect("version one");
-        connection
-            .execute_batch(MIGRATION_0002)
-            .expect("second migration");
-        connection
-            .execute(
-                "INSERT INTO schema_migrations(version, applied_at) VALUES (2, ?1)",
-                ["2026-01-01T00:00:00Z"],
-            )
-            .expect("version two");
-        connection
-            .execute(
-                "INSERT INTO content_sources
-                 (sha256, relative_path, size_bytes, created_at)
-                 VALUES (?1, ?2, 1, ?3)",
-                params![
-                    "a".repeat(64),
-                    format!("sources/sha256/aa/{}", "a".repeat(64)),
-                    "2026-01-01T00:00:00Z"
-                ],
-            )
-            .expect("legacy source");
-        connection
-            .execute(
-                "INSERT INTO characters
-                 (id, name, description, source_hash, avatar_asset_hash, created_at)
-                 VALUES ('character', 'Legacy', 'Legacy character', ?1, NULL, ?2)",
-                params!["a".repeat(64), "2026-01-01T00:00:00Z"],
-            )
-            .expect("legacy character");
-        connection
-            .execute(
-                "INSERT INTO conversations
-                 (id, character_id, title, created_at, updated_at)
-                 VALUES ('conversation', 'character', 'Legacy room', ?1, ?2)",
-                params!["2026-01-01T00:00:00Z", "2026-01-01T00:00:04Z"],
-            )
-            .expect("legacy conversation");
-        for (id, parent_id, role, content, generation_id, created_at) in [
+        let connection = version_two_database(root.path());
+        for row in [
             (
-                "user-1",
+                "z-user-1",
                 None,
                 "user",
                 "first",
+                "complete",
                 None,
                 "2026-01-01T00:00:01Z",
             ),
             (
-                "assistant-1",
-                Some("user-1"),
+                "a-assistant-1",
+                Some("z-user-1"),
                 "assistant",
                 "one",
+                "complete",
                 Some("generation-1"),
-                "2026-01-01T00:00:02Z",
+                "2026-01-01T00:00:01Z",
             ),
             (
-                "user-2",
+                "z-user-2",
                 None,
                 "user",
                 "second",
+                "complete",
                 None,
-                "2026-01-01T00:00:03Z",
+                "2026-01-01T00:00:02Z",
             ),
             (
-                "assistant-2",
-                Some("user-2"),
+                "a-assistant-2",
+                Some("z-user-2"),
                 "assistant",
                 "two",
+                "complete",
                 Some("generation-2"),
-                "2026-01-01T00:00:04Z",
+                "2026-01-01T00:00:02Z",
             ),
         ] {
-            connection
-                .execute(
-                    "INSERT INTO messages
-                     (id, conversation_id, parent_id, role, content, status,
-                      generation_id, created_at)
-                     VALUES (?1, 'conversation', ?2, ?3, ?4, 'complete', ?5, ?6)",
-                    params![id, parent_id, role, content, generation_id, created_at],
-                )
-                .expect("legacy message");
+            insert_legacy_message(&connection, row);
         }
         drop(connection);
 
@@ -4073,6 +4189,154 @@ mod tests {
                 .mode,
             ConversationMode::Chat
         );
+        assert_eq!(
+            storage
+                .get_generation(&GenerationId("generation-1".to_owned()))
+                .expect("first generation snapshot")
+                .user_message_id,
+            MessageId("z-user-1".to_owned())
+        );
+    }
+
+    #[test]
+    fn version_two_assistant_without_a_user_parent_is_rejected_before_migration() {
+        let root = tempdir().expect("temp root");
+        let connection = version_two_database(root.path());
+        insert_legacy_message(
+            &connection,
+            (
+                "assistant",
+                None,
+                "assistant",
+                "orphan",
+                "complete",
+                Some("generation"),
+                "2026-01-01T00:00:01Z",
+            ),
+        );
+        drop(connection);
+
+        let error = match Storage::open(root.path()) {
+            Ok(_) => panic!("orphan assistant must be rejected"),
+            Err(error) => error,
+        };
+        assert_eq!(error.code, CoreErrorCode::StorageCorrupted);
+
+        let connection =
+            Connection::open(root.path().join("db/lorepia.sqlite3")).expect("legacy database");
+        assert_eq!(
+            connection
+                .query_row(
+                    "SELECT MAX(version) FROM schema_migrations",
+                    [],
+                    |row| row.get::<_, u32>(0)
+                )
+                .expect("schema version"),
+            2
+        );
+        assert_eq!(
+            connection
+                .query_row(
+                    "SELECT COUNT(*) FROM sqlite_master
+                     WHERE type = 'table' AND name = 'generations'",
+                    [],
+                    |row| row.get::<_, u32>(0)
+                )
+                .expect("generation table count"),
+            0
+        );
+    }
+
+    #[test]
+    fn version_two_recovery_reparents_later_turns_around_discarded_partial_assistant() {
+        let root = tempdir().expect("temp root");
+        let connection = version_two_database(root.path());
+        for row in [
+            (
+                "user-1",
+                None,
+                "user",
+                "first",
+                "complete",
+                None,
+                "2026-01-01T00:00:01Z",
+            ),
+            (
+                "assistant-1",
+                Some("user-1"),
+                "assistant",
+                "partial",
+                "pending",
+                Some("generation-1"),
+                "2026-01-01T00:00:02Z",
+            ),
+            (
+                "user-2",
+                None,
+                "user",
+                "second",
+                "complete",
+                None,
+                "2026-01-01T00:00:03Z",
+            ),
+            (
+                "assistant-2",
+                Some("user-2"),
+                "assistant",
+                "two",
+                "complete",
+                Some("generation-2"),
+                "2026-01-01T00:00:04Z",
+            ),
+        ] {
+            insert_legacy_message(&connection, row);
+        }
+        connection
+            .execute(
+                "INSERT INTO app_settings(key, value_json) VALUES ('application', ?1)",
+                [serde_json::to_string(&AppSettings {
+                    preserve_partial_generations: false,
+                    selected_provider_profile_id: None,
+                })
+                .expect("settings JSON")],
+            )
+            .expect("discard-partial settings");
+        drop(connection);
+
+        for reopen_index in 0..2 {
+            let storage = Storage::open(root.path()).expect("migrate and recover legacy database");
+            assert_eq!(storage.schema_version(), 3);
+            let state = storage
+                .get_conversation_state(&ConversationId("conversation".to_owned()))
+                .expect("conversation state");
+            let messages = storage
+                .list_branch_messages(&state.active_branch_id)
+                .expect("recovered lineage");
+            assert_eq!(
+                messages
+                    .iter()
+                    .map(|message| message.content.as_str())
+                    .collect::<Vec<_>>(),
+                ["first", "second", "two"],
+                "reopen {reopen_index} must preserve later completed turns"
+            );
+            assert_eq!(messages[0].parent_id, None);
+            assert_eq!(messages[1].parent_id, Some(messages[0].id.clone()));
+            assert_eq!(messages[2].parent_id, Some(messages[1].id.clone()));
+
+            let discarded = storage
+                .get_generation(&GenerationId("generation-1".to_owned()))
+                .expect("discarded generation");
+            assert_eq!(discarded.status, GenerationStatus::Cancelled);
+            assert_eq!(discarded.assistant_message_id, None);
+            assert_eq!(
+                storage
+                    .get_generation(&GenerationId("generation-2".to_owned()))
+                    .expect("completed generation")
+                    .status,
+                GenerationStatus::Complete
+            );
+        }
     }
 
     #[test]
