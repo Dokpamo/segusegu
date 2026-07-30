@@ -2258,6 +2258,11 @@ final class IOSRootNavigationUITests: XCTestCase {
                     - (search.frame.maxX + searchGlassOutset),
                 accuracy: 1
             )
+        } else {
+            XCTAssertEqual(back.frame.width, 44, accuracy: 1)
+            XCTAssertEqual(back.frame.height, 44, accuracy: 1)
+            XCTAssertEqual(search.frame.width, 44, accuracy: 1)
+            XCTAssertEqual(search.frame.height, 44, accuracy: 1)
         }
         XCTAssertGreaterThanOrEqual(
             search.frame.minY,

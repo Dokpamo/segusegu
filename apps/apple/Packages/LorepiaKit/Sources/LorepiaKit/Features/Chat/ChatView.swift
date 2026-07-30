@@ -1400,11 +1400,17 @@ public struct ChatView: View {
             openSearch()
         } label: {
             LorepiaGlyphView(.search, size: 23)
+                // The toolbar adds 8pt of button chrome around this label,
+                // producing the same 44pt target as the native back item.
                 .frame(width: 36, height: 36)
                 .contentShape(Circle())
         }
         .accessibilityLabel("대화 내 검색")
         .accessibilityIdentifier("chat-room-search-trigger")
+        // The pre-iOS 26 custom trailing slot sits 8pt farther inward than
+        // the native back item. Move the whole control so its visual, hit,
+        // and accessibility frames remain symmetric with that 44pt item.
+        .offset(x: 8)
     }
 
     /// The pre-iOS 26 field stays inside the principal navigation-bar slot.
