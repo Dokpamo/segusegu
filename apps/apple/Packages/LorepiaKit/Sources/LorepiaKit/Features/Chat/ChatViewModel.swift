@@ -32,6 +32,12 @@ public final class ChatViewModel: ObservableObject {
     private var latestSequenceByGeneration: [String: UInt64] = [:]
     private var pollingTask: Task<Void, Never>?
     private var selectionEpoch: UInt64 = 0
+    /// Invalidates branch/mode/message snapshots across MainActor reentrancy.
+    private var conversationSelectionRevision: UInt64 = 0
+    /// Orders same-selection message and metadata snapshots by start time.
+    private var conversationContentRevision: UInt64 = 0
+    /// Prevents an older async operation from clearing a newer loading state.
+    private var loadingOperationRevision: UInt64 = 0
     private var providerSelectionRevision: UInt64 = 0
     private var providerRefreshRevision: UInt64 = 0
     private var providerRefreshRetryScheduled = false
@@ -41,6 +47,42 @@ public final class ChatViewModel: ObservableObject {
     private var providerRefreshErrorMessage: String?
     private var idlePollsSinceReconciliation = 0
     private var draftByConversationID: [String: String] = [:]
+
+    private struct ConversationSelectionToken: Equatable {
+        let conversationID: String
+        let revision: UInt64
+    }
+
+    private struct ConversationContentToken: Equatable {
+        let selection: ConversationSelectionToken
+        let revision: UInt64
+    }
+
+    private struct ConversationContentObservationToken: Equatable {
+        let selection: ConversationSelectionToken
+        let revision: UInt64
+    }
+
+#if DEBUG
+    private var branchMetadataCommitHookForTesting:
+        (@MainActor () async -> Void)?
+    private var messageActionRestoreCommitHookForTesting:
+        (@MainActor () async -> Void)?
+    private var conversationRestoreCommitHookForTesting:
+        (@MainActor () async -> Void)?
+    private var conversationSelectionErrorCommitHookForTesting:
+        (@MainActor () async -> Void)?
+    private var pollBatchCommitHookForTesting:
+        (@MainActor () async -> Void)?
+    private var submitMessageSuccessCommitHookForTesting:
+        (@MainActor () async -> Void)?
+    private var submitMessageGenerationCommitHookForTesting:
+        (@MainActor (String) -> Void)?
+    private var submitMessageErrorCommitHookForTesting:
+        (@MainActor () async -> Void)?
+    private var cancelGenerationErrorCommitHookForTesting:
+        (@MainActor () async -> Void)?
+#endif
 
     private static let idlePollsBeforeReconciliation = 10
     private static let credentialAccessFailureMessage =
@@ -205,7 +247,9 @@ public final class ChatViewModel: ObservableObject {
         pollingTask = nil
         let generationToCancel = activeGenerationID
         selectionEpoch &+= 1
+        advanceConversationSelectionRevision()
         let epoch = selectionEpoch
+        let loadingRevision = beginLoadingOperation()
         self.character = character
         conversation = nil
         branches = []
@@ -218,11 +262,8 @@ public final class ChatViewModel: ObservableObject {
         latestSequenceByGeneration = [:]
         idlePollsSinceReconciliation = 0
         isGenerating = false
-        isLoading = true
         defer {
-            if selectionEpoch == epoch {
-                isLoading = false
-            }
+            endLoadingOperation(loadingRevision)
         }
 
         do {
@@ -251,7 +292,12 @@ public final class ChatViewModel: ObservableObject {
             )
             startPolling()
         } catch {
-            errorMessage = error.localizedDescription
+#if DEBUG
+            await conversationSelectionErrorCommitHookForTesting?()
+#endif
+            if selectionEpoch == epoch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -268,7 +314,9 @@ public final class ChatViewModel: ObservableObject {
         pollingTask = nil
         let generationToCancel = activeGenerationID
         selectionEpoch &+= 1
+        advanceConversationSelectionRevision()
         let epoch = selectionEpoch
+        let loadingRevision = beginLoadingOperation()
         self.character = character
         self.conversation = nil
         branches = []
@@ -281,11 +329,8 @@ public final class ChatViewModel: ObservableObject {
         latestSequenceByGeneration = [:]
         idlePollsSinceReconciliation = 0
         isGenerating = false
-        isLoading = true
         defer {
-            if selectionEpoch == epoch {
-                isLoading = false
-            }
+            endLoadingOperation(loadingRevision)
         }
 
         do {
@@ -299,7 +344,12 @@ public final class ChatViewModel: ObservableObject {
             )
             startPolling()
         } catch {
-            errorMessage = error.localizedDescription
+#if DEBUG
+            await conversationSelectionErrorCommitHookForTesting?()
+#endif
+            if selectionEpoch == epoch {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -321,11 +371,15 @@ public final class ChatViewModel: ObservableObject {
         let restoredMessages = try await client.listBranchMessages(
             branchID: state.activeBranchID
         )
+#if DEBUG
+        await conversationRestoreCommitHookForTesting?()
+#endif
         guard selectionEpoch == epoch,
               character?.id == characterID
         else {
             return
         }
+        advanceConversationSelectionRevision()
         self.conversation = conversation
         draft = draftByConversationID.removeValue(
             forKey: conversation.id
@@ -351,6 +405,34 @@ public final class ChatViewModel: ObservableObject {
         }
     }
 
+    private func restoreSubmittedDraftAfterFailure(
+        _ submittedDraft: String,
+        conversationID: String,
+        branchID: String,
+        selectionToken: ConversationSelectionToken
+    ) -> Bool {
+        if conversationSelectionIsCurrent(
+            selectionToken,
+            branchID: branchID
+        ) {
+            if draft.isEmpty {
+                draft = submittedDraft
+            }
+            return true
+        }
+
+        if conversation?.id == conversationID {
+            if draft.isEmpty {
+                draft = submittedDraft
+            }
+            return false
+        }
+        if draftByConversationID[conversationID] == nil {
+            draftByConversationID[conversationID] = submittedDraft
+        }
+        return false
+    }
+
     public func selectBranch(id branchID: String) async {
         guard let conversation,
               branchID != activeBranchID,
@@ -359,8 +441,11 @@ public final class ChatViewModel: ObservableObject {
             return
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        let selectionToken = beginConversationSelectionMutation(
+            conversationID: conversation.id
+        )
+        let loadingRevision = beginLoadingOperation()
+        defer { endLoadingOperation(loadingRevision) }
         do {
             let state = try await client.selectConversationBranch(
                 conversationID: conversation.id,
@@ -369,16 +454,19 @@ public final class ChatViewModel: ObservableObject {
             let restoredMessages = try await client.listBranchMessages(
                 branchID: state.activeBranchID
             )
-            guard self.conversation?.id == conversation.id else {
+            guard conversationSelectionIsCurrent(selectionToken) else {
                 return
             }
+            advanceConversationSelectionRevision()
             activeBranchID = state.activeBranchID
             mode = state.selectedMode
             messages = restoredMessages
             reconcileGenerationState(from: restoredMessages)
             errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            if conversationSelectionIsCurrent(selectionToken) {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -392,8 +480,11 @@ public final class ChatViewModel: ObservableObject {
             return
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        let selectionToken = beginConversationSelectionMutation(
+            conversationID: conversation.id
+        )
+        let loadingRevision = beginLoadingOperation()
+        defer { endLoadingOperation(loadingRevision) }
         do {
             let branchNumber = branches.count + 1
             let branch = try await client.createConversationBranch(
@@ -415,9 +506,10 @@ public final class ChatViewModel: ObservableObject {
                 branchListTask,
                 messagesTask
             )
-            guard self.conversation?.id == conversation.id else {
+            guard conversationSelectionIsCurrent(selectionToken) else {
                 return
             }
+            advanceConversationSelectionRevision()
             branches = loadedBranches
             activeBranchID = state.activeBranchID
             mode = state.selectedMode
@@ -425,7 +517,9 @@ public final class ChatViewModel: ObservableObject {
             reconcileGenerationState(from: restoredMessages)
             errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            if conversationSelectionIsCurrent(selectionToken) {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -437,6 +531,9 @@ public final class ChatViewModel: ObservableObject {
             return
         }
 
+        let selectionToken = beginConversationSelectionMutation(
+            conversationID: conversation.id
+        )
         let previousMode = mode
         mode = newMode
         do {
@@ -444,13 +541,18 @@ public final class ChatViewModel: ObservableObject {
                 conversationID: conversation.id,
                 mode: newMode
             )
-            guard self.conversation?.id == conversation.id else {
+            guard conversationSelectionIsCurrent(
+                selectionToken,
+                branchID: state.activeBranchID
+            ) else {
                 return
             }
+            advanceConversationSelectionRevision()
             mode = state.selectedMode
             errorMessage = nil
         } catch {
-            if self.conversation?.id == conversation.id {
+            if conversationSelectionIsCurrent(selectionToken) {
+                advanceConversationSelectionRevision()
                 mode = previousMode
                 errorMessage = error.localizedDescription
             }
@@ -483,12 +585,17 @@ public final class ChatViewModel: ObservableObject {
             return false
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        let selectionToken = beginConversationSelectionMutation(
+            conversationID: conversation.id
+        )
+        let loadingRevision = beginLoadingOperation()
+        defer { endLoadingOperation(loadingRevision) }
         do {
             let provider = try await selectedProviderAccess()
-            guard self.conversation?.id == conversation.id,
-                  self.activeBranchID == activeBranch.id
+            guard conversationSelectionIsCurrent(
+                selectionToken,
+                branchID: activeBranch.id
+            )
             else {
                 return false
             }
@@ -502,19 +609,24 @@ public final class ChatViewModel: ObservableObject {
                 providerProfileID: provider.profile.id,
                 credential: provider.credential
             )
-            try await restoreAfterMessageAction(
+            guard try await restoreAfterMessageAction(
                 conversationID: conversation.id,
                 branchID: result.branch.id,
-                generationID: result.generationID
-            )
+                generationID: result.generationID,
+                selectionToken: selectionToken
+            ) else {
+                return false
+            }
             errorMessage = nil
             startPolling()
             return true
         } catch {
-            errorMessage = userFacingProviderError(
-                error,
-                fallback: "메시지를 수정하지 못했습니다. 잠시 후 다시 시도하세요."
-            )
+            if conversationSelectionIsCurrent(selectionToken) {
+                errorMessage = userFacingProviderError(
+                    error,
+                    fallback: "메시지를 수정하지 못했습니다. 잠시 후 다시 시도하세요."
+                )
+            }
             return false
         }
     }
@@ -530,12 +642,17 @@ public final class ChatViewModel: ObservableObject {
             return
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        let selectionToken = beginConversationSelectionMutation(
+            conversationID: conversation.id
+        )
+        let loadingRevision = beginLoadingOperation()
+        defer { endLoadingOperation(loadingRevision) }
         do {
             let provider = try await selectedProviderAccess()
-            guard self.conversation?.id == conversation.id,
-                  self.activeBranchID == activeBranch.id
+            guard conversationSelectionIsCurrent(
+                selectionToken,
+                branchID: activeBranch.id
+            )
             else {
                 return
             }
@@ -548,18 +665,23 @@ public final class ChatViewModel: ObservableObject {
                 providerProfileID: provider.profile.id,
                 credential: provider.credential
             )
-            try await restoreAfterMessageAction(
+            guard try await restoreAfterMessageAction(
                 conversationID: conversation.id,
                 branchID: result.branch.id,
-                generationID: result.generationID
-            )
+                generationID: result.generationID,
+                selectionToken: selectionToken
+            ) else {
+                return
+            }
             errorMessage = nil
             startPolling()
         } catch {
-            errorMessage = userFacingProviderError(
-                error,
-                fallback: "응답을 다시 생성하지 못했습니다. 잠시 후 다시 시도하세요."
-            )
+            if conversationSelectionIsCurrent(selectionToken) {
+                errorMessage = userFacingProviderError(
+                    error,
+                    fallback: "응답을 다시 생성하지 못했습니다. 잠시 후 다시 시도하세요."
+                )
+            }
         }
     }
 
@@ -572,8 +694,11 @@ public final class ChatViewModel: ObservableObject {
             return
         }
 
-        isLoading = true
-        defer { isLoading = false }
+        let selectionToken = beginConversationSelectionMutation(
+            conversationID: conversation.id
+        )
+        let loadingRevision = beginLoadingOperation()
+        defer { endLoadingOperation(loadingRevision) }
         do {
             let branch = try await client.removeMessageFromBranch(
                 conversationID: conversation.id,
@@ -581,14 +706,19 @@ public final class ChatViewModel: ObservableObject {
                 expectedHeadMessageID: activeBranch.headMessageID,
                 messageID: messageID
             )
-            try await restoreAfterMessageAction(
+            guard try await restoreAfterMessageAction(
                 conversationID: conversation.id,
                 branchID: branch.id,
-                generationID: nil
-            )
+                generationID: nil,
+                selectionToken: selectionToken
+            ) else {
+                return
+            }
             errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            if conversationSelectionIsCurrent(selectionToken) {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -607,6 +737,9 @@ public final class ChatViewModel: ObservableObject {
               let activeBranchID,
               let activeBranch = branches.first(
                   where: { $0.id == activeBranchID }
+              ),
+              let selectionToken = conversationSelectionToken(
+                  conversationID: conversation.id
               )
         else {
             return
@@ -619,7 +752,10 @@ public final class ChatViewModel: ObservableObject {
         }
         do {
             let provider = try await selectedProviderAccess()
-            guard self.conversation?.id == conversation.id,
+            guard conversationSelectionIsCurrent(
+                selectionToken,
+                branchID: activeBranchID
+            ),
                   providerSelectionRevision == providerRevision,
                   !isChangingProviderProfile
             else {
@@ -640,34 +776,73 @@ public final class ChatViewModel: ObservableObject {
                 providerProfileID: provider.profile.id,
                 credential: provider.credential
             )
-            guard self.conversation?.id == conversation.id else {
+#if DEBUG
+            await submitMessageSuccessCommitHookForTesting?()
+#endif
+            guard conversationSelectionIsCurrent(
+                selectionToken,
+                branchID: activeBranchID
+            ) else {
                 return
             }
             activeGenerationID = generationID
+#if DEBUG
+            submitMessageGenerationCommitHookForTesting?(generationID)
+#endif
             latestSequenceByGeneration[generationID] = 0
             idlePollsSinceReconciliation = 0
             await refreshMessages()
-            await refreshBranchMetadata(conversationID: conversation.id)
+            guard conversationSelectionIsCurrent(
+                selectionToken,
+                branchID: activeBranchID
+            ) else {
+                return
+            }
             startPolling()
         } catch {
+#if DEBUG
+            await submitMessageErrorCommitHookForTesting?()
+#endif
+            guard restoreSubmittedDraftAfterFailure(
+                submittedDraft,
+                conversationID: conversation.id,
+                branchID: activeBranchID,
+                selectionToken: selectionToken
+            ) else {
+                return
+            }
             isGenerating = false
             errorMessage = userFacingProviderError(
                 error,
                 fallback: "메시지를 보내지 못했습니다. 잠시 후 다시 시도하세요."
             )
-            if draft.isEmpty, self.conversation?.id == conversation.id {
-                draft = submittedDraft
-            }
         }
     }
 
     public func cancelGeneration() async {
-        guard let generationID = activeGenerationID else {
+        guard let generationID = activeGenerationID,
+              let conversation,
+              let activeBranchID,
+              let selectionToken = conversationSelectionToken(
+                  conversationID: conversation.id
+              )
+        else {
             return
         }
         do {
             try await client.cancelGeneration(generationID: generationID)
         } catch {
+#if DEBUG
+            await cancelGenerationErrorCommitHookForTesting?()
+#endif
+            guard conversationSelectionIsCurrent(
+                selectionToken,
+                branchID: activeBranchID
+            ),
+                activeGenerationID == generationID
+            else {
+                return
+            }
             errorMessage = userFacingProviderError(
                 error,
                 fallback: "응답 생성을 중단하지 못했습니다. 다시 시도하세요."
@@ -676,35 +851,60 @@ public final class ChatViewModel: ObservableObject {
     }
 
     public func refreshMessages() async {
-        guard let conversation else {
+        guard !isLoading,
+              let conversation,
+              let contentToken = beginConversationContentRead(
+                  conversationID: conversation.id
+              )
+        else {
             return
         }
-        await reconcilePersistedMessages(conversationID: conversation.id)
+        await reconcilePersistedMessages(
+            conversationID: conversation.id,
+            contentToken: contentToken
+        )
     }
 
-    private func reconcilePersistedMessages(conversationID: String) async {
-        guard let branchID = activeBranchID else {
+    private func reconcilePersistedMessages(
+        conversationID: String,
+        contentToken: ConversationContentToken
+    ) async {
+        guard conversationContentIsCurrent(contentToken),
+              let branchID = activeBranchID
+        else {
             return
         }
         do {
             let persisted = try await client.listBranchMessages(
                 branchID: branchID
             )
-            guard conversation?.id == conversationID,
-                  activeBranchID == branchID
+            guard conversationContentIsCurrent(
+                contentToken,
+                branchID: branchID
+            )
             else {
                 return
             }
             messages = mergePersistedMessages(persisted)
             reconcileGenerationState(from: persisted)
             idlePollsSinceReconciliation = 0
-            await refreshBranchMetadata(conversationID: conversationID)
+            await refreshBranchMetadata(
+                conversationID: conversationID,
+                branchID: branchID,
+                contentToken: contentToken
+            )
         } catch {
-            errorMessage = error.localizedDescription
+            if conversationContentIsCurrent(contentToken) {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
-    private func refreshBranchMetadata(conversationID: String) async {
+    private func refreshBranchMetadata(
+        conversationID: String,
+        branchID: String,
+        contentToken: ConversationContentToken
+    ) async {
         do {
             async let stateTask = client.getConversationState(
                 conversationID: conversationID
@@ -716,28 +916,47 @@ public final class ChatViewModel: ObservableObject {
                 stateTask,
                 branchesTask
             )
-            guard conversation?.id == conversationID else {
+#if DEBUG
+            await branchMetadataCommitHookForTesting?()
+#endif
+            guard conversationContentIsCurrent(
+                contentToken,
+                branchID: branchID
+            ),
+                state.activeBranchID == branchID
+            else {
                 return
             }
             branches = loadedBranches
-            activeBranchID = state.activeBranchID
             mode = state.selectedMode
         } catch {
-            errorMessage = error.localizedDescription
+            if conversationContentIsCurrent(contentToken) {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
     public func pollOnce() async {
-        guard let conversation else {
+        guard !isLoading,
+              let conversation,
+              let observationToken = observeConversationContent(
+                  conversationID: conversation.id
+              )
+        else {
             return
         }
+        let selectionToken = observationToken.selection
         do {
             let batch = try await client.pollEvents(maxEvents: 128)
-            guard self.conversation?.id == conversation.id else {
+#if DEBUG
+            await pollBatchCommitHookForTesting?()
+#endif
+            guard conversationContentObservationIsCurrent(observationToken) else {
                 return
             }
             var shouldReconcile = batch.droppedEventCount > 0
             var appliedEvent = false
+            var pollContentToken: ConversationContentToken?
             for event in batch.events
             where event.conversationID == conversation.id {
                 guard event.eventVersion == 2 else {
@@ -749,6 +968,19 @@ public final class ChatViewModel: ObservableObject {
                         shouldReconcile = true
                     }
                     continue
+                }
+                guard eventCanMutateCurrentContent(event) else {
+                    continue
+                }
+                if pollContentToken == nil {
+                    pollContentToken = claimConversationContentCommit(
+                        observationToken
+                    )
+                }
+                guard let pollContentToken,
+                      conversationContentIsCurrent(pollContentToken)
+                else {
+                    return
                 }
                 switch apply(event) {
                 case .ignored:
@@ -773,10 +1005,54 @@ public final class ChatViewModel: ObservableObject {
             }
 
             if shouldReconcile {
-                await reconcilePersistedMessages(conversationID: conversation.id)
+                let contentToken =
+                    pollContentToken
+                    ?? claimConversationContentCommit(
+                        observationToken
+                    )
+                guard let contentToken else {
+                    return
+                }
+                await reconcilePersistedMessages(
+                    conversationID: conversation.id,
+                    contentToken: contentToken
+                )
             }
         } catch {
-            errorMessage = error.localizedDescription
+            if conversationContentObservationIsCurrent(observationToken) {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func eventCanMutateCurrentContent(_ event: ChatEvent) -> Bool {
+        guard event.generationID == activeGenerationID,
+              event.sequence
+                  > (latestSequenceByGeneration[event.generationID] ?? 0)
+        else {
+            return false
+        }
+
+        switch event.kind {
+        case "generation_started":
+            return !messages.contains {
+                $0.generationID == event.generationID
+                    && $0.status != .pending
+            }
+        case "text_delta":
+            return event.text != nil
+                && !messages.contains {
+                    $0.generationID == event.generationID
+                        && $0.status != .pending
+                }
+        case "usage_updated",
+             "message_committed",
+             "generation_finished",
+             "generation_cancelled",
+             "generation_failed":
+            return true
+        default:
+            return false
         }
     }
 
@@ -932,9 +1208,7 @@ public final class ChatViewModel: ObservableObject {
     }
 
     public func resumeEventPolling() async {
-        if let conversation {
-            await reconcilePersistedMessages(conversationID: conversation.id)
-        }
+        await refreshMessages()
         startPolling()
     }
 
@@ -948,6 +1222,79 @@ public final class ChatViewModel: ObservableObject {
     ) {
         providerStoreAutoRefreshEnabled = isEnabled
     }
+
+#if DEBUG
+    func setBranchMetadataCommitHookForTesting(
+        _ hook: (@MainActor () async -> Void)?
+    ) {
+        branchMetadataCommitHookForTesting = hook
+    }
+
+    func setMessageActionRestoreCommitHookForTesting(
+        _ hook: (@MainActor () async -> Void)?
+    ) {
+        messageActionRestoreCommitHookForTesting = hook
+    }
+
+    func setConversationRestoreCommitHookForTesting(
+        _ hook: (@MainActor () async -> Void)?
+    ) {
+        conversationRestoreCommitHookForTesting = hook
+    }
+
+    func setConversationSelectionErrorCommitHookForTesting(
+        _ hook: (@MainActor () async -> Void)?
+    ) {
+        conversationSelectionErrorCommitHookForTesting = hook
+    }
+
+    func setPollBatchCommitHookForTesting(
+        _ hook: (@MainActor () async -> Void)?
+    ) {
+        pollBatchCommitHookForTesting = hook
+    }
+
+    func setSubmitMessageSuccessCommitHookForTesting(
+        _ hook: (@MainActor () async -> Void)?
+    ) {
+        submitMessageSuccessCommitHookForTesting = hook
+    }
+
+    func setSubmitMessageGenerationCommitHookForTesting(
+        _ hook: (@MainActor (String) -> Void)?
+    ) {
+        submitMessageGenerationCommitHookForTesting = hook
+    }
+
+    func setSubmitMessageErrorCommitHookForTesting(
+        _ hook: (@MainActor () async -> Void)?
+    ) {
+        submitMessageErrorCommitHookForTesting = hook
+    }
+
+    func setCancelGenerationErrorCommitHookForTesting(
+        _ hook: (@MainActor () async -> Void)?
+    ) {
+        cancelGenerationErrorCommitHookForTesting = hook
+    }
+
+    func restoreAfterMessageActionForTesting(
+        conversationID: String,
+        branchID: String
+    ) async throws -> Bool {
+        guard let selectionToken = conversationSelectionToken(
+            conversationID: conversationID
+        ) else {
+            return false
+        }
+        return try await restoreAfterMessageAction(
+            conversationID: conversationID,
+            branchID: branchID,
+            generationID: nil,
+            selectionToken: selectionToken
+        )
+    }
+#endif
 
     public func refreshProviderSelection() async {
         guard !isChangingProviderProfile else {
@@ -1566,8 +1913,14 @@ public final class ChatViewModel: ObservableObject {
     private func restoreAfterMessageAction(
         conversationID: String,
         branchID: String,
-        generationID: String?
-    ) async throws {
+        generationID: String?,
+        selectionToken: ConversationSelectionToken
+    ) async throws -> Bool {
+        guard let contentToken = beginConversationContentRead(
+            selectionToken: selectionToken
+        ) else {
+            return false
+        }
         async let stateTask = client.getConversationState(
             conversationID: conversationID
         )
@@ -1580,19 +1933,150 @@ public final class ChatViewModel: ObservableObject {
             branchesTask,
             messagesTask
         )
-        guard conversation?.id == conversationID else {
-            return
+#if DEBUG
+        await messageActionRestoreCommitHookForTesting?()
+#endif
+        guard conversationContentIsCurrent(contentToken),
+              state.activeBranchID == branchID
+        else {
+            return false
         }
+        advanceConversationSelectionRevision()
         branches = loadedBranches
         activeBranchID = state.activeBranchID
         mode = state.selectedMode
-        messages = restoredMessages
+        messages = mergePersistedMessages(restoredMessages)
         activeGenerationID = generationID
         if let generationID {
             latestSequenceByGeneration[generationID] = 0
         }
         reconcileGenerationState(from: restoredMessages)
         idlePollsSinceReconciliation = 0
+        return true
+    }
+
+    private func beginConversationSelectionMutation(
+        conversationID: String
+    ) -> ConversationSelectionToken {
+        advanceConversationSelectionRevision()
+        return ConversationSelectionToken(
+            conversationID: conversationID,
+            revision: conversationSelectionRevision
+        )
+    }
+
+    private func advanceConversationSelectionRevision() {
+        conversationSelectionRevision &+= 1
+        conversationContentRevision &+= 1
+    }
+
+    private func beginConversationContentRead(
+        conversationID: String
+    ) -> ConversationContentToken? {
+        guard let selectionToken = conversationSelectionToken(
+            conversationID: conversationID
+        ) else {
+            return nil
+        }
+        return beginConversationContentRead(selectionToken: selectionToken)
+    }
+
+    private func beginConversationContentRead(
+        selectionToken: ConversationSelectionToken
+    ) -> ConversationContentToken? {
+        guard conversationSelectionIsCurrent(selectionToken) else {
+            return nil
+        }
+        conversationContentRevision &+= 1
+        return ConversationContentToken(
+            selection: selectionToken,
+            revision: conversationContentRevision
+        )
+    }
+
+    private func observeConversationContent(
+        conversationID: String
+    ) -> ConversationContentObservationToken? {
+        guard let selectionToken = conversationSelectionToken(
+            conversationID: conversationID
+        ) else {
+            return nil
+        }
+        return ConversationContentObservationToken(
+            selection: selectionToken,
+            revision: conversationContentRevision
+        )
+    }
+
+    private func conversationContentObservationIsCurrent(
+        _ token: ConversationContentObservationToken
+    ) -> Bool {
+        conversationContentRevision == token.revision
+            && conversationSelectionIsCurrent(token.selection)
+    }
+
+    private func claimConversationContentCommit(
+        _ observation: ConversationContentObservationToken
+    ) -> ConversationContentToken? {
+        guard conversationContentObservationIsCurrent(observation) else {
+            return nil
+        }
+        conversationContentRevision &+= 1
+        return ConversationContentToken(
+            selection: observation.selection,
+            revision: conversationContentRevision
+        )
+    }
+
+    private func conversationSelectionToken(
+        conversationID: String
+    ) -> ConversationSelectionToken? {
+        guard conversation?.id == conversationID else {
+            return nil
+        }
+        return ConversationSelectionToken(
+            conversationID: conversationID,
+            revision: conversationSelectionRevision
+        )
+    }
+
+    private func conversationSelectionIsCurrent(
+        _ token: ConversationSelectionToken,
+        branchID: String? = nil
+    ) -> Bool {
+        guard conversation?.id == token.conversationID,
+              conversationSelectionRevision == token.revision
+        else {
+            return false
+        }
+        if let branchID {
+            return activeBranchID == branchID
+        }
+        return true
+    }
+
+    private func conversationContentIsCurrent(
+        _ token: ConversationContentToken,
+        branchID: String? = nil
+    ) -> Bool {
+        conversationContentRevision == token.revision
+            && conversationSelectionIsCurrent(
+                token.selection,
+                branchID: branchID
+            )
+    }
+
+    private func beginLoadingOperation() -> UInt64 {
+        loadingOperationRevision &+= 1
+        isLoading = true
+        return loadingOperationRevision
+    }
+
+    private func endLoadingOperation(_ revision: UInt64) {
+        guard loadingOperationRevision == revision else {
+            return
+        }
+        isLoading = false
     }
 
     private var coreIsAvailable: Bool {

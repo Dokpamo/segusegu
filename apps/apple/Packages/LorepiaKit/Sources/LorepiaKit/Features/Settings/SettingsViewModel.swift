@@ -73,6 +73,16 @@ public final class SettingsViewModel: ObservableObject {
     private var pendingProviderConfigurationRevision: UInt64?
     private var selfPublishedProviderConfigurationRevisions: Set<UInt64> = []
     private var editingProfileID = UUID().uuidString
+    private var hasEstablishedEditorState = false
+
+    private struct EditorSnapshot: Equatable {
+        let editingProfileID: String
+        let profileName: String
+        let baseURL: String
+        let model: String
+        let timeoutSeconds: String
+        let credentialDraft: String
+    }
 
     public init(
         client: any CoreClient,
@@ -97,11 +107,29 @@ public final class SettingsViewModel: ObservableObject {
                 }
     }
 
+    /// Refreshes persisted settings while retaining an unsaved editor draft.
+    /// If the edited persisted profile was deleted, the editor safely resets.
     public func refresh() async {
+        await performRefreshPreservingUnsavedEditor()
+    }
+
+    /// Refreshes persisted provider settings without replacing an in-progress
+    /// editor draft. This is used when navigation reveals settings as a
+    /// secondary destination rather than as an explicit discard-and-reload
+    /// action.
+    public func refreshPreservingUnsavedEditor() async {
+        await performRefreshPreservingUnsavedEditor()
+    }
+
+    private func performRefreshPreservingUnsavedEditor() async {
         guard beginOperation() else {
             return
         }
         defer { endOperation() }
+        let editorBeforeRefresh = editorSnapshot
+        let editorWasDirty = editorHasUnsavedChanges
+        let providerConfigurationRevisionBeforeRefresh =
+            providerConfigurationStore.revision
 
         do {
             async let loadedProfiles = client.listProviderProfiles()
@@ -110,14 +138,38 @@ public final class SettingsViewModel: ObservableObject {
                 loadedProfiles,
                 loadedSettings
             )
-            profiles = sortedProfiles(newProfiles)
+            guard providerConfigurationStore.revision
+                == providerConfigurationRevisionBeforeRefresh
+            else {
+                queueProviderConfiguration(
+                    revision: providerConfigurationStore.revision
+                )
+                return
+            }
+            let previousEditorProfile = profiles.first {
+                $0.id == editingProfileID
+            }
+            let sortedNewProfiles = sortedProfiles(newProfiles)
+            let editingStoredProfileWasDeleted =
+                previousEditorProfile != nil
+                && !sortedNewProfiles.contains { $0.id == editingProfileID }
+            let shouldPreserveEditor =
+                !editingStoredProfileWasDeleted
+                && (
+                    editorWasDirty
+                        || editorSnapshot != editorBeforeRefresh
+                )
+            profiles = sortedNewProfiles
             selectedProfileID = profiles.contains {
                 $0.id == settings.selectedProviderProfileID
             } ? settings.selectedProviderProfileID : nil
             preservePartialGenerations = settings.preservePartialGenerations
             publishProviderConfiguration()
 
-            if let selectedProfileID,
+            if shouldPreserveEditor {
+                statusMessage =
+                    "프로바이더 설정을 새로고침했지만 저장하지 않은 프로필 편집 내용은 유지했습니다."
+            } else if let selectedProfileID,
                let profile = profiles.first(where: {
                    $0.id == selectedProfileID
                })
@@ -996,6 +1048,7 @@ public final class SettingsViewModel: ObservableObject {
         credentialDraft = ""
         hasStoredCredential = false
         isCredentialStateKnown = true
+        hasEstablishedEditorState = true
     }
 
     private func loadEditorAndCredentialState(
@@ -1007,6 +1060,7 @@ public final class SettingsViewModel: ObservableObject {
         model = profile.model
         timeoutSeconds = String(profile.timeoutSeconds)
         credentialDraft = ""
+        hasEstablishedEditorState = true
         await reconcileCredentialState(for: profile.id)
     }
 
@@ -1379,6 +1433,11 @@ public final class SettingsViewModel: ObservableObject {
         {
             return
         }
+        queueProviderConfiguration(revision: revision)
+        await applyPendingProviderConfiguration()
+    }
+
+    private func queueProviderConfiguration(revision: UInt64) {
         if let pendingProviderConfigurationRevision {
             self.pendingProviderConfigurationRevision = max(
                 pendingProviderConfigurationRevision,
@@ -1387,7 +1446,6 @@ public final class SettingsViewModel: ObservableObject {
         } else {
             pendingProviderConfigurationRevision = revision
         }
-        await applyPendingProviderConfiguration()
     }
 
     private func applyPendingProviderConfiguration() async {
@@ -1465,6 +1523,12 @@ public final class SettingsViewModel: ObservableObject {
         if !credentialDraft.isEmpty {
             return true
         }
+        guard hasEstablishedEditorState else {
+            return !profileName.isEmpty
+                || !baseURL.isEmpty
+                || !model.isEmpty
+                || timeoutSeconds != "60"
+        }
         guard let profile = profiles.first(where: {
             $0.id == editingProfileID
         }) else {
@@ -1477,6 +1541,17 @@ public final class SettingsViewModel: ObservableObject {
             || baseURL != profile.baseURL
             || model != profile.model
             || timeoutSeconds != String(profile.timeoutSeconds)
+    }
+
+    private var editorSnapshot: EditorSnapshot {
+        EditorSnapshot(
+            editingProfileID: editingProfileID,
+            profileName: profileName,
+            baseURL: baseURL,
+            model: model,
+            timeoutSeconds: timeoutSeconds,
+            credentialDraft: credentialDraft
+        )
     }
 
     private func publishProviderConfiguration() {

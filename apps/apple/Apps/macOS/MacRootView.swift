@@ -147,7 +147,8 @@ struct MacRootView: View {
                     settingsNavigationPath = [.providerProfile]
                     navigationModel.navigate(to: .settings)
                     Task {
-                        await settingsViewModel.refresh()
+                        await settingsViewModel
+                            .refreshPreservingUnsavedEditor()
                     }
                 }
             )

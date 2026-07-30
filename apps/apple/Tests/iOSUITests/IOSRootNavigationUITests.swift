@@ -556,6 +556,47 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
+    func testMistypedFixtureArgumentUsesLiveRuntimePath() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-dev-fixture"]
+        app.launch()
+
+        let settings = app.tabBars.buttons["설정"]
+        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        settings.tap()
+
+        let diagnostics = app.buttons["settings-diagnostics-row"]
+        XCTAssertTrue(diagnostics.waitForExistence(timeout: 10))
+        let diagnosticsReady = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "isEnabled == true AND isHittable == true"
+            ),
+            object: diagnostics
+        )
+        wait(for: [diagnosticsReady], timeout: 10)
+        diagnostics.tap()
+        XCTAssertTrue(
+            app.navigationBars["진단"].waitForExistence(timeout: 5)
+        )
+
+        let liveRuntime = app.staticTexts.matching(
+            NSPredicate(
+                format: "label == %@ OR label == %@",
+                "Rust Core",
+                "Core Unavailable"
+            )
+        ).firstMatch
+        XCTAssertTrue(
+            liveRuntime.waitForExistence(timeout: 5),
+            "An unknown fixture argument must use the live core path."
+        )
+        XCTAssertFalse(
+            app.staticTexts["Preview Core"].exists,
+            "A mistyped fixture argument silently selected preview data."
+        )
+    }
+
+    @MainActor
     func testHomeAddActionRemainsAccessibleAtLargestTextSize() {
         let app = XCUIApplication()
         app.launchArguments = [

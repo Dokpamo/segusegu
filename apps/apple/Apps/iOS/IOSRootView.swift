@@ -59,7 +59,8 @@ struct IOSRootView: View {
                             settingsNavigationPath = [.providerProfile]
                             selectedTab = .settings
                             Task {
-                                await settingsViewModel.refresh()
+                                await settingsViewModel
+                                    .refreshPreservingUnsavedEditor()
                             }
                         }
                     )

@@ -229,12 +229,12 @@ The exact, deterministic UI-test showcases remain available separately:
 
 All fixture scenarios use in-memory test clients, project-owned synthetic
 content, and in-memory credentials. They do not read or write the production
-database, Keychain, or user data. A Debug launch without a recognized fixture
-argument also falls back to the comprehensive development catalog, so a direct
-Simulator relaunch keeps the synthetic data even when Xcode scheme arguments
-are omitted. Pass an optional scenario argument explicitly when launching
-outside the scheme. To use the live Rust core in Debug, replace the fixture
-argument with the explicit `--lorepia-live-core` opt-in.
+database, Keychain, or user data. Only a recognized fixture argument selects
+synthetic data. A Debug launch with no fixture argument, or with an unknown or
+mistyped argument, uses the live local core. The committed `project.yml`
+continues to pass `--lorepia-dev-fixtures` explicitly for the standard Xcode
+Run action; remove that argument (or replace it with `--lorepia-live-core`) to
+run the live core from Xcode.
 
 `apps/apple/project.yml` is the source of truth for the committed Xcode project
 structure. After changing targets or build settings, regenerate the project

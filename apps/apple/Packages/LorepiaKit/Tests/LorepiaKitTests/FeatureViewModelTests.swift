@@ -929,6 +929,584 @@ final class FeatureViewModelTests: XCTestCase {
         )
     }
 
+#if DEBUG
+    func testChatLateSelectionReadsCannotOverwriteANewerSelection() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let conversation = try await client.createConversation(
+            characterID: character.id,
+            title: "지연 분기 메타데이터 방",
+            mode: .chat
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setConversation(conversation, character: character)
+        let rootBranchID = try XCTUnwrap(viewModel.activeBranchID)
+
+        viewModel.draft = "공통 메시지"
+        await viewModel.submitMessage()
+        let forkMessageID = try XCTUnwrap(viewModel.messages.last?.id)
+        await viewModel.createBranch(afterMessageID: forkMessageID)
+        let siblingBranchID = try XCTUnwrap(viewModel.activeBranchID)
+        viewModel.draft = "새 분기에만 있는 메시지"
+        await viewModel.submitMessage()
+        let siblingMessages = viewModel.messages
+        await viewModel.selectBranch(id: rootBranchID)
+
+        let metadataGate = AsyncTestGate()
+        viewModel.setBranchMetadataCommitHookForTesting {
+            await metadataGate.wait()
+        }
+        let staleRefresh = Task {
+            await viewModel.refreshMessages()
+        }
+        await waitUntil {
+            await metadataGate.hasWaiter
+        }
+
+        await viewModel.selectBranch(id: siblingBranchID)
+        await viewModel.setMode(.story)
+        XCTAssertEqual(viewModel.activeBranchID, siblingBranchID)
+        XCTAssertEqual(viewModel.mode, .story)
+        XCTAssertEqual(viewModel.messages, siblingMessages)
+
+        await metadataGate.release()
+        await staleRefresh.value
+        viewModel.setBranchMetadataCommitHookForTesting(nil)
+
+        XCTAssertEqual(viewModel.activeBranchID, siblingBranchID)
+        XCTAssertEqual(viewModel.mode, .story)
+        XCTAssertEqual(viewModel.messages, siblingMessages)
+
+        await viewModel.setMode(.chat)
+        await viewModel.selectBranch(id: rootBranchID)
+        let restoreGate = AsyncTestGate()
+        viewModel.setMessageActionRestoreCommitHookForTesting {
+            await restoreGate.wait()
+        }
+        let staleRestore = Task {
+            try await viewModel.restoreAfterMessageActionForTesting(
+                conversationID: conversation.id,
+                branchID: rootBranchID
+            )
+        }
+        await waitUntil {
+            await restoreGate.hasWaiter
+        }
+
+        await viewModel.selectBranch(id: siblingBranchID)
+        await viewModel.setMode(.story)
+        await restoreGate.release()
+        let didCommitStaleRestore = try await staleRestore.value
+        viewModel.setMessageActionRestoreCommitHookForTesting(nil)
+
+        XCTAssertFalse(didCommitStaleRestore)
+        XCTAssertEqual(viewModel.activeBranchID, siblingBranchID)
+        XCTAssertEqual(viewModel.mode, .story)
+        XCTAssertEqual(viewModel.messages, siblingMessages)
+    }
+
+    func testChatNewerSameBranchRefreshInvalidatesDelayedRestore() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let conversation = try await client.createConversation(
+            characterID: character.id,
+            title: "동일 분기 스냅샷 순서 방",
+            mode: .chat
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setConversation(conversation, character: character)
+        let branchID = try XCTUnwrap(viewModel.activeBranchID)
+        let first = ChatMessage(
+            conversationID: conversation.id,
+            role: .user,
+            text: "먼저 읽힌 합성 메시지"
+        )
+        await client.replaceMessagesForTesting(
+            conversationID: conversation.id,
+            messages: [first]
+        )
+        await viewModel.refreshMessages()
+
+        let restoreGate = AsyncTestGate()
+        viewModel.setMessageActionRestoreCommitHookForTesting {
+            await restoreGate.wait()
+        }
+        let staleRestore = Task {
+            try await viewModel.restoreAfterMessageActionForTesting(
+                conversationID: conversation.id,
+                branchID: branchID
+            )
+        }
+        await waitUntil {
+            await restoreGate.hasWaiter
+        }
+
+        let latest = ChatMessage(
+            conversationID: conversation.id,
+            parentID: first.id,
+            role: .assistant,
+            text: "나중에 읽힌 합성 메시지"
+        )
+        await client.replaceMessagesForTesting(
+            conversationID: conversation.id,
+            messages: [first, latest]
+        )
+        await viewModel.refreshMessages()
+        XCTAssertEqual(viewModel.messages, [first, latest])
+
+        await restoreGate.release()
+        let didCommitStaleRestore = try await staleRestore.value
+        viewModel.setMessageActionRestoreCommitHookForTesting(nil)
+
+        XCTAssertFalse(didCommitStaleRestore)
+        XCTAssertEqual(viewModel.messages, [first, latest])
+    }
+
+    func testChatStaleSelectionCannotClearNewLoaderOrPublishError() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let first = try await client.createConversation(
+            characterID: character.id,
+            title: "첫 선택",
+            mode: .chat
+        )
+        let second = try await client.createConversation(
+            characterID: character.id,
+            title: "최신 선택",
+            mode: .story
+        )
+        let missing = CoreConversation(
+            id: "missing-conversation",
+            characterID: character.id,
+            title: "없는 선택",
+            createdAt: first.createdAt,
+            updatedAt: first.updatedAt
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setConversation(first, character: character)
+
+        let staleErrorGate = AsyncTestGate()
+        viewModel.setConversationSelectionErrorCommitHookForTesting {
+            await staleErrorGate.wait()
+        }
+        let staleSelection = Task {
+            await viewModel.setConversation(missing, character: character)
+        }
+        await waitUntil {
+            await staleErrorGate.hasWaiter
+        }
+
+        let latestRestoreGate = AsyncTestGate()
+        viewModel.setConversationRestoreCommitHookForTesting {
+            await latestRestoreGate.wait()
+        }
+        let latestSelection = Task {
+            await viewModel.setConversation(second, character: character)
+        }
+        await waitUntil {
+            await latestRestoreGate.hasWaiter
+        }
+
+        await staleErrorGate.release()
+        await staleSelection.value
+        XCTAssertTrue(viewModel.isLoading)
+        XCTAssertNil(viewModel.errorMessage)
+
+        await latestRestoreGate.release()
+        await latestSelection.value
+        viewModel.setConversationSelectionErrorCommitHookForTesting(nil)
+        viewModel.setConversationRestoreCommitHookForTesting(nil)
+
+        XCTAssertFalse(viewModel.isLoading)
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertEqual(viewModel.conversation?.id, second.id)
+        XCTAssertEqual(viewModel.mode, .story)
+    }
+
+    func testChatPollDiscardsBatchWhenNewerRefreshCommitsDuringRPC() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let conversation = try await client.createConversation(
+            characterID: character.id,
+            title: "poll 관찰 순서 방",
+            mode: .chat
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setConversation(conversation, character: character)
+        let branchID = try XCTUnwrap(viewModel.activeBranchID)
+        let generationID = "poll-observation-generation"
+        var pending = ChatMessage(
+            id: "poll-observation-assistant",
+            conversationID: conversation.id,
+            role: .assistant,
+            text: "기존 ",
+            status: .pending,
+            generationID: generationID
+        )
+        await client.replaceMessagesForTesting(
+            conversationID: conversation.id,
+            messages: [pending]
+        )
+        await viewModel.refreshMessages()
+        await client.enqueueEventBatch([
+            ChatEvent(
+                generationID: generationID,
+                conversationID: conversation.id,
+                branchID: branchID,
+                assistantMessageID: pending.id,
+                sequence: 1,
+                kind: "text_delta",
+                text: "추가"
+            ),
+        ])
+
+        let pollGate = AsyncTestGate()
+        viewModel.setPollBatchCommitHookForTesting {
+            await pollGate.wait()
+        }
+        let stalePoll = Task {
+            await viewModel.pollOnce()
+        }
+        await waitUntil {
+            await pollGate.hasWaiter
+        }
+
+        pending.text = "기존 추가"
+        await client.replaceMessagesForTesting(
+            conversationID: conversation.id,
+            messages: [pending]
+        )
+        await viewModel.refreshMessages()
+        XCTAssertEqual(viewModel.messages, [pending])
+
+        await pollGate.release()
+        await stalePoll.value
+        viewModel.setPollBatchCommitHookForTesting(nil)
+
+        XCTAssertEqual(viewModel.messages, [pending])
+    }
+
+    func testChatLateSubmitSuccessCannotAttachGenerationToNewRoom() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let first = try await client.createConversation(
+            characterID: character.id,
+            title: "전송 시작 방",
+            mode: .chat
+        )
+        let second = try await client.createConversation(
+            characterID: character.id,
+            title: "전송 중 이동한 방",
+            mode: .story
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setConversation(first, character: character)
+        viewModel.draft = "첫 방에 보낼 합성 메시지"
+
+        let successGate = AsyncTestGate()
+        var committedGenerationID: String?
+        viewModel.setSubmitMessageSuccessCommitHookForTesting {
+            await successGate.wait()
+        }
+        viewModel.setSubmitMessageGenerationCommitHookForTesting {
+            committedGenerationID = $0
+        }
+        let staleSubmit = Task {
+            await viewModel.submitMessage()
+        }
+        await waitUntil {
+            await successGate.hasWaiter
+        }
+
+        await viewModel.setConversation(second, character: character)
+        viewModel.draft = "둘째 방의 미전송 초안"
+        await successGate.release()
+        await staleSubmit.value
+        viewModel.setSubmitMessageSuccessCommitHookForTesting(nil)
+        viewModel.setSubmitMessageGenerationCommitHookForTesting(nil)
+
+        XCTAssertNil(committedGenerationID)
+        XCTAssertEqual(viewModel.conversation?.id, second.id)
+        XCTAssertEqual(viewModel.mode, .story)
+        XCTAssertTrue(viewModel.messages.isEmpty)
+        XCTAssertFalse(viewModel.isGenerating)
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertEqual(viewModel.draft, "둘째 방의 미전송 초안")
+    }
+
+    func testChatLateSubmitFailureCannotOverwriteNewRoomState() async throws {
+        let client = FakeCoreClient(
+            testingOptions: FakeCoreClientTestingOptions(
+                sendMessageToBranchFailure: .invalidResponse(
+                    "synthetic old-room failure"
+                )
+            )
+        )
+        let character = LibraryCharacter.previewCharacters[0]
+        let first = try await client.createConversation(
+            characterID: character.id,
+            title: "실패 시작 방",
+            mode: .chat
+        )
+        let second = try await client.createConversation(
+            characterID: character.id,
+            title: "실패 중 이동한 방",
+            mode: .story
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        let secondPending = ChatMessage(
+            conversationID: second.id,
+            role: .assistant,
+            text: "둘째 방에서 생성 중",
+            status: .pending,
+            generationID: "second-room-generation"
+        )
+        await client.replaceMessagesForTesting(
+            conversationID: second.id,
+            messages: [secondPending]
+        )
+        await viewModel.setConversation(first, character: character)
+        viewModel.draft = "실패할 합성 메시지"
+
+        let failureGate = AsyncTestGate()
+        viewModel.setSubmitMessageErrorCommitHookForTesting {
+            await failureGate.wait()
+        }
+        let staleSubmit = Task {
+            await viewModel.submitMessage()
+        }
+        await waitUntil {
+            await failureGate.hasWaiter
+        }
+
+        await viewModel.setConversation(second, character: character)
+        viewModel.draft = "둘째 방의 안전한 초안"
+        await failureGate.release()
+        await staleSubmit.value
+        viewModel.setSubmitMessageErrorCommitHookForTesting(nil)
+
+        XCTAssertEqual(viewModel.conversation?.id, second.id)
+        XCTAssertEqual(viewModel.mode, .story)
+        XCTAssertEqual(viewModel.messages, [secondPending])
+        XCTAssertTrue(viewModel.isGenerating)
+        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertEqual(viewModel.draft, "둘째 방의 안전한 초안")
+
+        await viewModel.setConversation(first, character: character)
+        XCTAssertEqual(viewModel.draft, "실패할 합성 메시지")
+
+        await viewModel.setConversation(second, character: character)
+        XCTAssertEqual(viewModel.draft, "둘째 방의 안전한 초안")
+        XCTAssertEqual(viewModel.messages, [secondPending])
+        XCTAssertTrue(viewModel.isGenerating)
+    }
+
+    func testChatStaleSubmitFailurePreservesNewerSavedDraftForOriginalRoom()
+        async throws
+    {
+        let client = FakeCoreClient(
+            testingOptions: FakeCoreClientTestingOptions(
+                sendMessageToBranchFailure: .invalidResponse(
+                    "synthetic old-room failure"
+                )
+            )
+        )
+        let character = LibraryCharacter.previewCharacters[0]
+        let first = try await client.createConversation(
+            characterID: character.id,
+            title: "최신 초안이 있는 방",
+            mode: .chat
+        )
+        let second = try await client.createConversation(
+            characterID: character.id,
+            title: "실패 대기 방",
+            mode: .story
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setConversation(first, character: character)
+        viewModel.draft = "전송에 실패할 이전 초안"
+
+        let failureGate = AsyncTestGate()
+        viewModel.setSubmitMessageErrorCommitHookForTesting {
+            await failureGate.wait()
+        }
+        let staleSubmit = Task {
+            await viewModel.submitMessage()
+        }
+        await waitUntil {
+            await failureGate.hasWaiter
+        }
+
+        await viewModel.setConversation(second, character: character)
+        viewModel.draft = "둘째 방 초안"
+        await viewModel.setConversation(first, character: character)
+        viewModel.draft = "실패 이후 작성한 최신 초안"
+        await viewModel.setConversation(second, character: character)
+
+        await failureGate.release()
+        await staleSubmit.value
+        viewModel.setSubmitMessageErrorCommitHookForTesting(nil)
+
+        XCTAssertEqual(viewModel.conversation?.id, second.id)
+        XCTAssertEqual(viewModel.draft, "둘째 방 초안")
+        XCTAssertNil(viewModel.errorMessage)
+
+        await viewModel.setConversation(first, character: character)
+        XCTAssertEqual(viewModel.draft, "실패 이후 작성한 최신 초안")
+    }
+
+    func testChatStaleSubmitFailureRestoresEmptyDraftAfterReturningToRoom()
+        async throws
+    {
+        let client = FakeCoreClient(
+            testingOptions: FakeCoreClientTestingOptions(
+                sendMessageToBranchFailure: .invalidResponse(
+                    "synthetic old-selection failure"
+                )
+            )
+        )
+        let character = LibraryCharacter.previewCharacters[0]
+        let first = try await client.createConversation(
+            characterID: character.id,
+            title: "실패 후 돌아올 방",
+            mode: .chat
+        )
+        let second = try await client.createConversation(
+            characterID: character.id,
+            title: "잠시 이동할 방",
+            mode: .story
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setConversation(first, character: character)
+        viewModel.draft = "돌아온 뒤 복구할 제출 원문"
+
+        let failureGate = AsyncTestGate()
+        viewModel.setSubmitMessageErrorCommitHookForTesting {
+            await failureGate.wait()
+        }
+        let staleSubmit = Task {
+            await viewModel.submitMessage()
+        }
+        await waitUntil {
+            await failureGate.hasWaiter
+        }
+
+        await viewModel.setConversation(second, character: character)
+        await viewModel.setConversation(first, character: character)
+        XCTAssertTrue(viewModel.draft.isEmpty)
+
+        await failureGate.release()
+        await staleSubmit.value
+        viewModel.setSubmitMessageErrorCommitHookForTesting(nil)
+
+        XCTAssertEqual(viewModel.conversation?.id, first.id)
+        XCTAssertEqual(viewModel.draft, "돌아온 뒤 복구할 제출 원문")
+        XCTAssertFalse(viewModel.isGenerating)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testChatLateCancelFailureCannotOverwriteNewRoomState() async throws {
+        let client = FakeCoreClient()
+        let character = LibraryCharacter.previewCharacters[0]
+        let first = try await client.createConversation(
+            characterID: character.id,
+            title: "취소 시작 방",
+            mode: .chat
+        )
+        let second = try await client.createConversation(
+            characterID: character.id,
+            title: "취소 중 이동한 방",
+            mode: .story
+        )
+        let viewModel = ChatViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            automaticallyPollEvents: false
+        )
+        await viewModel.setConversation(first, character: character)
+        let generationID = "late-cancel-generation"
+        let pending = ChatMessage(
+            conversationID: first.id,
+            role: .assistant,
+            text: "취소 대기 중",
+            status: .pending,
+            generationID: generationID
+        )
+        await client.replaceMessagesForTesting(
+            conversationID: first.id,
+            messages: [pending]
+        )
+        await viewModel.refreshMessages()
+        XCTAssertTrue(viewModel.isGenerating)
+        await client.replaceMessagesForTesting(
+            conversationID: first.id,
+            messages: []
+        )
+
+        let failureGate = AsyncTestGate()
+        viewModel.setCancelGenerationErrorCommitHookForTesting {
+            await failureGate.wait()
+        }
+        let staleCancellation = Task {
+            await viewModel.cancelGeneration()
+        }
+        await waitUntil {
+            await failureGate.hasWaiter
+        }
+
+        await viewModel.setConversation(second, character: character)
+        await failureGate.release()
+        await staleCancellation.value
+        viewModel.setCancelGenerationErrorCommitHookForTesting(nil)
+
+        XCTAssertEqual(viewModel.conversation?.id, second.id)
+        XCTAssertEqual(viewModel.mode, .story)
+        XCTAssertFalse(viewModel.isGenerating)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+#endif
+
     func testChatEditingUserMessageCreatesAndSelectsANewBranch() async throws {
         let client = FakeCoreClient()
         let character = LibraryCharacter.previewCharacters[0]
@@ -3048,6 +3626,215 @@ final class FeatureViewModelTests: XCTestCase {
         XCTAssertEqual(readsAfterChange, readsBeforeChange)
     }
 
+    func testSettingsRefreshPreservesEditsMadeWhileReadsAreInFlight() async {
+        let profiles = providerSelectionFixtures()
+        let client = FakeCoreClient(profiles: profiles)
+        let viewModel = SettingsViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview
+        )
+        await viewModel.refresh()
+
+        await client.gateNextProviderReadSnapshotsForTesting()
+        let refresh = Task {
+            await viewModel.refresh()
+        }
+        await waitUntil {
+            await client.providerReadSnapshotCaptureCountForTesting() == 2
+        }
+        viewModel.profileName = "지연 조회 중 작성한 이름"
+        viewModel.baseURL = "https://draft.example.invalid/v1"
+        viewModel.model = "draft-during-refresh"
+        viewModel.timeoutSeconds = "123"
+        viewModel.credentialDraft = "synthetic-delayed-refresh-key"
+        await client.releaseProviderReadSnapshotsForTesting()
+        await refresh.value
+
+        XCTAssertEqual(viewModel.profileName, "지연 조회 중 작성한 이름")
+        XCTAssertEqual(
+            viewModel.baseURL,
+            "https://draft.example.invalid/v1"
+        )
+        XCTAssertEqual(viewModel.model, "draft-during-refresh")
+        XCTAssertEqual(viewModel.timeoutSeconds, "123")
+        XCTAssertEqual(
+            viewModel.credentialDraft,
+            "synthetic-delayed-refresh-key"
+        )
+    }
+
+    func testSettingsRefreshCannotOverwriteANewerSharedSelection() async throws {
+        let profiles = providerSelectionFixtures()
+        let client = FakeCoreClient(profiles: profiles)
+        let store = ProviderConfigurationStore()
+        let viewModel = SettingsViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            providerConfigurationStore: store
+        )
+        await viewModel.refresh()
+        viewModel.profileName = "선택 경쟁 중 유지할 이름"
+        viewModel.model = "selection-race-draft"
+        viewModel.credentialDraft = "synthetic-selection-race-key"
+
+        await client.gateNextProviderReadSnapshotsForTesting()
+        let staleRefresh = Task {
+            await viewModel.refresh()
+        }
+        await waitUntil {
+            await client.providerReadSnapshotCaptureCountForTesting() == 2
+        }
+
+        let updated = try await client.selectProviderProfile(id: "pro")
+        store.replace(
+            profiles: profiles,
+            selectedProfileID: updated.selectedProviderProfileID
+        )
+        await client.releaseProviderReadSnapshotsForTesting()
+        await staleRefresh.value
+        await waitUntil {
+            !viewModel.isLoading
+                && viewModel.selectedProfileID == "pro"
+        }
+
+        XCTAssertEqual(store.selectedProfileID, "pro")
+        XCTAssertEqual(viewModel.selectedProfileID, "pro")
+        XCTAssertEqual(viewModel.profileName, "선택 경쟁 중 유지할 이름")
+        XCTAssertEqual(viewModel.model, "selection-race-draft")
+        XCTAssertEqual(
+            viewModel.credentialDraft,
+            "synthetic-selection-race-key"
+        )
+    }
+
+    func testSettingsRefreshCannotRestoreADeletedSharedProfile() async throws {
+        let profile = providerSelectionFixtures()[0]
+        let client = FakeCoreClient(profiles: [profile])
+        let store = ProviderConfigurationStore()
+        let viewModel = SettingsViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview,
+            providerConfigurationStore: store
+        )
+        await viewModel.refresh()
+        viewModel.model = "deleted-selection-race-draft"
+        viewModel.credentialDraft = "synthetic-deletion-race-key"
+
+        await client.gateNextProviderReadSnapshotsForTesting()
+        let staleRefresh = Task {
+            await viewModel.refresh()
+        }
+        await waitUntil {
+            await client.providerReadSnapshotCaptureCountForTesting() == 2
+        }
+
+        try await client.deleteProviderProfile(id: profile.id)
+        store.replace(profiles: [], selectedProfileID: nil)
+        await client.releaseProviderReadSnapshotsForTesting()
+        await staleRefresh.value
+        await waitUntil {
+            !viewModel.isLoading
+                && viewModel.profiles.isEmpty
+                && !viewModel.isEditingStoredProfile
+        }
+
+        XCTAssertTrue(store.profiles.isEmpty)
+        XCTAssertNil(store.selectedProfileID)
+        XCTAssertTrue(viewModel.profiles.isEmpty)
+        XCTAssertNil(viewModel.selectedProfileID)
+        XCTAssertEqual(viewModel.profileName, "")
+        XCTAssertEqual(viewModel.baseURL, "https://api.openai.com/v1")
+        XCTAssertEqual(viewModel.model, "")
+        XCTAssertEqual(viewModel.timeoutSeconds, "60")
+        XCTAssertTrue(viewModel.credentialDraft.isEmpty)
+    }
+
+    func testSettingsRefreshPreservesAnExistingNavigationDraft() async {
+        let viewModel = SettingsViewModel(
+            client: FakeCoreClient(profiles: providerSelectionFixtures()),
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview
+        )
+        await viewModel.refresh()
+        viewModel.profileName = "설정 이동 전에 작성한 이름"
+        viewModel.baseURL = "https://navigation-draft.example.invalid/v1"
+        viewModel.model = "navigation-draft-model"
+        viewModel.timeoutSeconds = "321"
+        viewModel.credentialDraft = "synthetic-navigation-draft-key"
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.profileName, "설정 이동 전에 작성한 이름")
+        XCTAssertEqual(
+            viewModel.baseURL,
+            "https://navigation-draft.example.invalid/v1"
+        )
+        XCTAssertEqual(viewModel.model, "navigation-draft-model")
+        XCTAssertEqual(viewModel.timeoutSeconds, "321")
+        XCTAssertEqual(
+            viewModel.credentialDraft,
+            "synthetic-navigation-draft-key"
+        )
+    }
+
+    func testSettingsRefreshReloadsAPristineEditor() async throws {
+        let profile = providerSelectionFixtures()[0]
+        let client = FakeCoreClient(profiles: [profile])
+        let viewModel = SettingsViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview
+        )
+        await viewModel.refresh()
+        let updated = ProviderProfile(
+            id: profile.id,
+            displayName: "Compact Updated",
+            baseURL: "https://updated.example.invalid/v1",
+            model: "lore-compact-updated",
+            timeoutSeconds: 45
+        )
+        _ = try await client.upsertProviderProfile(updated)
+
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.profiles, [updated])
+        XCTAssertEqual(viewModel.profileName, updated.displayName)
+        XCTAssertEqual(viewModel.baseURL, updated.baseURL)
+        XCTAssertEqual(viewModel.model, updated.model)
+        XCTAssertEqual(
+            viewModel.timeoutSeconds,
+            String(updated.timeoutSeconds)
+        )
+        XCTAssertTrue(viewModel.credentialDraft.isEmpty)
+    }
+
+    func testSettingsRefreshResetsADraftWhoseProfileWasDeleted() async throws {
+        let profile = providerSelectionFixtures()[0]
+        let client = FakeCoreClient(profiles: [profile])
+        let viewModel = SettingsViewModel(
+            client: client,
+            credentialStore: InMemoryCredentialStore(),
+            runtimeMode: .preview
+        )
+        await viewModel.refresh()
+        viewModel.model = "draft-for-deleted-profile"
+        viewModel.credentialDraft = "synthetic-deleted-profile-key"
+        try await client.deleteProviderProfile(id: profile.id)
+
+        await viewModel.refresh()
+
+        XCTAssertTrue(viewModel.profiles.isEmpty)
+        XCTAssertFalse(viewModel.isEditingStoredProfile)
+        XCTAssertEqual(viewModel.profileName, "")
+        XCTAssertEqual(viewModel.baseURL, "https://api.openai.com/v1")
+        XCTAssertEqual(viewModel.model, "")
+        XCTAssertEqual(viewModel.timeoutSeconds, "60")
+        XCTAssertTrue(viewModel.credentialDraft.isEmpty)
+    }
+
     func testSettingsBlockedProfileActionOpensEditorWithoutSelectingIt() async {
         let profiles = providerSelectionFixtures()
         let store = ProviderConfigurationStore(
@@ -4336,6 +5123,35 @@ private enum SyntheticCredentialStoreFailure: Error, LocalizedError {
         "synthetic-secret-canary operation_id=credential-operation-42"
     }
 }
+
+#if DEBUG
+private actor AsyncTestGate {
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    private var isReleased = false
+
+    var hasWaiter: Bool {
+        !waiters.isEmpty
+    }
+
+    func wait() async {
+        guard !isReleased else {
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    func release() {
+        isReleased = true
+        let pending = waiters
+        waiters.removeAll()
+        for continuation in pending {
+            continuation.resume()
+        }
+    }
+}
+#endif
 
 private actor ScriptedCredentialStore: CredentialStore {
     private var values: [String: String]
