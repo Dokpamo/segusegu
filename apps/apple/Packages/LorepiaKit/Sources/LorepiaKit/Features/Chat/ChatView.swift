@@ -58,9 +58,6 @@ public struct ChatView: View {
     @State private var pendingScrollTargetID: String?
     @FocusState private var isComposerFocused: Bool
     @FocusState private var isFullscreenComposerFocused: Bool
-#if os(iOS)
-    @FocusState private var isFallbackSearchFocused: Bool
-#endif
 
     public init(
         viewModel: ChatViewModel,
@@ -1375,19 +1372,6 @@ public struct ChatView: View {
         withTransaction(transaction) {
             isSearchActive = true
         }
-#if os(iOS)
-        Task { @MainActor in
-            await Task.yield()
-            guard isSearchActive else {
-                return
-            }
-            var focusTransaction = Transaction(animation: nil)
-            focusTransaction.disablesAnimations = true
-            withTransaction(focusTransaction) {
-                isFallbackSearchFocused = true
-            }
-        }
-#endif
     }
 
 #if os(iOS)
@@ -1406,36 +1390,15 @@ public struct ChatView: View {
                     .accessibilityHidden(isAvailable && isSearchActive)
                     .accessibilityAddTraits(.isHeader)
 
-                TextField("대화 내 검색", text: $searchQuery)
-                    .focused($isFallbackSearchFocused)
-                    .textFieldStyle(.plain)
-                    .submitLabel(.search)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .padding(.horizontal, 10)
+                ChatFallbackSearchField(
+                    text: $searchQuery,
+                    isActive: isAvailable && isSearchActive
+                )
                     .frame(
                         maxWidth: .infinity,
                         minHeight: 36,
                         maxHeight: 36
                     )
-                    .background(
-                        Color(uiColor: .secondarySystemBackground),
-                        in: RoundedRectangle(
-                            cornerRadius: 10,
-                            style: .continuous
-                        )
-                    )
-                    .accessibilityLabel("대화 내 검색")
-                    .accessibilityIdentifier("chat-room-search-field")
-                    .accessibilityAddTraits(
-                        isAvailable && isSearchActive
-                            ? .isSearchField
-                            : []
-                    )
-                    .opacity(isAvailable && isSearchActive ? 1 : 0)
-                    .allowsHitTesting(isAvailable && isSearchActive)
-                    .disabled(!(isAvailable && isSearchActive))
-                    .accessibilityHidden(!(isAvailable && isSearchActive))
             }
             .frame(
                 minWidth: 120,
@@ -1501,7 +1464,6 @@ public struct ChatView: View {
         var transaction = Transaction(animation: nil)
         transaction.disablesAnimations = true
         withTransaction(transaction) {
-            isFallbackSearchFocused = false
             isSearchActive = false
         }
     }
@@ -2105,6 +2067,188 @@ public struct ChatView: View {
         }
     }
 }
+
+#if os(iOS)
+/// A permanently mounted toolbar field whose native responder state is
+/// synchronized only when fallback search is presented.
+private struct ChatFallbackSearchField: UIViewRepresentable {
+    @Binding var text: String
+    let isActive: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text)
+    }
+
+    func makeUIView(
+        context: Context
+    ) -> ChatFallbackSearchTextField {
+        let field = ChatFallbackSearchTextField(frame: .zero)
+        field.placeholder = "대화 내 검색"
+        field.accessibilityLabel = "대화 내 검색"
+        field.accessibilityIdentifier = "chat-room-search-field"
+        field.returnKeyType = .search
+        field.autocapitalizationType = .none
+        field.autocorrectionType = .no
+        field.spellCheckingType = .no
+        field.clearButtonMode = .whileEditing
+        field.font = UIFont.preferredFont(forTextStyle: .body)
+        field.adjustsFontForContentSizeCategory = true
+        field.borderStyle = .none
+        field.backgroundColor = .secondarySystemBackground
+        field.layer.cornerRadius = 10
+        field.clipsToBounds = true
+        field.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        field.setContentCompressionResistancePriority(
+            .defaultLow,
+            for: .horizontal
+        )
+        field.addTarget(
+            context.coordinator,
+            action: #selector(Coordinator.textDidChange(_:)),
+            for: .editingChanged
+        )
+        field.text = text
+        field.setActive(isActive)
+        return field
+    }
+
+    func updateUIView(
+        _ field: ChatFallbackSearchTextField,
+        context: Context
+    ) {
+        context.coordinator.text = $text
+        if field.markedTextRange == nil, field.text != text {
+            field.text = text
+        }
+        field.setActive(isActive)
+    }
+
+    static func dismantleUIView(
+        _ field: ChatFallbackSearchTextField,
+        coordinator: Coordinator
+    ) {
+        field.removeTarget(
+            coordinator,
+            action: #selector(Coordinator.textDidChange(_:)),
+            for: .editingChanged
+        )
+        field.setActive(false)
+    }
+
+    @MainActor
+    final class Coordinator: NSObject {
+        var text: Binding<String>
+
+        init(text: Binding<String>) {
+            self.text = text
+        }
+
+        @objc
+        func textDidChange(_ field: UISearchTextField) {
+            guard field.markedTextRange == nil else {
+                return
+            }
+            let value = field.text ?? ""
+            if text.wrappedValue != value {
+                text.wrappedValue = value
+            }
+        }
+    }
+}
+
+@MainActor
+private final class ChatFallbackSearchTextField: UISearchTextField {
+    private var requestsFocus = false
+    private var focusGeneration: UInt = 0
+    private var scheduledGeneration: UInt?
+    private var focusTask: Task<Void, Never>?
+
+    func setActive(_ active: Bool) {
+        if requestsFocus != active {
+            requestsFocus = active
+            focusGeneration &+= 1
+            scheduledGeneration = nil
+            focusTask?.cancel()
+            focusTask = nil
+        }
+
+        if active {
+            isHidden = false
+            isEnabled = true
+            isUserInteractionEnabled = true
+            isAccessibilityElement = true
+            accessibilityElementsHidden = false
+            scheduleFocusIfNeeded()
+        } else {
+            if isFirstResponder {
+                resignFirstResponder()
+            }
+            isHidden = true
+            isEnabled = false
+            isUserInteractionEnabled = false
+            isAccessibilityElement = false
+            accessibilityElementsHidden = true
+        }
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        scheduledGeneration = nil
+        scheduleFocusIfNeeded()
+    }
+
+    private func scheduleFocusIfNeeded() {
+        guard requestsFocus,
+              window != nil,
+              !isFirstResponder,
+              scheduledGeneration != focusGeneration
+        else {
+            return
+        }
+
+        let generation = focusGeneration
+        scheduledGeneration = generation
+        focusTask?.cancel()
+        focusTask = Task { @MainActor [weak self] in
+            for attempt in 0 ..< 8 {
+                if attempt == 0 {
+                    await Task.yield()
+                } else {
+                    do {
+                        try await Task.sleep(for: .milliseconds(100))
+                    } catch {
+                        return
+                    }
+                }
+
+                guard !Task.isCancelled,
+                      let self,
+                      self.requestsFocus,
+                      self.focusGeneration == generation
+                else {
+                    return
+                }
+                guard let window = self.window, window.isKeyWindow else {
+                    continue
+                }
+                if self.becomeFirstResponder() {
+                    self.focusTask = nil
+                    return
+                }
+            }
+
+            guard let self,
+                  self.requestsFocus,
+                  self.focusGeneration == generation
+            else {
+                return
+            }
+            self.scheduledGeneration = nil
+            self.focusTask = nil
+        }
+    }
+}
+#endif
 
 /// Marks the message a conversation forks at.
 ///

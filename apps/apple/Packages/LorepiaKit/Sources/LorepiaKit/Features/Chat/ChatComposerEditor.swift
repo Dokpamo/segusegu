@@ -500,6 +500,10 @@ final class ChatComposerEditorHost: UIView {
         let maximumHeight = pixelCeil(
             lineHeight * CGFloat(max(maximumLines, 1)) + insets
         )
+        let boundedExpansionLineLimit = max(expansionLineLimit, 1)
+        let expansionHeight = pixelCeil(
+            lineHeight * CGFloat(boundedExpansionLineLimit) + insets
+        )
         let fittingHeight = pixelCeil(
             textView.sizeThatFits(
                 CGSize(
@@ -515,8 +519,9 @@ final class ChatComposerEditorHost: UIView {
             ),
             exceedsMaximum: fittingHeight > maximumHeight + 0.5,
             exceedsExpansionLineLimit:
-                max(visualLineCount(), explicitLineCount())
-                    > max(expansionLineLimit, 1)
+                fittingHeight > expansionHeight + 0.5
+                    || explicitLineCount()
+                        > boundedExpansionLineLimit
         )
     }
 
@@ -526,24 +531,6 @@ final class ChatComposerEditorHost: UIView {
                 count += 1
             }
         }
-    }
-
-    private func visualLineCount() -> Int {
-        let layoutManager = textView.layoutManager
-        let textContainer = textView.textContainer
-        layoutManager.ensureLayout(for: textContainer)
-
-        let glyphRange = layoutManager.glyphRange(for: textContainer)
-        var count = 0
-        layoutManager.enumerateLineFragments(
-            forGlyphRange: glyphRange
-        ) { _, _, _, _, _ in
-            count += 1
-        }
-        if textView.text.hasSuffix("\n") {
-            count += 1
-        }
-        return max(count, 1)
     }
 
     func updateScrolling(shouldScroll: Bool) {
