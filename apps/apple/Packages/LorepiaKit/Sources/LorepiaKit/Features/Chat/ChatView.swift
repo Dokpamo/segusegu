@@ -1407,10 +1407,10 @@ public struct ChatView: View {
         }
         .accessibilityLabel("대화 내 검색")
         .accessibilityIdentifier("chat-room-search-trigger")
-        // The pre-iOS 26 custom trailing slot sits 8pt farther inward than
-        // the native back item. Move the whole control so its visual, hit,
-        // and accessibility frames remain symmetric with that 44pt item.
-        .offset(x: 8)
+        // Keep the toolbar's reported width unchanged while laying out the
+        // actual 44pt button 8pt outward, symmetric with the native back item.
+        .padding(.leading, 8)
+        .padding(.trailing, -8)
     }
 
     /// The pre-iOS 26 field stays inside the principal navigation-bar slot.

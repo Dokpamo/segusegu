@@ -2316,6 +2316,27 @@ final class IOSRootNavigationUITests: XCTestCase {
             app.searchFields.firstMatch.exists,
             "Pulling down must not reveal a native search field."
         )
+        XCTAssertTrue(search.isHittable)
+        XCTAssertEqual(
+            search.frame.midX,
+            restingSearchFrame.midX,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            search.frame.midY,
+            restingSearchFrame.midY,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            search.frame.width,
+            restingSearchFrame.width,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            search.frame.height,
+            restingSearchFrame.height,
+            accuracy: 1
+        )
 
         search.tap()
         let searchField = app.searchFields.firstMatch
