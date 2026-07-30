@@ -1365,6 +1365,71 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
+    func testLongRestoredDraftStaysInsideComposerWhenReenteringRoom() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--lorepia-native-navigation-ui-test",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryL",
+        ]
+        let longDraft = (1 ... 12)
+            .map { "실험용 입력 \(String(format: "%02d", $0))" }
+            .joined(separator: "\n")
+        app.launchEnvironment["LOREPIA_UI_TEST_CHAT_DRAFT"] = longDraft
+        app.launch()
+
+        guard openPreviewChat(in: app) else {
+            return
+        }
+
+        var composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        let initialDraft = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", longDraft),
+            object: composer
+        )
+        wait(for: [initialDraft], timeout: 5)
+
+        let backButton = app.navigationBars.buttons["채팅"]
+        XCTAssertTrue(backButton.waitForExistence(timeout: 5))
+        backButton.tap()
+
+        let restoredRoom = app.descendants(matching: .any).matching(
+            NSPredicate(
+                format: "identifier BEGINSWITH %@",
+                "conversation-row-"
+            )
+        ).firstMatch
+        XCTAssertTrue(restoredRoom.waitForExistence(timeout: 5))
+        restoredRoom.tap()
+
+        composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        let composerSurface = app.descendants(matching: .any)[
+            "chat-composer-surface"
+        ]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            composerSurface.exists,
+            "The composer surface must appear with its restored editor."
+        )
+        XCTAssertEqual(composer.value as? String, longDraft)
+        XCTAssertGreaterThan(
+            composer.frame.height,
+            80,
+            "The restored compact editor must reopen at its five-line cap."
+        )
+        XCTAssertTrue(
+            composerSurface.frame
+                .insetBy(dx: -1, dy: -1)
+                .contains(composer.frame),
+            "The restored editor must remain inside its compact surface."
+        )
+    }
+
+    @MainActor
     func testChatSupportsNativeEdgeSwipeBack() {
         let app = XCUIApplication()
         app.launchArguments = ["--lorepia-native-navigation-ui-test"]

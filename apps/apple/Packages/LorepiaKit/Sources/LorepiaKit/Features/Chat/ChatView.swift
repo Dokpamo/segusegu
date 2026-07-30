@@ -2497,12 +2497,18 @@ private struct ChatComposer: View {
         } else {
             iosMessageEditor
                 .frame(
-                    height: max(
+                    minHeight: max(
                         measuredEditorHeight,
                         minimumEditorHeight
                     ),
                     alignment: .bottom
                 )
+                // A restored draft can resolve its native TextKit height
+                // before the asynchronous measured-height binding is
+                // published. Let that intrinsic size open the SwiftUI
+                // surface immediately, and contain any pixels while the two
+                // layout systems exchange their measurement.
+                .clipped()
         }
 #else
         TextField(
