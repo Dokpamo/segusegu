@@ -2087,6 +2087,7 @@ private struct ChatFallbackSearchField: UIViewRepresentable {
         field.placeholder = "대화 내 검색"
         field.accessibilityLabel = "대화 내 검색"
         field.accessibilityIdentifier = "chat-room-search-field"
+        field.accessibilityTraits.insert(.searchField)
         field.returnKeyType = .search
         field.autocapitalizationType = .none
         field.autocorrectionType = .no

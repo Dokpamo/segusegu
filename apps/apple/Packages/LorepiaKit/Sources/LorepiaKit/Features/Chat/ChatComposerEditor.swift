@@ -501,15 +501,6 @@ final class ChatComposerEditorHost: UIView {
             lineHeight * CGFloat(max(maximumLines, 1)) + insets
         )
         let boundedExpansionLineLimit = max(expansionLineLimit, 1)
-        let expansionHeight = pixelCeil(
-            lineHeight * CGFloat(boundedExpansionLineLimit) + insets
-        )
-        // UIKit can report a fitting height just over the nominal cap because
-        // glyph metrics and backing-scale rounding do not always land on the
-        // same pixel boundary. The midpoint to the next full line separates
-        // that rounding from a real additional wrapped line.
-        let expansionThreshold =
-            expansionHeight + pixelCeil(lineHeight / 2)
         let fittingHeight = pixelCeil(
             textView.sizeThatFits(
                 CGSize(
@@ -525,10 +516,58 @@ final class ChatComposerEditorHost: UIView {
             ),
             exceedsMaximum: fittingHeight > maximumHeight + 0.5,
             exceedsExpansionLineLimit:
-                fittingHeight > expansionThreshold
-                    || explicitLineCount()
-                        > boundedExpansionLineLimit
+                visualLineCount(width: width)
+                    > boundedExpansionLineLimit
         )
+    }
+
+    private func visualLineCount(width: CGFloat) -> Int {
+        let text = textView.text ?? ""
+        guard !text.isEmpty else {
+            return 1
+        }
+
+        // Measure in an independent container at the proposed width. The live
+        // text container can still carry the previous layout width while a
+        // restored draft is entering the SwiftUI hierarchy.
+        let containerWidth = max(
+            width
+                - textView.textContainerInset.left
+                - textView.textContainerInset.right,
+            1
+        )
+        let font =
+            textView.font ?? UIFont.preferredFont(forTextStyle: .body)
+        let textStorage = NSTextStorage(
+            string: text,
+            attributes: [.font: font]
+        )
+        let layoutManager = NSLayoutManager()
+        let textContainer = NSTextContainer(
+            size: CGSize(
+                width: containerWidth,
+                height: .greatestFiniteMagnitude
+            )
+        )
+        textContainer.lineFragmentPadding =
+            textView.textContainer.lineFragmentPadding
+        textContainer.lineBreakMode = textView.textContainer.lineBreakMode
+        textContainer.maximumNumberOfLines = 0
+        textStorage.addLayoutManager(layoutManager)
+        layoutManager.addTextContainer(textContainer)
+        layoutManager.ensureLayout(for: textContainer)
+
+        var lineCount = 0
+        let glyphRange = layoutManager.glyphRange(for: textContainer)
+        layoutManager.enumerateLineFragments(
+            forGlyphRange: glyphRange
+        ) { _, _, _, _, _ in
+            lineCount += 1
+        }
+        if text.last?.isNewline == true {
+            lineCount += 1
+        }
+        return max(lineCount, explicitLineCount())
     }
 
     private func explicitLineCount() -> Int {
