@@ -1427,7 +1427,11 @@ public struct ChatView: View {
                     )
                     .accessibilityLabel("대화 내 검색")
                     .accessibilityIdentifier("chat-room-search-field")
-                    .accessibilityAddTraits(.isSearchField)
+                    .accessibilityAddTraits(
+                        isAvailable && isSearchActive
+                            ? .isSearchField
+                            : []
+                    )
                     .opacity(isAvailable && isSearchActive ? 1 : 0)
                     .allowsHitTesting(isAvailable && isSearchActive)
                     .disabled(!(isAvailable && isSearchActive))
@@ -2958,10 +2962,26 @@ private struct ChatComposer: View {
 
     private var showsExpansionControl: Bool {
 #if os(iOS)
-        !isFullscreen && (isExpanded || exceedsExpansionLineLimit)
+        !isFullscreen
+            && (
+                isExpanded
+                    || exceedsExpansionLineLimit
+                    || draftExceedsExpansionLineLimit
+            )
 #else
         isEditing
 #endif
+    }
+
+    private var draftExceedsExpansionLineLimit: Bool {
+        var lineCount = 1
+        for character in draft where character.isNewline {
+            lineCount += 1
+            if lineCount > ChatComposerMetrics.expansionLineLimit {
+                return true
+            }
+        }
+        return false
     }
 
     private var expansionControlName: String {
