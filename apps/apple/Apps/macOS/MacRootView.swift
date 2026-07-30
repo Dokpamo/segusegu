@@ -59,6 +59,7 @@ struct MacRootView: View {
     @ObservedObject private var navigationModel: MacRootNavigationModel
     @ObservedObject private var settingsViewModel: SettingsViewModel
     @State private var showsFileImporter = false
+    @State private var settingsNavigationPath: [SettingsDestination] = []
 
     init(
         environment: AppEnvironment,
@@ -88,20 +89,12 @@ struct MacRootView: View {
             .navigationTitle("LorePia")
             .navigationSplitViewColumnWidth(min: 180, ideal: 220)
         } detail: {
-            HSplitView {
-                detail
-                    .frame(minWidth: 460, maxWidth: .infinity, maxHeight: .infinity)
-
-                if settingsViewModel.showTechnicalDetails {
-                    ScrollView {
-                        CoreStatusPanel(
-                            viewModel: environment.coreStatusViewModel
-                        )
-                        .padding(LorepiaSpacing.standard)
-                    }
-                    .frame(minWidth: 250, idealWidth: 280, maxWidth: 320)
-                }
-            }
+            detail
+                .frame(
+                    minWidth: 460,
+                    maxWidth: .infinity,
+                    maxHeight: .infinity
+                )
             .navigationTitle(navigationModel.destination.title)
         }
         .fileImporter(
@@ -151,6 +144,7 @@ struct MacRootView: View {
             ChatView(
                 viewModel: environment.chatViewModel,
                 onOpenProviderSettings: {
+                    settingsNavigationPath = [.providerProfile]
                     navigationModel.navigate(to: .settings)
                     Task {
                         await settingsViewModel.refresh()
@@ -174,7 +168,12 @@ struct MacRootView: View {
                 navigationModel.acknowledgeRendered(.importReview)
             }
         case .settings:
-            SettingsView(viewModel: settingsViewModel)
+            NavigationStack(path: $settingsNavigationPath) {
+                SettingsView(
+                    viewModel: settingsViewModel,
+                    coreStatus: environment.coreStatusViewModel
+                )
+            }
                 .onAppear {
                     navigationModel.acknowledgeRendered(.settings)
                 }

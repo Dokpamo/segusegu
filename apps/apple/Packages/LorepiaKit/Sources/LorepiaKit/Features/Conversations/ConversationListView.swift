@@ -197,8 +197,10 @@ private enum ConversationRowGeometry {
     static let avatarSize: CGFloat = 52
     static let verticalGap: CGFloat = 18
     static let verticalInset = verticalGap / 2
-    static let leadingInset: CGFloat = 11
-    static let trailingInset: CGFloat = 13
+    /// One gutter for the whole tab: the large title and the search field
+    /// both sit 16pt in, so the rows do too.
+    static let leadingInset: CGFloat = 16
+    static let trailingInset: CGFloat = 16
     static let avatarTextSpacing: CGFloat = 13
     static let titleAccessorySpacing: CGFloat = 8
     static let timestampOpticalAdjustment: CGFloat = 0.5
@@ -275,8 +277,10 @@ private struct ConversationListRow: View {
     private var avatar: some View {
         LorepiaAvatar(
             symbolName: item.character?.symbolName ?? "person.crop.circle",
-            seed: item.character?.id ?? item.id,
-            size: resolvedAvatarSize
+            size: resolvedAvatarSize,
+            // Whoever the row is about: the character if there is one, and
+            // otherwise the conversation's own name.
+            name: item.character?.name ?? item.displayTitle
         )
     }
 

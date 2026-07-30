@@ -3,7 +3,6 @@ import Foundation
 
 @MainActor
 public final class SettingsViewModel: ObservableObject {
-    @Published public var showTechnicalDetails = true
     @Published public private(set) var profiles: [ProviderProfile] = []
     @Published public private(set) var selectedProfileID: String?
     @Published public var preservePartialGenerations = false
@@ -22,6 +21,17 @@ public final class SettingsViewModel: ObservableObject {
 
     public var isEditingStoredProfile: Bool {
         profiles.contains { $0.id == editingProfileID }
+    }
+
+    /// Credential state is editor-scoped. Expose it for the selected profile
+    /// only when the editor currently represents that same persisted profile.
+    public var selectedProfileCredentialPresence: Bool? {
+        guard editingProfileID == selectedProfileID,
+              isCredentialStateKnown
+        else {
+            return nil
+        }
+        return hasStoredCredential
     }
 
     public var requiresCredentialRecovery: Bool {

@@ -15,7 +15,7 @@ struct IOSRootView: View {
 
     @State private var selectedTab: Tab = .home
     @State private var chatNavigationPath: [ConversationListItem] = []
-    @State private var showsCoreStatus = false
+    @State private var settingsNavigationPath: [SettingsDestination] = []
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -55,6 +55,7 @@ struct IOSRootView: View {
                     ChatView(
                         viewModel: environment.chatViewModel,
                         onOpenProviderSettings: {
+                            settingsNavigationPath = [.providerProfile]
                             selectedTab = .settings
                             Task {
                                 await settingsViewModel.refresh()
@@ -81,47 +82,13 @@ struct IOSRootView: View {
             }
             .tag(Tab.create)
 
-            NavigationStack {
-                SettingsView(viewModel: settingsViewModel)
-                    .toolbar {
-                        if settingsViewModel.showTechnicalDetails {
-                            ToolbarItem(placement: .primaryAction) {
-                                Button {
-                                    showsCoreStatus = true
-                                } label: {
-                                    Label {
-                                        Text("코어 상태")
-                                    } icon: {
-                                        LorepiaGlyphView(
-                                            .waveform,
-                                            size: 18
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .sheet(isPresented: $showsCoreStatus) {
-                        NavigationStack {
-                            ScrollView {
-                                CoreStatusPanel(
-                                    viewModel: environment.coreStatusViewModel
-                                )
-                                .padding(LorepiaSpacing.standard)
-                            }
-                            .navigationTitle("코어 상태")
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("완료") {
-                                        showsCoreStatus = false
-                                    }
-                                }
-                            }
-                        }
-                        .presentationDetents([.medium, .large])
-                    }
-                .navigationTitle("설정")
+            NavigationStack(path: $settingsNavigationPath) {
+                // No large title and no core-status button: the page opens on
+                // connection settings, and diagnostics live one page in.
+                SettingsView(
+                    viewModel: settingsViewModel,
+                    coreStatus: environment.coreStatusViewModel
+                )
             }
             .tabItem {
                 Label("설정", image: "TabSettings")

@@ -1,240 +1,182 @@
 import SwiftUI
 
+/// Destinations that can be opened from settings or from another app surface.
+public enum SettingsDestination: Hashable, Sendable {
+    case providerProfile
+    case diagnostics
+}
+
 public struct SettingsView: View {
     @ObservedObject private var viewModel: SettingsViewModel
-    @State private var showsProviderSelector = false
+    @ObservedObject private var coreStatus: CoreStatusViewModel
 
-    public init(viewModel: SettingsViewModel) {
+    public init(
+        viewModel: SettingsViewModel,
+        coreStatus: CoreStatusViewModel
+    ) {
         self.viewModel = viewModel
+        self.coreStatus = coreStatus
     }
 
     public var body: some View {
-        Form {
-            Section("코어") {
-                LabeledContent("실행 모드", value: viewModel.runtimeMode.displayName)
-                if case let .unavailable(message) = viewModel.runtimeMode {
-                    LabeledContent("오류") {
-                        Text(message)
-                            .foregroundStyle(.orange)
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
+        ScrollView {
+            VStack(spacing: LorepiaSettingsMetrics.cardSpacing) {
+                connectionCard
+                generalCard
+                statusCard
             }
-
-            Section("사용할 프로바이더") {
-                Button {
-                    showsProviderSelector = true
-                } label: {
-                    HStack {
-                        Text("프로필")
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        Text(selectedProviderDisplayName)
-                            .foregroundStyle(.secondary)
-                    }
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("프로필")
-                .accessibilityIdentifier(
-                    "settings-provider-profile-picker"
-                )
-                .accessibilityValue(selectedProviderDisplayName)
-                .confirmationDialog(
-                    "사용할 프로바이더",
-                    isPresented: $showsProviderSelector
-                ) {
-                    Button("선택 안 함") {
-                        Task {
-                            await viewModel.selectProfile(id: nil)
-                        }
-                    }
-                    ForEach(viewModel.profiles) { profile in
-                        Button(profile.displayName) {
-                            Task {
-                                await viewModel.selectProfile(
-                                    id: profile.id
-                                )
-                            }
-                        }
-                    }
-                    Button("취소", role: .cancel) {}
-                }
-
-                Toggle(
-                    "취소·실패한 부분 응답 보존",
-                    isOn: Binding(
-                        get: { viewModel.preservePartialGenerations },
-                        set: { value in
-                            Task {
-                                await viewModel.setPreservePartialGenerations(value)
-                            }
-                        }
-                    )
-                )
-            }
-
-            Section("프로필 편집") {
-                TextField("표시 이름", text: $viewModel.profileName)
-                TextField("Base URL", text: $viewModel.baseURL)
-                    .textContentType(.URL)
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.URL)
-                    #endif
-                Text(viewModel.baseURLGuidance)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                TextField("모델", text: $viewModel.model)
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    #endif
-                TextField("제한 시간(초)", text: $viewModel.timeoutSeconds)
-                    #if os(iOS)
-                    .keyboardType(.numberPad)
-                    #endif
-                SecureField(
-                    viewModel.hasStoredCredential
-                        ? "새 API 키를 입력하면 교체됩니다"
-                        : "API 키 (선택 사항)",
-                    text: $viewModel.credentialDraft
-                )
-                .textContentType(.password)
-                .privacySensitive()
-
-                Text(viewModel.credentialStatusDescription)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .privacySensitive()
-
-                if viewModel.hasStoredCredential
-                    || viewModel.requiresCredentialRecovery
-                    || (
-                        !viewModel.isCredentialStateKnown
-                            && viewModel.isEditingStoredProfile
-                    )
-                {
-                    Button(
-                        credentialRecoveryButtonTitle,
-                        role: .destructive
-                    ) {
-                        Task {
-                            await viewModel.clearCredential()
-                        }
-                    }
-                    .accessibilityIdentifier(
-                        "settings-credential-recovery"
-                    )
-                }
-                if !viewModel.isCredentialStateKnown,
-                   viewModel.isEditingStoredProfile
-                {
-                    Button("API 키 상태 다시 확인") {
-                        Task {
-                            await viewModel.refreshCredentialStatus()
-                        }
-                    }
-                }
-
-                HStack {
-                    newProfileButton
-                    Spacer()
-                    deleteProfileButton
-                    saveProfileButton
-                }
-            }
-
-            Section("화면") {
-                Toggle(
-                    "기술 상태 패널 표시",
-                    isOn: $viewModel.showTechnicalDetails
-                )
-            }
-
-            if let errorMessage = viewModel.errorMessage {
-                Section {
-                    Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                }
-            }
-            if let statusMessage = viewModel.statusMessage {
-                Section {
-                    LorepiaGlyphLabel(statusMessage, glyph: .check)
-                        .foregroundStyle(.secondary)
-                        .accessibilityIdentifier(
-                            "settings-status-message"
-                        )
-                }
-            }
-
-            Section {
-                Text(
-                    "API 키는 Keychain에만 저장되며 Rust 데이터베이스나 앱 로그에 기록되지 않습니다."
-                )
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-            }
+            .padding(.horizontal, LorepiaSettingsMetrics.cardInset)
+            .padding(.bottom, LorepiaSpacing.roomy)
+            .frame(maxWidth: 680)
+            .frame(maxWidth: .infinity)
         }
-        .formStyle(.grouped)
-        .lorepiaCanvas()
+        .background(LorepiaColor.paper.ignoresSafeArea())
         .disabled(viewModel.isLoading)
         .overlay {
             if viewModel.isLoading {
                 ProgressView()
             }
         }
+        .navigationDestination(for: SettingsDestination.self) { destination in
+            settingsDestination(destination)
+        }
     }
 
-    private var credentialRecoveryButtonTitle: String {
-        if viewModel.hasStoredCredential {
-            return "저장된 자격증명 삭제"
-        }
-        if viewModel.requiresCredentialRecovery {
-            return "API 키 없이 복구"
-        }
-        return "읽을 수 없는 API 키 삭제"
-    }
+    private var connectionCard: some View {
+        LorepiaSettingsCard {
+            NavigationLink(value: SettingsDestination.providerProfile) {
+                providerProfileRow
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings-provider-profile-row")
 
-    private var newProfileButton: some View {
-        Button("새 프로필") {
-            viewModel.beginNewProfile()
-        }
-        .buttonStyle(.borderless)
-        .accessibilityIdentifier("settings-new-provider-profile")
-    }
-
-    private var deleteProfileButton: some View {
-        Button("프로필 삭제", role: .destructive) {
-            Task {
-                await viewModel.deleteEditingProfile()
+            // The core only earns a line here when it is broken. Otherwise
+            // its state is a diagnostic, one page down.
+            if case let .unavailable(message) = viewModel.runtimeMode {
+                LorepiaSettingsRow(
+                    glyph: .waveform,
+                    title: "코어를 사용할 수 없습니다",
+                    subtitle: message
+                )
             }
         }
-        .disabled(!viewModel.isEditingStoredProfile)
-        .buttonStyle(.borderless)
-        .accessibilityIdentifier("settings-delete-provider-profile")
     }
 
-    private var saveProfileButton: some View {
-        Button("저장") {
-            Task {
-                await viewModel.saveProfile()
+    private var generalCard: some View {
+        LorepiaSettingsCard {
+            Toggle(
+                isOn: Binding(
+                    get: { viewModel.preservePartialGenerations },
+                    set: { value in
+                        Task {
+                            await viewModel.setPreservePartialGenerations(value)
+                        }
+                    }
+                )
+            ) {
+                LorepiaSettingsRow(
+                    glyph: .regenerate,
+                    title: "취소·실패한 부분 응답 보존",
+                    subtitle: "중단된 응답도 대화에 남겨 둡니다"
+                )
+            }
+
+            NavigationLink(value: SettingsDestination.diagnostics) {
+                diagnosticsRow
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("settings-diagnostics-row")
+        }
+    }
+
+    private var providerProfileRow: some View {
+        LorepiaSettingsRow(
+            glyph: .shield,
+            title: connectionTitle,
+            subtitle: connectionSubtitle
+        ) {
+            disclosure
+        }
+        .contentShape(Rectangle())
+    }
+
+    private var diagnosticsRow: some View {
+        LorepiaSettingsRow(
+            glyph: .waveform,
+            title: "진단",
+            subtitle: "실행 모드와 코어 상태"
+        ) {
+            disclosure
+        }
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func settingsDestination(
+        _ destination: SettingsDestination
+    ) -> some View {
+        switch destination {
+        case .providerProfile:
+            SettingsProviderProfileView(viewModel: viewModel)
+        case .diagnostics:
+            SettingsDiagnosticsView(
+                viewModel: viewModel,
+                coreStatus: coreStatus
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var statusCard: some View {
+        if let errorMessage = viewModel.errorMessage {
+            LorepiaSettingsCard {
+                Label(
+                    errorMessage,
+                    systemImage: "exclamationmark.triangle.fill"
+                )
+                .font(.footnote)
+                .foregroundStyle(.orange)
             }
         }
-        .buttonStyle(.borderedProminent)
-        .accessibilityIdentifier("settings-save-provider-profile")
     }
 
-    private var selectedProviderDisplayName: String {
+    private var disclosure: some View {
+        Image(systemName: "chevron.right")
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.tertiary)
+    }
+
+    private var connectionTitle: String {
+        selectedProviderProfile?.displayName ?? "프로바이더 연결"
+    }
+
+    /// The model and whether a key is stored: what the reader needs to know
+    /// without opening the page.
+    private var connectionSubtitle: String {
+        guard let selectedProviderProfile else {
+            return "아직 연결된 프로바이더가 없습니다"
+        }
+        let model = selectedProviderProfile.model.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        )
+        guard let hasCredential =
+            viewModel.selectedProfileCredentialPresence
+        else {
+            return model
+        }
+        let key = hasCredential ? "API 키 저장됨" : "API 키 없음"
+        return model.isEmpty ? key : "\(model) · \(key)"
+    }
+
+    private var selectedProviderProfile: ProviderProfile? {
         guard
             let selectedProfileID = viewModel.selectedProfileID,
             let selectedProfile = viewModel.profiles.first(where: {
                 $0.id == selectedProfileID
             })
         else {
-            return "선택 안 함"
+            return nil
         }
-        return selectedProfile.displayName
+        return selectedProfile
     }
 }

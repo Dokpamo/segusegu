@@ -90,6 +90,18 @@ public enum LorepiaColor {
         darkIncreasedContrast: 0xFFB69B
     )
 
+    /// The avatar disc.
+    ///
+    /// One flat tint for everyone, as the system's placeholder avatars do: a
+    /// per-character hue would compete with the colours that carry meaning.
+    /// Deep enough that the letter on it can be white, like the system's.
+    public static let avatarFill = adaptive(
+        light: 0x847C6E,
+        dark: 0x423D35,
+        lightIncreasedContrast: 0x6C6459,
+        darkIncreasedContrast: 0x544E43
+    )
+
     /// The day marker's capsule. It is chrome, so it stays a neutral warm
     /// grey — and in the dark it steps down instead of becoming the brightest
     /// block on a page whose text it is only labelling.

@@ -37,6 +37,17 @@ final class IOSRootNavigationUITests: XCTestCase {
         )
     }
 
+    /// Settings lists what is connected; the profile form lives one page down.
+    @MainActor
+    private func openProviderProfileDetail(in app: XCUIApplication) {
+        let row = app.buttons["settings-provider-profile-row"]
+        XCTAssertTrue(row.waitForExistence(timeout: 5))
+        row.tap()
+        XCTAssertTrue(
+            app.navigationBars["프로필 편집"].waitForExistence(timeout: 5)
+        )
+    }
+
     @MainActor
     private func visibleContentElements(
         matching elementType: XCUIElement.ElementType,
@@ -449,30 +460,22 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         settings.tap()
         XCTAssertTrue(settings.isSelected)
-        XCTAssertTrue(
-            app.staticTexts["프로필 편집"].waitForExistence(timeout: 5)
-        )
+        // Editing a profile now lives one page down, behind the connection row.
+        openProviderProfileDetail(in: app)
         XCTAssertTrue(app.textFields["표시 이름"].isHittable)
+        app.navigationBars["프로필 편집"].buttons.firstMatch.tap()
 
-        let coreStatus = app.buttons["코어 상태"]
-        XCTAssertTrue(coreStatus.waitForExistence(timeout: 5))
-        coreStatus.tap()
+        // Diagnostics, including the core status panel, live one page in.
+        let diagnostics = app.buttons["settings-diagnostics-row"]
+        XCTAssertTrue(diagnostics.waitForExistence(timeout: 5))
+        diagnostics.tap()
         XCTAssertTrue(
-            app.navigationBars["코어 상태"].waitForExistence(timeout: 5)
+            app.navigationBars["진단"].waitForExistence(timeout: 5)
         )
         XCTAssertTrue(
             app.buttons["코어 상태 새로 고침"].waitForExistence(timeout: 5)
         )
-        app.buttons["완료"].tap()
-
-        app.swipeUp()
-        let technicalDetails = app.switches["기술 상태 패널 표시"]
-        XCTAssertTrue(technicalDetails.waitForExistence(timeout: 5))
-        technicalDetails.coordinate(
-            withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)
-        ).tap()
-        XCTAssertEqual(technicalDetails.value as? String, "0")
-        XCTAssertTrue(coreStatus.waitForNonExistence(timeout: 5))
+        app.navigationBars["진단"].buttons.firstMatch.tap()
 
         app.swipeDown()
         XCTAssertTrue(home.waitForExistence(timeout: 5))
@@ -772,7 +775,7 @@ final class IOSRootNavigationUITests: XCTestCase {
             18,
             accuracy: 1
         )
-        let expectedTextLeading = window.frame.minX + 11 + 52 + 13
+        let expectedTextLeading = window.frame.minX + 16 + 52 + 13
         XCTAssertEqual(
             titleFrame.minX,
             expectedTextLeading,
@@ -1117,6 +1120,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
         settingsTab.tap()
         XCTAssertTrue(settingsTab.isSelected)
+        openProviderProfileDetail(in: app)
 
         let profilePicker = app.buttons[
             "settings-provider-profile-picker"
@@ -1211,6 +1215,14 @@ final class IOSRootNavigationUITests: XCTestCase {
             app.buttons["settings-delete-provider-profile"].isEnabled
         )
 
+        app.navigationBars["프로필 편집"].buttons.firstMatch.tap()
+        let diagnostics = app.buttons["settings-diagnostics-row"]
+        XCTAssertTrue(diagnostics.waitForExistence(timeout: 5))
+        diagnostics.tap()
+        XCTAssertTrue(
+            app.navigationBars["진단"].waitForExistence(timeout: 5)
+        )
+
         guard openPreviewChat(in: app) else {
             return
         }
@@ -1239,11 +1251,15 @@ final class IOSRootNavigationUITests: XCTestCase {
             providerCTA.tap()
             XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
             XCTAssertTrue(settingsTab.isSelected)
+            // The CTA targets provider configuration directly and replaces
+            // any settings detail path that the tab previously preserved.
             XCTAssertTrue(
-                app.navigationBars["설정"].waitForExistence(timeout: 5)
+                app.navigationBars["프로필 편집"]
+                    .waitForExistence(timeout: 5)
             )
             XCTAssertTrue(
-                app.staticTexts["프로필 편집"].waitForExistence(timeout: 5)
+                app.buttons["settings-provider-profile-picker"]
+                    .waitForExistence(timeout: 5)
             )
         }
     }
