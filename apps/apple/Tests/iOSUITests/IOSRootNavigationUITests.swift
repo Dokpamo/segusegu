@@ -977,6 +977,10 @@ final class IOSRootNavigationUITests: XCTestCase {
             composer.waitForExistence(timeout: 5),
             "행의 텍스트 바깥 빈 공간을 눌러도 채팅방이 열려야 합니다."
         )
+        let backButton = app.navigationBars.buttons["채팅"]
+        XCTAssertTrue(backButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(backButton.isHittable)
+        XCTAssertFalse(chats.exists)
 
         let window = app.windows.firstMatch
         let leadingEdge = window.coordinate(
@@ -985,9 +989,22 @@ final class IOSRootNavigationUITests: XCTestCase {
         let destination = window.coordinate(
             withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5)
         )
-        leadingEdge.press(forDuration: 0.05, thenDragTo: destination)
+        var returnedToConversationList = false
+        // XCTest can drop the first synthesized edge drag on a freshly
+        // presented screen. Retry the same native gesture once; never fall
+        // back to tapping the navigation button in this regression test.
+        for _ in 0..<2 {
+            leadingEdge.press(forDuration: 0.05, thenDragTo: destination)
+            if chats.waitForExistence(timeout: 5) {
+                returnedToConversationList = true
+                break
+            }
+        }
 
-        XCTAssertTrue(chats.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            returnedToConversationList,
+            "Native edge swipe must return to the conversation list."
+        )
         XCTAssertTrue(chats.isSelected)
         XCTAssertTrue(
             app.descendants(matching: .any)["conversation-list-screen"]
@@ -2259,10 +2276,24 @@ final class IOSRootNavigationUITests: XCTestCase {
                 accuracy: 1
             )
         } else {
-            XCTAssertEqual(back.frame.width, 44, accuracy: 1)
-            XCTAssertEqual(back.frame.height, 44, accuracy: 1)
-            XCTAssertEqual(search.frame.width, 44, accuracy: 1)
-            XCTAssertEqual(search.frame.height, 44, accuracy: 1)
+            // The accessibility frame includes the back title horizontally;
+            // its 44pt height is the native control's visual diameter.
+            let backControlDiameter = back.frame.height
+            XCTAssertEqual(backControlDiameter, 44, accuracy: 1)
+            XCTAssertGreaterThanOrEqual(
+                back.frame.width,
+                backControlDiameter
+            )
+            XCTAssertEqual(
+                search.frame.width,
+                backControlDiameter,
+                accuracy: 1
+            )
+            XCTAssertEqual(
+                search.frame.height,
+                backControlDiameter,
+                accuracy: 1
+            )
         }
         XCTAssertGreaterThanOrEqual(
             search.frame.minY,
