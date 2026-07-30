@@ -155,46 +155,28 @@ public struct ChatView: View {
                             )
                         } else {
                             if isSearchActive {
-                                ToolbarItem(
-                                    id: "chat-search-field",
-                                    placement: .principal
-                                ) {
+                                ToolbarItem(placement: .principal) {
                                     chatToolbarSearchField
                                 }
-                                ToolbarItem(
-                                    id: "chat-search-close",
-                                    placement: .topBarTrailing
-                                ) {
+                                ToolbarItem(placement: .topBarTrailing) {
                                     chatToolbarSearchClose
                                 }
                             } else {
-                                ToolbarItem(
-                                    id: "chat-search-trigger",
-                                    placement: .topBarTrailing
-                                ) {
+                                ToolbarItem(placement: .topBarTrailing) {
                                     chatToolbarSearchFallback
                                 }
                             }
                         }
 #else
                         if isSearchActive {
-                            ToolbarItem(
-                                id: "chat-search-field",
-                                placement: .principal
-                            ) {
+                            ToolbarItem(placement: .principal) {
                                 chatToolbarSearchField
                             }
-                            ToolbarItem(
-                                id: "chat-search-close",
-                                placement: .topBarTrailing
-                            ) {
+                            ToolbarItem(placement: .topBarTrailing) {
                                 chatToolbarSearchClose
                             }
                         } else {
-                            ToolbarItem(
-                                id: "chat-search-trigger",
-                                placement: .topBarTrailing
-                            ) {
+                            ToolbarItem(placement: .topBarTrailing) {
                                 chatToolbarSearchFallback
                             }
                         }
@@ -1424,12 +1406,14 @@ public struct ChatView: View {
                     // while matching the back control's visible inset.
                     LorepiaGlyphView(.search, size: 23)
                         .offset(x: 8)
+                        .allowsHitTesting(false)
                         .accessibilityHidden(true)
                 }
                 .contentShape(Circle())
         }
         .accessibilityLabel("대화 내 검색")
         .accessibilityIdentifier("chat-room-search-trigger")
+        .id("chat-search-trigger")
     }
 
     /// The pre-iOS 26 field stays inside the principal navigation-bar slot.
