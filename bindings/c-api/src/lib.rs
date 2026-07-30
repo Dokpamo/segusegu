@@ -18,7 +18,7 @@ use lorepia_engine::{
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
-pub const ABI_VERSION: u32 = 2;
+pub const ABI_VERSION: u32 = 3;
 
 const STATUS_OK: i32 = 0;
 const STATUS_INVALID_ARGUMENT: i32 = 1;
@@ -866,6 +866,8 @@ mod tests {
             let body = concat!(
                 "data: {\"choices\":[{\"delta\":{\"content\":\"Hello from ABI\"}}],",
                 "\"usage\":null}\n\n",
+                "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],",
+                "\"usage\":null}\n\n",
                 "data: [DONE]\n\n"
             );
             write!(
@@ -915,12 +917,12 @@ mod tests {
 
     #[test]
     #[allow(clippy::too_many_lines)]
-    fn c_abi_v2_exercises_import_chat_profiles_settings_and_events() {
+    fn c_abi_v3_exercises_import_chat_profiles_settings_and_events() {
         let root = tempdir().expect("temp root");
         // SAFETY: this test follows the documented handle and buffer lifetimes.
         unsafe {
             let handle = create_core(root.path());
-            assert_eq!(lorepia_abi_version(), 2);
+            assert_eq!(lorepia_abi_version(), 3);
 
             let mut version_buffer = LorepiaBuffer::default();
             assert_eq!(

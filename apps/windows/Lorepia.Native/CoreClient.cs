@@ -7,7 +7,7 @@ namespace Lorepia.Native;
 
 public sealed class CoreClient : IDisposable
 {
-    public const uint SupportedAbiVersion = 2;
+    public const uint SupportedAbiVersion = 3;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

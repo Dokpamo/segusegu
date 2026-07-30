@@ -2,10 +2,10 @@ using System.Text.Json;
 
 namespace Lorepia.Native.Tests;
 
-public sealed class CoreClientV2Tests
+public sealed class CoreClientV3Tests
 {
     [Fact]
-    public void MapsCompleteV2ContractAndUtf8Inputs()
+    public void MapsCompleteV3ContractAndUtf8Inputs()
     {
         var api = new FakeNativeApi();
         using var client = CoreClient.Open(api, CreateDataRoot());
@@ -459,6 +459,6 @@ public sealed class CoreClientV2Tests
     private static string CreateDataRoot() =>
         Path.Combine(
             Path.GetTempPath(),
-            "lorepia-native-v2-tests",
+            "lorepia-native-v3-tests",
             Guid.NewGuid().ToString("N"));
 }
