@@ -2210,7 +2210,7 @@ private final class ChatFallbackSearchTextField: UISearchTextField {
         scheduledGeneration = generation
         focusTask?.cancel()
         focusTask = Task { @MainActor [weak self] in
-            for attempt in 0 ..< 8 {
+            for attempt in 0 ..< 16 {
                 if attempt == 0 {
                     await Task.yield()
                 } else {
