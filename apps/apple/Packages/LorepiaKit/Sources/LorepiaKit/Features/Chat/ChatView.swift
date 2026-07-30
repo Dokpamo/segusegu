@@ -1415,17 +1415,20 @@ public struct ChatView: View {
                 openSearch()
             }
         } label: {
-            ZStack {
-                Color.clear
-                LorepiaGlyphView(.search, size: 23)
-                    .offset(x: 8)
-                    .opacity(isSearchActive ? 0 : 1)
-                    .accessibilityHidden(true)
-                Text("취소")
-                    .opacity(isSearchActive ? 1 : 0)
-                    .accessibilityHidden(true)
-            }
+            Color.clear
                 .frame(width: 36, height: 36)
+                .overlay {
+                    if isSearchActive {
+                        Text("취소")
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    } else {
+                        LorepiaGlyphView(.search, size: 23)
+                            .offset(x: 8)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
                 .contentShape(Circle())
         }
         .accessibilityLabel(isSearchActive ? "취소" : "대화 내 검색")
