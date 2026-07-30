@@ -1375,8 +1375,9 @@ public struct ChatView: View {
     }
 
 #if os(iOS)
-    /// Keep both fallback slots mounted for the room's lifetime. Only their
-    /// presentation changes, so opening search does not relayout the toolbar.
+    /// Keep both fallback slots and their native controls mounted for the
+    /// room's lifetime. Only presentation changes, so opening search does not
+    /// relayout the toolbar.
     @ToolbarContentBuilder
     private func chatFallbackSearchToolbar(
         isAvailable: Bool
@@ -1394,11 +1395,11 @@ public struct ChatView: View {
                     text: $searchQuery,
                     isActive: isAvailable && isSearchActive
                 )
-                    .frame(
-                        maxWidth: .infinity,
-                        minHeight: 36,
-                        maxHeight: 36
-                    )
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: 36,
+                    maxHeight: 36
+                )
             }
             .frame(
                 minWidth: 120,
@@ -2097,6 +2098,7 @@ private struct ChatFallbackSearchField: UIViewRepresentable {
         field.backgroundColor = .secondarySystemBackground
         field.layer.cornerRadius = 10
         field.clipsToBounds = true
+        field.isAccessibilityElement = true
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(
             .defaultLow,
@@ -2172,22 +2174,20 @@ private final class ChatFallbackSearchTextField: UISearchTextField {
             focusTask = nil
         }
 
-        if active {
+        UIView.performWithoutAnimation {
             isHidden = false
-            isEnabled = true
-            isUserInteractionEnabled = true
-            isAccessibilityElement = true
-            accessibilityElementsHidden = false
-            scheduleFocusIfNeeded()
-        } else {
-            if isFirstResponder {
+            alpha = active ? 1 : 0
+            isEnabled = active
+            isUserInteractionEnabled = active
+            accessibilityElementsHidden = !active
+
+            if !active, isFirstResponder {
                 resignFirstResponder()
             }
-            isHidden = true
-            isEnabled = false
-            isUserInteractionEnabled = false
-            isAccessibilityElement = false
-            accessibilityElementsHidden = true
+        }
+
+        if active {
+            scheduleFocusIfNeeded()
         }
     }
 
@@ -2210,6 +2210,7 @@ private final class ChatFallbackSearchTextField: UISearchTextField {
         scheduledGeneration = generation
         focusTask?.cancel()
         focusTask = Task { @MainActor [weak self] in
+            var postedAccessibilityLayoutChange = false
             for attempt in 0 ..< 20 {
                 if attempt == 0 {
                     await Task.yield()
@@ -2230,6 +2231,13 @@ private final class ChatFallbackSearchTextField: UISearchTextField {
                 }
                 guard let window = self.window, window.isKeyWindow else {
                     continue
+                }
+                if !postedAccessibilityLayoutChange {
+                    UIAccessibility.post(
+                        notification: .layoutChanged,
+                        argument: self
+                    )
+                    postedAccessibilityLayoutChange = true
                 }
                 if self.becomeFirstResponder() {
                     self.focusTask = nil

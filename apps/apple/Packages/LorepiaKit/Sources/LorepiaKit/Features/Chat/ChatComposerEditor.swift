@@ -504,6 +504,12 @@ final class ChatComposerEditorHost: UIView {
         let expansionHeight = pixelCeil(
             lineHeight * CGFloat(boundedExpansionLineLimit) + insets
         )
+        // UIKit can report a fitting height just over the nominal cap because
+        // glyph metrics and backing-scale rounding do not always land on the
+        // same pixel boundary. The midpoint to the next full line separates
+        // that rounding from a real additional wrapped line.
+        let expansionThreshold =
+            expansionHeight + pixelCeil(lineHeight / 2)
         let fittingHeight = pixelCeil(
             textView.sizeThatFits(
                 CGSize(
@@ -519,7 +525,7 @@ final class ChatComposerEditorHost: UIView {
             ),
             exceedsMaximum: fittingHeight > maximumHeight + 0.5,
             exceedsExpansionLineLimit:
-                fittingHeight > expansionHeight + 0.5
+                fittingHeight > expansionThreshold
                     || explicitLineCount()
                         > boundedExpansionLineLimit
         )
