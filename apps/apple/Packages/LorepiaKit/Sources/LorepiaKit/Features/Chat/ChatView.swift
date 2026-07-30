@@ -154,32 +154,10 @@ public struct ChatView: View {
                                 placement: .topBarTrailing
                             )
                         } else {
-                            if isSearchActive {
-                                ToolbarItem(placement: .principal) {
-                                    chatToolbarSearchField
-                                }
-                                ToolbarItem(placement: .topBarTrailing) {
-                                    chatToolbarSearchClose
-                                }
-                            } else {
-                                ToolbarItem(placement: .topBarTrailing) {
-                                    chatToolbarSearchFallback
-                                }
-                            }
+                            chatFallbackSearchToolbar
                         }
 #else
-                        if isSearchActive {
-                            ToolbarItem(placement: .principal) {
-                                chatToolbarSearchField
-                            }
-                            ToolbarItem(placement: .topBarTrailing) {
-                                chatToolbarSearchClose
-                            }
-                        } else {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                chatToolbarSearchFallback
-                            }
-                        }
+                        chatFallbackSearchToolbar
 #endif
                     }
 #endif
@@ -1393,6 +1371,44 @@ public struct ChatView: View {
     }
 
 #if os(iOS)
+    /// Older navigation bars do not reliably install a newly inserted
+    /// principal item after a toolbar button changes state. Keep both toolbar
+    /// slots mounted and replace only their contents.
+    @ToolbarContentBuilder
+    private var chatFallbackSearchToolbar: some ToolbarContent {
+        ToolbarItem(placement: .principal) {
+            Group {
+                if isSearchActive {
+                    chatToolbarSearchField
+                } else {
+                    Text(viewModel.character?.name ?? "")
+                        .font(.headline)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .accessibilityAddTraits(.isHeader)
+                }
+            }
+            .transaction { transaction in
+                transaction.animation = nil
+                transaction.disablesAnimations = true
+            }
+        }
+
+        ToolbarItem(placement: .topBarTrailing) {
+            Group {
+                if isSearchActive {
+                    chatToolbarSearchClose
+                } else {
+                    chatToolbarSearchFallback
+                }
+            }
+            .transaction { transaction in
+                transaction.animation = nil
+                transaction.disablesAnimations = true
+            }
+        }
+    }
+
     /// Older iOS releases do not expose a relocatable default search item, so
     /// the inactive toolbar keeps the prepared glyph in the trailing slot.
     private var chatToolbarSearchFallback: some View {
@@ -1413,7 +1429,6 @@ public struct ChatView: View {
         }
         .accessibilityLabel("대화 내 검색")
         .accessibilityIdentifier("chat-room-search-trigger")
-        .id("chat-search-trigger")
     }
 
     /// The pre-iOS 26 field stays inside the principal navigation-bar slot.
