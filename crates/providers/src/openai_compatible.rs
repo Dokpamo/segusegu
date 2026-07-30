@@ -389,10 +389,7 @@ fn update_usage(stream_usage: Option<&StreamUsage>, usage: &mut GenerationUsage)
     }
 }
 
-fn observe_finish_reasons(
-    choices: &[StreamChoice],
-    state: &mut SseStreamState,
-) -> CoreResult<()> {
+fn observe_finish_reasons(choices: &[StreamChoice], state: &mut SseStreamState) -> CoreResult<()> {
     let mut saw_supported_finish_reason = false;
     for choice in choices {
         match choice.finish_reason.as_deref() {
@@ -510,8 +507,7 @@ fn ensure_pending_size(bytes: &[u8], end_of_stream: bool) -> CoreResult<()> {
     let possible_separator = &bytes[MAX_SSE_BUFFER_BYTES..];
     if !end_of_stream
         && SSE_EVENT_SEPARATORS.iter().any(|separator| {
-            possible_separator.len() < separator.len()
-                && separator.starts_with(possible_separator)
+            possible_separator.len() < separator.len() && separator.starts_with(possible_separator)
         })
     {
         return Ok(());

@@ -3349,15 +3349,7 @@ mod tests {
 
     fn insert_legacy_message(
         connection: &Connection,
-        row: (
-            &str,
-            Option<&str>,
-            &str,
-            &str,
-            &str,
-            Option<&str>,
-            &str,
-        ),
+        row: (&str, Option<&str>, &str, &str, &str, Option<&str>, &str),
     ) {
         let (id, parent_id, role, content, status, generation_id, created_at) = row;
         connection
@@ -4226,11 +4218,10 @@ mod tests {
             Connection::open(root.path().join("db/lorepia.sqlite3")).expect("legacy database");
         assert_eq!(
             connection
-                .query_row(
-                    "SELECT MAX(version) FROM schema_migrations",
-                    [],
-                    |row| row.get::<_, u32>(0)
-                )
+                .query_row("SELECT MAX(version) FROM schema_migrations", [], |row| row
+                    .get::<_, u32>(
+                    0
+                ))
                 .expect("schema version"),
             2
         );
