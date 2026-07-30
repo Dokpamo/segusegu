@@ -21,6 +21,7 @@ public struct SettingsView: View {
     public var body: some View {
         ScrollView {
             VStack(spacing: LorepiaSettingsMetrics.cardSpacing) {
+                guestIdentityHeader
                 connectionCard
                 generalCard
                 statusCard
@@ -40,6 +41,42 @@ public struct SettingsView: View {
         .navigationDestination(for: SettingsDestination.self) { destination in
             settingsDestination(destination)
         }
+    }
+
+    /// The local identity header from the settings reference.
+    ///
+    /// Its account behavior is intentionally absent: LorePia remains
+    /// local-first, while the visual hierarchy still starts with the current
+    /// guest identity.
+    private var guestIdentityHeader: some View {
+        VStack(spacing: LorepiaSpacing.snug) {
+            LorepiaAvatar(
+                symbolName: "person.fill",
+                size: 104
+            )
+            .overlay(alignment: .bottomTrailing) {
+                LorepiaGlyphView(.plus, size: 17)
+                    .foregroundStyle(LorepiaColor.paper)
+                    .frame(width: 32, height: 32)
+                    .background(Color.primary, in: Circle())
+                    .overlay {
+                        Circle().strokeBorder(
+                            LorepiaColor.paper,
+                            lineWidth: 2.5
+                        )
+                    }
+                    .accessibilityHidden(true)
+            }
+
+            Text("게스트")
+                .font(.title3.weight(.semibold))
+        }
+        .padding(.top, LorepiaSpacing.compact)
+        .padding(.bottom, LorepiaSpacing.tight)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("게스트")
+        .accessibilityIdentifier("settings-guest-identity")
     }
 
     private var connectionCard: some View {

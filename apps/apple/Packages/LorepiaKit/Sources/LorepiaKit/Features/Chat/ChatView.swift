@@ -47,7 +47,6 @@ public struct ChatView: View {
     @State private var activeMatchID: String?
     @State private var pendingScrollTargetID: String?
     @FocusState private var isComposerFocused: Bool
-    @FocusState private var isSearchFocused: Bool
 
     public init(
         viewModel: ChatViewModel,
@@ -97,7 +96,8 @@ public struct ChatView: View {
             }
             .chatConversationSearch(
                 text: $searchQuery,
-                isPresented: $isSearchActive
+                isPresented: $isSearchActive,
+                isAvailable: viewModel.conversation != nil
             )
             .onChange(of: isSearchActive) { _, active in
                 if !active {
@@ -118,33 +118,6 @@ public struct ChatView: View {
                         }
                     }
                 }
-#else
-                // Ours rather than the system's search button, so it can keep
-                // a fixed place beside settings while still using native
-                // toolbar chrome.
-                if viewModel.conversation != nil {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            openSearch()
-                        } label: {
-                            LorepiaGlyphView(.search, size: 23)
-                        }
-                        .accessibilityLabel("대화 내 검색")
-                        .accessibilityIdentifier("chat-room-search-trigger")
-                    }
-                }
-#endif
-
-#if os(iOS) && compiler(>=6.2)
-                if #available(iOS 26.0, *),
-                   viewModel.conversation != nil
-                {
-                    ToolbarSpacer(
-                        .fixed,
-                        placement: .primaryAction
-                    )
-                }
-#endif
 
                 if viewModel.conversation != nil {
                     ToolbarItem(placement: .primaryAction) {
@@ -157,6 +130,26 @@ public struct ChatView: View {
                         }
                     }
                 }
+#else
+                if viewModel.conversation != nil {
+#if compiler(>=6.2)
+                    if #available(iOS 26.0, *) {
+                        DefaultToolbarItem(
+                            kind: .search,
+                            placement: .topBarTrailing
+                        )
+                    } else {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            chatToolbarSearchFallback
+                        }
+                    }
+#else
+                    ToolbarItem(placement: .topBarTrailing) {
+                        chatToolbarSearchFallback
+                    }
+#endif
+                }
+#endif
             }
             .chatRoomTitle(name: viewModel.character?.name)
             .sheet(isPresented: $isRoomSettingsPresented) {
@@ -304,6 +297,21 @@ public struct ChatView: View {
                                 .transition(.opacity)
                             }
 
+                            if showsStoryDivider(
+                                before: message,
+                                after: previous,
+                                hasDateSeparator: needsSeparator
+                            ) {
+                                Divider()
+                                    .frame(
+                                        width: maximumStoryWidth(
+                                            in: geometry.size.width
+                                        )
+                                    )
+                                    .frame(maxWidth: .infinity)
+                                    .accessibilityHidden(true)
+                            }
+
                             messageRow(
                                 message: message,
                                 width: geometry.size.width
@@ -312,7 +320,10 @@ public struct ChatView: View {
                                 .top,
                                 needsSeparator
                                     ? 0
-                                    : (joinsPrevious ? 2 : 10)
+                                    : messageTopSpacing(
+                                        for: message,
+                                        joinsPrevious: joinsPrevious
+                                    )
                             )
                             .transition(messageTransition(for: message))
                             .id(message.id)
@@ -1091,20 +1102,22 @@ public struct ChatView: View {
 
     private func openSearch() {
         isComposerFocused = false
-        withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) {
-            isSearchActive = true
-        }
-        isSearchFocused = true
+        isSearchActive = true
     }
 
-    private func closeSearch() {
-        isSearchFocused = false
-        searchQuery = ""
-        activeMatchID = nil
-        withAnimation(reduceMotion ? nil : .snappy(duration: 0.24)) {
-            isSearchActive = false
+#if os(iOS)
+    /// Older iOS releases do not expose a relocatable default search item.
+    /// Keep the prepared glyph there while the system owns the field itself.
+    private var chatToolbarSearchFallback: some View {
+        Button {
+            openSearch()
+        } label: {
+            LorepiaGlyphView(.search, size: 23)
         }
+        .accessibilityLabel("대화 내 검색")
+        .accessibilityIdentifier("chat-room-search-trigger")
     }
+#endif
 
     /// Walks the match list. Without a landing point yet, the newest match is
     /// the one closest to where the transcript already sits.
@@ -1513,6 +1526,39 @@ public struct ChatView: View {
             return nil
         }
         return viewModel.messages[index - 1]
+    }
+
+    /// Story entries carry their own vertical reading space around the divider,
+    /// while chat mode retains its compact speaker grouping.
+    private func messageTopSpacing(
+        for message: ChatMessage,
+        joinsPrevious: Bool
+    ) -> CGFloat {
+        if viewModel.mode == .story,
+           message.role != .system,
+           message.role != .notice
+        {
+            return 0
+        }
+        return joinsPrevious ? 2 : 10
+    }
+
+    /// A date marker already separates days, and notices keep their capsule
+    /// treatment. The quiet rule is only for adjacent pieces of story prose.
+    private func showsStoryDivider(
+        before message: ChatMessage,
+        after previous: ChatMessage?,
+        hasDateSeparator: Bool
+    ) -> Bool {
+        guard viewModel.mode == .story,
+              !hasDateSeparator,
+              message.role == .user || message.role == .assistant,
+              let previous,
+              previous.role == .user || previous.role == .assistant
+        else {
+            return false
+        }
+        return true
     }
 
     private func scrollToBottom(
@@ -2561,8 +2607,11 @@ private struct ChatBubble: View {
 
     @ScaledMetric(relativeTo: .body) private var scaledHorizontalPadding = 14
     @ScaledMetric(relativeTo: .body) private var scaledVerticalPadding = 7
+    @ScaledMetric(relativeTo: .body) private var scaledStoryHorizontalPadding =
+        LorepiaSpacing.standard
     @ScaledMetric(relativeTo: .body) private var scaledStoryLineSpacing = 5
-    @ScaledMetric(relativeTo: .body) private var scaledStoryVerticalPadding = 7
+    @ScaledMetric(relativeTo: .body) private var scaledStoryVerticalPadding =
+        LorepiaSpacing.standard
     @ScaledMetric(relativeTo: .caption2) private var scaledTimestampDrop = 1
 
     var body: some View {
@@ -2721,6 +2770,7 @@ private struct ChatBubble: View {
             }
         }
         .foregroundStyle(.primary)
+        .padding(.horizontal, scaledStoryHorizontalPadding)
         .padding(.vertical, scaledStoryVerticalPadding)
         .frame(width: storyMaximumWidth, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .center)
@@ -2728,7 +2778,8 @@ private struct ChatBubble: View {
         .accessibilityLabel(accessibilityText)
     }
 
-    /// The reader's own line in story mode: prose, marked rather than boxed.
+    /// The reader's own story entry keeps the accent marker that distinguishes
+    /// it from the character's prose without changing the reading rhythm.
     private var storyUserLine: some View {
         HStack(alignment: .top, spacing: LorepiaSpacing.snug) {
             Capsule()
@@ -2750,6 +2801,7 @@ private struct ChatBubble: View {
                 }
             }
         }
+        .padding(.horizontal, scaledStoryHorizontalPadding)
         .padding(.vertical, scaledStoryVerticalPadding)
         .frame(width: storyMaximumWidth, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .center)
@@ -3090,37 +3142,6 @@ private extension View {
 #endif
     }
 
-    /// The system's own search field, so it looks and behaves like search
-    /// everywhere else: iOS 26 keeps it collapsed in the toolbar until it is
-    /// asked for, and older versions show it under the title.
-    @ViewBuilder
-    func chatConversationSearch(
-        text: Binding<String>,
-        isPresented: Binding<Bool>
-    ) -> some View {
-        searchable(
-            text: text,
-            isPresented: isPresented,
-            prompt: "대화 내 검색"
-        )
-        .chatSearchToolbarBehavior()
-    }
-
-    /// The field stays out of the bar until the toolbar's own search button
-    /// asks for it, so search and settings can sit together in one group.
-    @ViewBuilder
-    func chatSearchToolbarBehavior() -> some View {
-#if os(iOS) && compiler(>=6.2)
-        if #available(iOS 26.0, *) {
-            toolbar(removing: .search)
-        } else {
-            self
-        }
-#else
-        self
-#endif
-    }
-
     /// Names the room in the navigation bar. macOS keeps its principal
     /// identity view, where the window title is already spoken for.
     @ViewBuilder
@@ -3138,6 +3159,54 @@ private extension View {
         scrollDismissesKeyboard(.interactively)
 #else
         self
+#endif
+    }
+
+    /// iOS 26 owns the complete minimized toolbar-search transition. Older
+    /// iOS releases request the navigation bar's principal section. macOS
+    /// keeps its existing platform-default searchable presentation.
+    @ViewBuilder
+    func chatConversationSearch(
+        text: Binding<String>,
+        isPresented: Binding<Bool>,
+        isAvailable: Bool
+    ) -> some View {
+#if os(iOS)
+        if isAvailable {
+#if compiler(>=6.2)
+            if #available(iOS 26.0, *) {
+                searchable(
+                    text: text,
+                    isPresented: isPresented,
+                    placement: .toolbar,
+                    prompt: Text("대화 내 검색")
+                )
+                .searchToolbarBehavior(.minimize)
+            } else {
+                searchable(
+                    text: text,
+                    isPresented: isPresented,
+                    placement: .toolbarPrincipal,
+                    prompt: Text("대화 내 검색")
+                )
+            }
+#else
+            searchable(
+                text: text,
+                isPresented: isPresented,
+                placement: .toolbarPrincipal,
+                prompt: Text("대화 내 검색")
+            )
+#endif
+        } else {
+            self
+        }
+#else
+        searchable(
+            text: text,
+            isPresented: isPresented,
+            prompt: Text("대화 내 검색")
+        )
 #endif
     }
 

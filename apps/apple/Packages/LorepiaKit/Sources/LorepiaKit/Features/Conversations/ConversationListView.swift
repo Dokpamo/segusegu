@@ -275,13 +275,23 @@ private struct ConversationListRow: View {
     }
 
     private var avatar: some View {
-        LorepiaAvatar(
-            symbolName: item.character?.symbolName ?? "person.crop.circle",
-            size: resolvedAvatarSize,
-            // Whoever the row is about: the character if there is one, and
-            // otherwise the conversation's own name.
-            name: item.character?.name ?? item.displayTitle
+        ZStack {
+            Circle()
+                .fill(LorepiaColor.avatarFill)
+            Image(systemName: "star.fill")
+                .font(
+                    .system(
+                        size: resolvedAvatarSize * 0.42,
+                        weight: .semibold
+                    )
+                )
+        }
+        .foregroundStyle(.white)
+        .frame(
+            width: resolvedAvatarSize,
+            height: resolvedAvatarSize
         )
+        .accessibilityHidden(true)
     }
 
     private var resolvedAvatarSize: CGFloat {

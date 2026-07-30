@@ -76,7 +76,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "--lorepia-chat-bubble-showcase"
+            argument = "--lorepia-dev-fixtures"
             isEnabled = "YES">
          </CommandLineArgument>
       </CommandLineArguments>

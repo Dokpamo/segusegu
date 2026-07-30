@@ -16,6 +16,58 @@ public struct FakeConversationFixture: Sendable {
     }
 }
 
+/// An exact branch snapshot used by deterministic development fixtures.
+///
+/// Unlike `FakeConversationFixture`, messages are installed without rewriting
+/// their identifiers, parents, generation metadata, statuses, or timestamps.
+/// Messages must be ordered as one linear parent chain.
+public struct FakeConversationBranchFixture: Sendable {
+    public let branch: CoreConversationBranch
+    public let messages: [ChatMessage]
+
+    public init(
+        branch: CoreConversationBranch,
+        messages: [ChatMessage]
+    ) {
+        self.branch = branch
+        self.messages = messages
+    }
+}
+
+/// An exact conversation snapshot containing every branch and its active state.
+public struct FakeConversationGraphFixture: Sendable {
+    public let conversation: CoreConversation
+    public let state: CoreConversationState
+    public let branches: [FakeConversationBranchFixture]
+
+    public init(
+        conversation: CoreConversation,
+        state: CoreConversationState,
+        branches: [FakeConversationBranchFixture]
+    ) {
+        self.conversation = conversation
+        self.state = state
+        self.branches = branches
+    }
+}
+
+/// Describes an inconsistent exact fixture rejected before a fake client starts.
+public enum FakeCoreClientFixtureError:
+    Error,
+    Equatable,
+    LocalizedError,
+    Sendable
+{
+    case invalid(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case let .invalid(message):
+            message
+        }
+    }
+}
+
 struct FakeProviderSendRequest: Equatable, Sendable {
     enum EntryPoint: Equatable, Sendable {
         case conversation
@@ -137,11 +189,18 @@ public actor FakeCoreClient: CoreClient {
         )
     }
 
-    init(
+    /// Creates a fake client from validated exact and legacy conversation seeds.
+    ///
+    /// Exact graph fixtures retain all supplied domain identifiers and metadata.
+    /// Legacy fixtures continue to receive deterministic generated identifiers.
+    /// Message and generation identifiers must be globally unique, except for
+    /// identical shared-prefix messages repeated across a graph's branches.
+    public init(
         version: String = "lorepia-core-preview/0.1.0",
         health: HealthStatus? = nil,
         characters: [CoreCharacter]? = nil,
         profiles: [ProviderProfile]? = nil,
+        initialSettings: CoreAppSettings,
         commitFailuresBeforeSuccess: UInt = 0,
         listProviderFailuresBeforeSuccess: UInt = 0,
         listProviderProfilesDelay: Duration? = nil,
@@ -149,6 +208,48 @@ public actor FakeCoreClient: CoreClient {
         updateSettingsDelay: Duration? = nil,
         initialConversationMessages: [ChatMessage] = [],
         initialConversationFixtures: [FakeConversationFixture] = [],
+        initialConversationGraphs: [FakeConversationGraphFixture] = []
+    ) throws {
+        try Self.validateFixtures(
+            characters: Self.resolvedCharacters(characters),
+            profiles: Self.resolvedProfiles(profiles),
+            settings: initialSettings,
+            conversationFixtures: initialConversationFixtures,
+            conversationGraphs: initialConversationGraphs
+        )
+        self.init(
+            version: version,
+            health: health,
+            characters: characters,
+            profiles: profiles,
+            initialSettings: initialSettings,
+            commitFailuresBeforeSuccess: commitFailuresBeforeSuccess,
+            listProviderFailuresBeforeSuccess:
+                listProviderFailuresBeforeSuccess,
+            listProviderProfilesDelay: listProviderProfilesDelay,
+            getSettingsDelay: getSettingsDelay,
+            updateSettingsDelay: updateSettingsDelay,
+            initialConversationMessages: initialConversationMessages,
+            initialConversationFixtures: initialConversationFixtures,
+            initialConversationGraphs: initialConversationGraphs,
+            testingOptions: FakeCoreClientTestingOptions()
+        )
+    }
+
+    init(
+        version: String = "lorepia-core-preview/0.1.0",
+        health: HealthStatus? = nil,
+        characters: [CoreCharacter]? = nil,
+        profiles: [ProviderProfile]? = nil,
+        initialSettings: CoreAppSettings? = nil,
+        commitFailuresBeforeSuccess: UInt = 0,
+        listProviderFailuresBeforeSuccess: UInt = 0,
+        listProviderProfilesDelay: Duration? = nil,
+        getSettingsDelay: Duration? = nil,
+        updateSettingsDelay: Duration? = nil,
+        initialConversationMessages: [ChatMessage] = [],
+        initialConversationFixtures: [FakeConversationFixture] = [],
+        initialConversationGraphs: [FakeConversationGraphFixture] = [],
         testingOptions: FakeCoreClientTestingOptions
     ) {
         reportedVersion = version
@@ -161,24 +262,9 @@ public actor FakeCoreClient: CoreClient {
             recoveryPending: false,
             activeJobs: 0
         )
-        self.characters = characters ?? LibraryCharacter.previewCharacters.map {
-            CoreCharacter(
-                id: $0.id,
-                name: $0.name,
-                description: $0.summary,
-                sourceHash: "synthetic-\($0.id)",
-                avatarAssetHash: nil,
-                createdAt: "2026-01-01T00:00:00Z"
-            )
-        }
-        let defaultProfile = ProviderProfile(
-            id: "preview-provider",
-            displayName: "Preview Provider",
-            baseURL: "https://example.invalid/v1",
-            model: "preview-model",
-            timeoutSeconds: 30
-        )
-        self.profiles = profiles ?? [defaultProfile]
+        self.characters = Self.resolvedCharacters(characters)
+        let resolvedProfiles = Self.resolvedProfiles(profiles)
+        self.profiles = resolvedProfiles
         listProviderFailuresRemaining = listProviderFailuresBeforeSuccess
         deleteProviderFailuresRemaining =
             testingOptions.deleteProviderFailuresBeforeSuccess
@@ -195,33 +281,15 @@ public actor FakeCoreClient: CoreClient {
         self.updateSettingsFailureInvocations =
             testingOptions.updateSettingsFailureInvocations
         self.initialConversationMessages = initialConversationMessages
-        settings = CoreAppSettings(
+        settings = initialSettings ?? CoreAppSettings(
             preservePartialGenerations: true,
-            selectedProviderProfileID: (profiles ?? [defaultProfile]).first?.id
+            selectedProviderProfileID: resolvedProfiles.first?.id
         )
         commitFailuresRemaining = commitFailuresBeforeSuccess
 
         for fixture in initialConversationFixtures {
             let conversation = fixture.conversation
-            var parentID: String?
-            let seededMessages = fixture.messages.enumerated().map {
-                index, template in
-                let messageID = "\(conversation.id)-fixture-\(index + 1)"
-                let message = ChatMessage(
-                    id: messageID,
-                    conversationID: conversation.id,
-                    parentID: parentID,
-                    role: template.role,
-                    text: template.text,
-                    status: template.status,
-                    generationID: template.generationID == nil
-                        ? nil
-                        : "\(conversation.id)-fixture-generation-\(index + 1)",
-                    createdAt: template.createdAt ?? conversation.updatedAt
-                )
-                parentID = messageID
-                return message
-            }
+            let seededMessages = Self.seededMessages(for: fixture)
             let branch = CoreConversationBranch(
                 id: "\(conversation.id)-fixture-main",
                 conversationID: conversation.id,
@@ -241,6 +309,270 @@ public actor FakeCoreClient: CoreClient {
                 activeBranchID: branch.id,
                 selectedMode: fixture.mode,
                 updatedAt: conversation.updatedAt
+            )
+        }
+
+        for fixture in initialConversationGraphs {
+            let conversation = fixture.conversation
+            let branches = fixture.branches.map(\.branch)
+
+            conversations.append(conversation)
+            branchesByConversation[conversation.id] = branches
+            statesByConversation[conversation.id] = fixture.state
+
+            for branchFixture in fixture.branches {
+                messagesByBranch[branchFixture.branch.id] =
+                    branchFixture.messages
+            }
+
+            messagesByConversation[conversation.id] =
+                fixture.branches.first(
+                    where: {
+                        $0.branch.id == fixture.state.activeBranchID
+                    }
+                )?.messages ?? []
+        }
+    }
+
+    private static func seededMessages(
+        for fixture: FakeConversationFixture
+    ) -> [ChatMessage] {
+        var parentID: String?
+        return fixture.messages.enumerated().map {
+            index, template in
+            let conversation = fixture.conversation
+            let messageID = "\(conversation.id)-fixture-\(index + 1)"
+            let message = ChatMessage(
+                id: messageID,
+                conversationID: conversation.id,
+                parentID: parentID,
+                role: template.role,
+                text: template.text,
+                status: template.status,
+                generationID: template.generationID == nil
+                    ? nil
+                    : "\(conversation.id)-fixture-generation-\(index + 1)",
+                createdAt: template.createdAt ?? conversation.updatedAt
+            )
+            parentID = messageID
+            return message
+        }
+    }
+
+    private static func resolvedCharacters(
+        _ characters: [CoreCharacter]?
+    ) -> [CoreCharacter] {
+        characters ?? LibraryCharacter.previewCharacters.map {
+            CoreCharacter(
+                id: $0.id,
+                name: $0.name,
+                description: $0.summary,
+                sourceHash: "synthetic-\($0.id)",
+                avatarAssetHash: nil,
+                createdAt: "2026-01-01T00:00:00Z"
+            )
+        }
+    }
+
+    private static func resolvedProfiles(
+        _ profiles: [ProviderProfile]?
+    ) -> [ProviderProfile] {
+        profiles ?? [
+            ProviderProfile(
+                id: "preview-provider",
+                displayName: "Preview Provider",
+                baseURL: "https://example.invalid/v1",
+                model: "preview-model",
+                timeoutSeconds: 30
+            ),
+        ]
+    }
+
+    private static func validateFixtures(
+        characters: [CoreCharacter],
+        profiles: [ProviderProfile],
+        settings: CoreAppSettings,
+        conversationFixtures: [FakeConversationFixture],
+        conversationGraphs: [FakeConversationGraphFixture]
+    ) throws {
+        try requireUnique(
+            characters.map(\.id),
+            description: "캐릭터"
+        )
+        try requireUnique(
+            profiles.map(\.id),
+            description: "프로바이더 프로필"
+        )
+        if let selectedProfileID = settings.selectedProviderProfileID,
+           !profiles.contains(where: { $0.id == selectedProfileID })
+        {
+            throw FakeCoreClientFixtureError.invalid(
+                "선택된 프로바이더 프로필이 없습니다: \(selectedProfileID)"
+            )
+        }
+
+        let characterIDs = Set(characters.map(\.id))
+        let allConversations =
+            conversationFixtures.map(\.conversation)
+                + conversationGraphs.map(\.conversation)
+        try requireUnique(
+            allConversations.map(\.id),
+            description: "대화"
+        )
+        for conversation in allConversations
+            where !characterIDs.contains(conversation.characterID)
+        {
+            throw FakeCoreClientFixtureError.invalid(
+                "대화 \(conversation.id)의 캐릭터가 없습니다: "
+                    + conversation.characterID
+            )
+        }
+
+        var branchIDs = Set(
+            conversationFixtures.map {
+                "\($0.conversation.id)-fixture-main"
+            }
+        )
+        var messagesByID: [String: ChatMessage] = [:]
+        var messagesByGenerationID: [String: ChatMessage] = [:]
+        for fixture in conversationFixtures {
+            for message in seededMessages(for: fixture) {
+                try register(
+                    message: message,
+                    messagesByID: &messagesByID,
+                    messagesByGenerationID: &messagesByGenerationID
+                )
+            }
+        }
+        for graph in conversationGraphs {
+            try validate(
+                graph: graph,
+                knownBranchIDs: &branchIDs,
+                messagesByID: &messagesByID,
+                messagesByGenerationID: &messagesByGenerationID
+            )
+        }
+    }
+
+    private static func validate(
+        graph: FakeConversationGraphFixture,
+        knownBranchIDs: inout Set<String>,
+        messagesByID: inout [String: ChatMessage],
+        messagesByGenerationID: inout [String: ChatMessage]
+    ) throws {
+        let conversationID = graph.conversation.id
+        guard graph.state.conversationID == conversationID else {
+            throw FakeCoreClientFixtureError.invalid(
+                "대화 \(conversationID)의 상태가 다른 대화를 가리킵니다: "
+                    + graph.state.conversationID
+            )
+        }
+        guard !graph.branches.isEmpty else {
+            throw FakeCoreClientFixtureError.invalid(
+                "대화 \(conversationID)에 분기가 없습니다."
+            )
+        }
+        guard graph.branches.contains(
+            where: { $0.branch.id == graph.state.activeBranchID }
+        ) else {
+            throw FakeCoreClientFixtureError.invalid(
+                "대화 \(conversationID)의 활성 분기가 없습니다: "
+                    + graph.state.activeBranchID
+            )
+        }
+
+        for branchFixture in graph.branches {
+            let branch = branchFixture.branch
+            guard branch.conversationID == conversationID else {
+                throw FakeCoreClientFixtureError.invalid(
+                    "분기 \(branch.id)가 다른 대화를 가리킵니다: "
+                        + branch.conversationID
+                )
+            }
+            guard knownBranchIDs.insert(branch.id).inserted else {
+                throw FakeCoreClientFixtureError.invalid(
+                    "분기 ID가 중복됩니다: \(branch.id)"
+                )
+            }
+            guard branch.headMessageID == branchFixture.messages.last?.id else {
+                throw FakeCoreClientFixtureError.invalid(
+                    "분기 \(branch.id)의 헤드 메시지가 마지막 메시지와 다릅니다."
+                )
+            }
+
+            var branchMessageIDs = Set<String>()
+            var expectedParentID: String?
+            for message in branchFixture.messages {
+                guard message.conversationID == conversationID else {
+                    throw FakeCoreClientFixtureError.invalid(
+                        "메시지 \(message.id)가 다른 대화를 가리킵니다."
+                    )
+                }
+                guard message.parentID == expectedParentID else {
+                    throw FakeCoreClientFixtureError.invalid(
+                        "분기 \(branch.id)의 메시지 \(message.id) 부모가 "
+                            + "선형 체인과 다릅니다."
+                    )
+                }
+                guard branchMessageIDs.insert(message.id).inserted else {
+                    throw FakeCoreClientFixtureError.invalid(
+                        "분기 \(branch.id)에 메시지 ID가 중복됩니다: "
+                            + message.id
+                    )
+                }
+                try register(
+                    message: message,
+                    messagesByID: &messagesByID,
+                    messagesByGenerationID: &messagesByGenerationID
+                )
+                expectedParentID = message.id
+            }
+            if let forkMessageID = branch.forkMessageID,
+               !branchMessageIDs.contains(forkMessageID)
+            {
+                throw FakeCoreClientFixtureError.invalid(
+                    "분기 \(branch.id)의 분기 기준 메시지가 없습니다: "
+                        + forkMessageID
+                )
+            }
+        }
+    }
+
+    private static func register(
+        message: ChatMessage,
+        messagesByID: inout [String: ChatMessage],
+        messagesByGenerationID: inout [String: ChatMessage]
+    ) throws {
+        if let existingMessage = messagesByID[message.id],
+           existingMessage != message
+        {
+            throw FakeCoreClientFixtureError.invalid(
+                "메시지 ID가 전역 중복됩니다: \(message.id)"
+            )
+        }
+        messagesByID[message.id] = message
+
+        guard let generationID = message.generationID else {
+            return
+        }
+        if let existingMessage = messagesByGenerationID[generationID],
+           existingMessage != message
+        {
+            throw FakeCoreClientFixtureError.invalid(
+                "생성 ID가 전역 중복됩니다: \(generationID)"
+            )
+        }
+        messagesByGenerationID[generationID] = message
+    }
+
+    private static func requireUnique(
+        _ ids: [String],
+        description: String
+    ) throws {
+        var knownIDs = Set<String>()
+        for id in ids where !knownIDs.insert(id).inserted {
+            throw FakeCoreClientFixtureError.invalid(
+                "\(description) ID가 중복됩니다: \(id)"
             )
         }
     }

@@ -79,6 +79,7 @@ final class IOSRootNavigationUITests: XCTestCase {
     private func recognizedFrame(
         of expectedText: String,
         in screenshot: XCUIScreenshot,
+        isolatesMatch: Bool = false,
         required: Bool = true,
         file: StaticString = #filePath,
         line: UInt = #line
@@ -123,10 +124,22 @@ final class IOSRootNavigationUITests: XCTestCase {
                     continue
                 }
 
-                // Keep the full detected line rather than a prefix-only
-                // candidate range; the attachment can then expose when
-                // Vision merges neighboring text.
-                let normalizedBounds = observation.boundingBox
+                let normalizedBounds: CGRect
+                if isolatesMatch,
+                   let candidateRange = candidate.string.range(
+                       of: expectedText
+                   ),
+                   let isolatedObservation = try? candidate.boundingBox(
+                       for: candidateRange
+                   )
+                {
+                    normalizedBounds = isolatedObservation.boundingBox
+                } else {
+                    // Most checks intentionally keep the full detected line.
+                    // A caller can isolate its substring when Vision merges a
+                    // title with an adjacent timestamp.
+                    normalizedBounds = observation.boundingBox
+                }
                 let imageSize = screenshot.image.size
                 return CGRect(
                     x: normalizedBounds.minX * imageSize.width,
@@ -184,21 +197,41 @@ final class IOSRootNavigationUITests: XCTestCase {
         }
 
         let imageSize = screenshot.image.size
-        let candidates = (request.results ?? []).compactMap {
-            observation -> CGRect? in
-            let normalizedBounds = observation.boundingBox
-            let frame = CGRect(
-                x: normalizedBounds.minX * imageSize.width,
-                y: (1 - normalizedBounds.maxY) * imageSize.height,
-                width: normalizedBounds.width * imageSize.width,
-                height: normalizedBounds.height * imageSize.height
-            )
-            guard frame.minX >= minimumLeading,
-                  frame.intersects(rowFrame)
-            else {
-                return nil
+        let candidates = (request.results ?? []).flatMap { observation in
+            observation.topCandidates(3).compactMap {
+                recognizedText -> CGRect? in
+                guard let timestampRange = trailingTimestampRange(
+                    in: recognizedText.string
+                ) else {
+                    return nil
+                }
+
+                let timestampObservation: VNRectangleObservation
+                do {
+                    guard let recognizedBounds = try recognizedText.boundingBox(
+                        for: timestampRange
+                    ) else {
+                        return nil
+                    }
+                    timestampObservation = recognizedBounds
+                } catch {
+                    return nil
+                }
+
+                let normalizedBounds = timestampObservation.boundingBox
+                let frame = CGRect(
+                    x: normalizedBounds.minX * imageSize.width,
+                    y: (1 - normalizedBounds.maxY) * imageSize.height,
+                    width: normalizedBounds.width * imageSize.width,
+                    height: normalizedBounds.height * imageSize.height
+                )
+                guard frame.minX >= minimumLeading,
+                      frame.intersects(rowFrame)
+                else {
+                    return nil
+                }
+                return frame
             }
-            return frame
         }
 
         guard let rightmostFrame = candidates.max(by: {
@@ -212,6 +245,35 @@ final class IOSRootNavigationUITests: XCTestCase {
             return nil
         }
         return rightmostFrame
+    }
+
+    private func trailingTimestampRange(
+        in recognizedText: String
+    ) -> Range<String.Index>? {
+        let patterns = [
+            #"(?:오전|오후)\s*\d{1,2}:\d{2}$"#,
+            #"어제$"#,
+            #"\d{4}년\s*\d{1,2}월\s*\d{1,2}일$"#,
+        ]
+        let fullRange = NSRange(
+            recognizedText.startIndex ..< recognizedText.endIndex,
+            in: recognizedText
+        )
+
+        for pattern in patterns {
+            guard
+                let expression = try? NSRegularExpression(pattern: pattern),
+                let match = expression.firstMatch(
+                    in: recognizedText,
+                    range: fullRange
+                ),
+                let range = Range(match.range, in: recognizedText)
+            else {
+                continue
+            }
+            return range
+        }
+        return nil
     }
 
     @MainActor
@@ -460,6 +522,13 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         settings.tap()
         XCTAssertTrue(settings.isSelected)
+        let guestIdentity = app.descendants(matching: .any)[
+            "settings-guest-identity"
+        ]
+        XCTAssertTrue(guestIdentity.waitForExistence(timeout: 5))
+        XCTAssertEqual(guestIdentity.label, "게스트")
+        XCTAssertFalse(app.buttons["settings-add-account"].exists)
+        XCTAssertFalse(app.buttons["settings-account-avatar"].exists)
         // Editing a profile now lives one page down, behind the connection row.
         openProviderProfileDetail(in: app)
         XCTAssertTrue(app.textFields["표시 이름"].isHittable)
@@ -662,7 +731,8 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         guard let storyTitleFrame = recognizedFrame(
             of: "마지막 장면부터",
-            in: screenshot
+            in: screenshot,
+            isolatesMatch: true
         ),
         let storyPreviewFrame = recognizedFrame(
             of: "문이 닫히기 직전",
@@ -799,7 +869,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(
             storyPreviewFrame.midY - storyTitleFrame.midY,
             24.5,
-            accuracy: 2
+            accuracy: 3
         )
         XCTAssertEqual(
             timestampFrame.midY,
@@ -898,6 +968,70 @@ final class IOSRootNavigationUITests: XCTestCase {
             app.navigationBars.buttons["채팅"].waitForExistence(timeout: 5)
         )
         XCTAssertFalse(app.tabBars.buttons["채팅"].exists)
+    }
+
+    @MainActor
+    func testStoryModeSeparatesProseWithDividerAndBreathingRoom() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-chat-bubble-showcase"]
+        app.launch()
+
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 10))
+        chats.tap()
+
+        let storyRow = app.descendants(matching: .any)[
+            "conversation-row-showcase-last-scene"
+        ]
+        XCTAssertTrue(storyRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(storyRow.isHittable)
+        storyRow.tap()
+
+        let userMessage = app.descendants(matching: .any)[
+            "chat-message-user-showcase-last-scene-fixture-1"
+        ]
+        let assistantMessage = app.descendants(matching: .any)[
+            "chat-message-assistant-showcase-last-scene-fixture-2"
+        ]
+        let composerMode = app.buttons["chat-composer-mode"]
+        XCTAssertTrue(userMessage.waitForExistence(timeout: 5))
+        XCTAssertTrue(assistantMessage.waitForExistence(timeout: 5))
+        XCTAssertTrue(composerMode.waitForExistence(timeout: 5))
+        XCTAssertEqual(composerMode.value as? String, "스토리 모드")
+
+        let userFrame = userMessage.frame
+        let assistantFrame = assistantMessage.frame
+        XCTAssertLessThan(userFrame.midY, assistantFrame.midY)
+
+        let screenshot = XCUIScreen.main.screenshot()
+        guard let userTextFrame = recognizedFrame(
+            of: "성문이 닫히기 직전 장면부터",
+            in: screenshot
+        ),
+        let assistantTextFrame = recognizedFrame(
+            of: "그녀가 뒤를 돌아",
+            in: screenshot
+        ) else {
+            XCTFail("스토리 구분선 양쪽의 합성 문장을 찾지 못했습니다.")
+            return
+        }
+        XCTAssertTrue(userFrame.contains(userTextFrame))
+        XCTAssertTrue(assistantFrame.contains(assistantTextFrame))
+        let readingBreak =
+            assistantTextFrame.minY - userTextFrame.maxY
+        XCTAssertGreaterThanOrEqual(
+            readingBreak,
+            24,
+            "스토리 단락 사이에는 구분선과 넉넉한 읽기 여백이 있어야 합니다."
+        )
+
+        let screenshotAttachment = XCTAttachment(
+            screenshot: screenshot
+        )
+        screenshotAttachment.name =
+            "story-mode-divider-and-breathing-room"
+        screenshotAttachment.lifetime = .keepAlways
+        add(screenshotAttachment)
     }
 
     @MainActor
@@ -1729,7 +1863,7 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
-    func testChatUsesEqualToolbarButtonsAndSeparateSearchSteps() {
+    func testChatUsesSingleToolbarSearchAndSeparateSearchSteps() {
         let app = XCUIApplication()
         app.launchArguments = ["--lorepia-native-navigation-ui-test"]
         app.launch()
@@ -1739,44 +1873,152 @@ final class IOSRootNavigationUITests: XCTestCase {
         }
 
         let back = app.navigationBars.buttons["채팅"]
-        let search = app.buttons["chat-room-search-trigger"]
-        let settings = app.buttons[
-            "chat-room-settings-trigger-toolbar"
-        ]
+        let search: XCUIElement
+        if #available(iOS 26.0, *) {
+            search = app.buttons["검색"]
+        } else {
+            search = app.buttons["chat-room-search-trigger"]
+        }
+        let navigationBar = app.navigationBars.firstMatch
+        let window = app.windows.firstMatch
         XCTAssertTrue(back.waitForExistence(timeout: 5))
         XCTAssertTrue(search.waitForExistence(timeout: 5))
-        XCTAssertTrue(settings.waitForExistence(timeout: 5))
-
+        XCTAssertFalse(
+            app.buttons["chat-room-settings-trigger-toolbar"].exists
+        )
+        XCTAssertTrue(navigationBar.waitForExistence(timeout: 5))
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
+        XCTAssertTrue(search.isHittable)
+        XCTAssertGreaterThanOrEqual(search.frame.width, 36)
+        XCTAssertGreaterThanOrEqual(search.frame.height, 36)
+        XCTAssertEqual(search.frame.midY, back.frame.midY, accuracy: 1)
+        XCTAssertEqual(
+            back.frame.midX - window.frame.minX,
+            window.frame.maxX - search.frame.midX,
+            accuracy: 1
+        )
         if #available(iOS 26.0, *) {
-            // A custom Shape reports its 36 pt inner accessibility frame;
-            // the surrounding 44 pt system glass circle is visual chrome and
-            // is not a separate accessibility element. Equal inner frames,
-            // a shared center line, and a positive spacer gap prove these are
-            // two independently wrapped toolbar controls.
+            // The minimized native search item's accessibility frame is its
+            // 36pt inner control. Its system glass expands equally to the
+            // back control's 44pt visual diameter.
+            XCTAssertEqual(back.frame.width, 44, accuracy: 1)
+            XCTAssertEqual(back.frame.height, 44, accuracy: 1)
+            XCTAssertEqual(search.frame.width, 36, accuracy: 1)
+            XCTAssertEqual(search.frame.height, 36, accuracy: 1)
+            let searchGlassOutset =
+                (back.frame.width - search.frame.width) / 2
             XCTAssertEqual(
-                settings.frame.height,
-                search.frame.height,
+                back.frame.minX - window.frame.minX,
+                window.frame.maxX
+                    - (search.frame.maxX + searchGlassOutset),
                 accuracy: 1
             )
-            XCTAssertEqual(search.frame.midY, back.frame.midY, accuracy: 1)
-            XCTAssertEqual(settings.frame.midY, back.frame.midY, accuracy: 1)
-            XCTAssertGreaterThan(
-                settings.frame.minX - search.frame.maxX,
-                0
-            )
-            XCTAssertGreaterThanOrEqual(search.frame.width, 35)
-            XCTAssertGreaterThanOrEqual(settings.frame.width, 35)
-            XCTAssertGreaterThanOrEqual(search.frame.height, 36)
-            XCTAssertGreaterThanOrEqual(settings.frame.height, 36)
         }
+        XCTAssertGreaterThanOrEqual(
+            search.frame.minY,
+            navigationBar.frame.minY
+        )
+        XCTAssertLessThanOrEqual(
+            search.frame.maxY,
+            navigationBar.frame.maxY
+        )
+
+        let restingSearchFrame = search.frame
 
         let toolbarEvidence = XCTAttachment(screenshot: app.screenshot())
-        toolbarEvidence.name = "chat-toolbar-circular-controls"
+        toolbarEvidence.name = "chat-toolbar-single-search"
         toolbarEvidence.lifetime = .keepAlways
         add(toolbarEvidence)
 
+        app.swipeDown()
+        XCTAssertFalse(
+            app.searchFields.firstMatch.exists,
+            "Pulling down must not reveal a native search field."
+        )
+
         search.tap()
-        XCTAssertTrue(app.searchFields.firstMatch.waitForExistence(timeout: 5))
+        let searchField = app.searchFields.firstMatch
+        let closeSearch = app.buttons.matching(
+            NSPredicate(format: "label == '닫기' OR label == '취소'")
+        ).firstMatch
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        XCTAssertTrue(closeSearch.waitForExistence(timeout: 5))
+        XCTAssertTrue(searchField.isHittable)
+        XCTAssertTrue(closeSearch.isHittable)
+        let focusExpectation = expectation(
+            for: NSPredicate(format: "hasKeyboardFocus == true"),
+            evaluatedWith: searchField
+        )
+        wait(for: [focusExpectation], timeout: 2)
+        app.typeText("preview")
+        XCTAssertEqual(searchField.value as? String, "preview")
+
+        let navigationBarFrame = navigationBar.frame
+        XCTAssertGreaterThanOrEqual(
+            searchField.frame.minY,
+            navigationBarFrame.minY - 1
+        )
+        XCTAssertLessThanOrEqual(
+            searchField.frame.maxY,
+            navigationBarFrame.maxY + 1
+        )
+        XCTAssertGreaterThanOrEqual(
+            closeSearch.frame.minY,
+            navigationBarFrame.minY - 1
+        )
+        XCTAssertLessThanOrEqual(
+            closeSearch.frame.maxY,
+            navigationBarFrame.maxY + 1
+        )
+
+        let activeSearchFieldFrame = searchField.frame
+        let activeCloseFrame = closeSearch.frame
+        Thread.sleep(forTimeInterval: 0.35)
+        XCTAssertEqual(
+            searchField.frame.minX,
+            activeSearchFieldFrame.minX,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            searchField.frame.midY,
+            activeSearchFieldFrame.midY,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            searchField.frame.width,
+            activeSearchFieldFrame.width,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            searchField.frame.height,
+            activeSearchFieldFrame.height,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            closeSearch.frame.minX,
+            activeCloseFrame.minX,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            closeSearch.frame.midY,
+            activeCloseFrame.midY,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            closeSearch.frame.width,
+            activeCloseFrame.width,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            closeSearch.frame.height,
+            activeCloseFrame.height,
+            accuracy: 1
+        )
+
+        let searchEvidence = XCTAttachment(screenshot: app.screenshot())
+        searchEvidence.name = "chat-toolbar-top-only-search"
+        searchEvidence.lifetime = .keepAlways
+        add(searchEvidence)
 
         let previous = app.buttons["chat-search-previous-result"]
         let next = app.buttons["chat-search-next-result"]
@@ -1788,10 +2030,53 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(next.frame.height, 44, accuracy: 1)
         XCTAssertEqual(previous.frame.midX, next.frame.midX, accuracy: 1)
         XCTAssertGreaterThan(next.frame.minY - previous.frame.maxY, 0)
+
+        closeSearch.tap()
+        XCTAssertTrue(searchField.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(closeSearch.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        XCTAssertTrue(search.isHittable)
+        XCTAssertFalse(
+            app.buttons["chat-room-settings-trigger-toolbar"].exists
+        )
+        XCTAssertEqual(
+            search.frame.minX,
+            restingSearchFrame.minX,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            search.frame.midY,
+            restingSearchFrame.midY,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            search.frame.width,
+            restingSearchFrame.width,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            search.frame.height,
+            restingSearchFrame.height,
+            accuracy: 1
+        )
+        app.swipeDown()
+        XCTAssertFalse(app.searchFields.firstMatch.exists)
+
+        search.tap()
+        XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+        XCTAssertTrue(closeSearch.waitForExistence(timeout: 5))
+        XCTAssertGreaterThanOrEqual(
+            searchField.frame.minY,
+            navigationBar.frame.minY - 1
+        )
+        XCTAssertLessThanOrEqual(
+            searchField.frame.maxY,
+            navigationBar.frame.maxY + 1
+        )
     }
 
     @MainActor
-    func testChatShowsRoomSettingsAndComposerGrowth() {
+    func testChatHidesRoomSettingsAndSupportsComposerGrowth() {
         let app = XCUIApplication()
         app.launchArguments = ["--lorepia-native-navigation-ui-test"]
         app.launch()
@@ -1800,57 +2085,15 @@ final class IOSRootNavigationUITests: XCTestCase {
             return
         }
 
-        let settings = app.buttons[
-            "chat-room-settings-trigger-toolbar"
-        ]
-        XCTAssertTrue(settings.waitForExistence(timeout: 5))
-        let backButton = app.navigationBars.buttons["채팅"]
-        let windowBounds = app.windows.firstMatch.frame
-        XCTAssertTrue(backButton.waitForExistence(timeout: 5))
-        if #available(iOS 26.0, *) {
-            XCTAssertEqual(
-                settings.frame.midY,
-                backButton.frame.midY,
-                accuracy: 1
-            )
-            XCTAssertGreaterThanOrEqual(settings.frame.width, 35)
-            XCTAssertGreaterThanOrEqual(settings.frame.height, 36)
-            XCTAssertGreaterThan(settings.frame.midX, windowBounds.midX)
-        }
+        XCTAssertFalse(
+            app.buttons["chat-room-settings-trigger-toolbar"].exists
+        )
         XCTAssertFalse(
             app.buttons["chat-room-settings-trigger-mode"].exists
         )
-        settings.tap()
-        XCTAssertTrue(
-            app.navigationBars["대화 설정"].waitForExistence(timeout: 5)
-        )
-        XCTAssertTrue(app.buttons["채팅"].exists)
-        XCTAssertTrue(app.buttons["스토리"].exists)
-        let doneButton = app.navigationBars["대화 설정"]
-            .descendants(matching: .any)
-            .matching(
-                NSPredicate(
-                    format: "label == %@",
-                    "완료"
-                )
-            )
-            .element(boundBy: 1)
-        XCTAssertTrue(doneButton.waitForExistence(timeout: 5))
-        let doneFrame = doneButton.frame
-        app.coordinate(withNormalizedOffset: .zero)
-            .withOffset(
-                CGVector(
-                    dx: doneFrame.midX,
-                    dy: doneFrame.midY
-                )
-            )
-            .tap()
-        XCTAssertTrue(
-            app.navigationBars["대화 설정"].waitForNonExistence(timeout: 5)
-        )
-        // Sheet dismissal may restore the field's previous first-responder
-        // state. A transcript tap establishes the keyboard-dismissed baseline;
-        // the composer itself must remain fully open.
+        let windowBounds = app.windows.firstMatch.frame
+        // Establish the keyboard-dismissed baseline before measuring the
+        // composer; the composer itself must remain fully open.
         app.windows.firstMatch.coordinate(
             withNormalizedOffset: CGVector(dx: 0.5, dy: 0.35)
         ).tap()

@@ -7,18 +7,28 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0540F222C367D2394386B95A /* IOSDevelopmentFixturesUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A0397F6EEB05A188FDDCDC3 /* IOSDevelopmentFixturesUITests.swift */; };
+		073F15CD7098D86AEFA9AEA8 /* ChatHistoryShowcase.swift in Sources */ = {isa = PBXBuildFile; fileRef = A073B89EAC7B2742B1910292 /* ChatHistoryShowcase.swift */; };
 		07F238E3A46EBB41C2F8836F /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 314595ED7FB306F62C341FCC /* InfoPlist.strings */; };
 		10D83B4C02AFED03A96BCF0D /* MacAppDirectories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A35C7CBD006B3128DA4A902 /* MacAppDirectories.swift */; };
+		1C86EC0BAD13331CAA218726 /* DevelopmentFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0BAAA1B22BA1E9DC22A8597 /* DevelopmentFixtures.swift */; };
 		2C355A7772333F8C8605236A /* IOSRootNavigationUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E41E1457FDA2CDC8845D0DCC /* IOSRootNavigationUITests.swift */; };
+		2CA44086437A469E8C313251 /* DevelopmentMessages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90DCC5E137C0035F932E6490 /* DevelopmentMessages.swift */; };
+		2EE5504576AAF07906737F64 /* DevelopmentProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 307BF1D516C61C23202D7D88 /* DevelopmentProviders.swift */; };
 		3810B7313788DAAC05176FC8 /* IOSRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6A45762D2D7B3E1DF310A20 /* IOSRootView.swift */; };
 		3DF9624BD3606BE2187E66CE /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = FCC5E85B2329CE037F9166EF /* InfoPlist.strings */; };
 		41722AF3C28BC6C878BD9C42 /* LorepiaKit in Frameworks */ = {isa = PBXBuildFile; productRef = B4F98EFF844DA48F3BD42DCA /* LorepiaKit */; };
+		42BDFC8B1FF7BCD41474F851 /* DevelopmentFixtureTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8113295BDD71A1B8E265365F /* DevelopmentFixtureTypes.swift */; };
 		59684055EF28F6E22B302AD9 /* LorepiaIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D200A9BA20E638B86090AFDE /* LorepiaIOSApp.swift */; };
+		64E3D4986763754B32085708 /* DevelopmentBranches.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1B9DB1F2FA6E2FE96E30A6 /* DevelopmentBranches.swift */; };
+		6D1355FCCE6E88DD7AAA1803 /* DevelopmentConversations.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CB4B923F7EDF793DA7A283B /* DevelopmentConversations.swift */; };
 		8B99119D5827C87E46258EAD /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3C7F2B15C8B231EE7AE6DE3E /* Assets.xcassets */; };
 		AD0B5392E47D4E66386CF441 /* IOSAppDirectories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AD0E6C48AEE69F698C6BE3F /* IOSAppDirectories.swift */; };
 		B61B03FF84E5FDB684FE7F0A /* LorepiaMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15A968E2201C7BED416CAE67 /* LorepiaMacApp.swift */; };
+		C7DE2B5F8ABD1B83F8B37D61 /* DevelopmentCharacters.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8679683D3DEEDD50A17CE650 /* DevelopmentCharacters.swift */; };
 		E50F83384A2DBD3E7C1D93E5 /* LorepiaKit in Frameworks */ = {isa = PBXBuildFile; productRef = 14399F8D73907FD4C648F25E /* LorepiaKit */; };
 		F7695C01CA5BD117B78ADDDB /* MacRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F25FDD6952F3DB69049BCF /* MacRootView.swift */; };
+		F991D4A9081F039682201451 /* ChatBubbleShowcase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9FAA47A607E2826B6F9BD1FE /* ChatBubbleShowcase.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,14 +46,24 @@
 		1691DB10016F7816F6113AA6 /* LorepiaKit */ = {isa = PBXFileReference; lastKnownFileType = folder; name = LorepiaKit; path = Packages/LorepiaKit; sourceTree = SOURCE_ROOT; };
 		1AE3E1A4207AC29C5A9008F0 /* LorepiaMac.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = LorepiaMac.entitlements; sourceTree = "<group>"; };
 		2A35C7CBD006B3128DA4A902 /* MacAppDirectories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAppDirectories.swift; sourceTree = "<group>"; };
+		307BF1D516C61C23202D7D88 /* DevelopmentProviders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentProviders.swift; sourceTree = "<group>"; };
 		390A3F6FFBB099EC677F64A2 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		3C7F2B15C8B231EE7AE6DE3E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3CB4B923F7EDF793DA7A283B /* DevelopmentConversations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentConversations.swift; sourceTree = "<group>"; };
 		4B612B0C94ACE1ED2D771A39 /* LorepiaIOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LorepiaIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5DFB3C809D238012ED100246 /* LorepiaIOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = LorepiaIOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		61B7B5E8F709EDF6FDF0F853 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		6AD0E6C48AEE69F698C6BE3F /* IOSAppDirectories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSAppDirectories.swift; sourceTree = "<group>"; };
 		72F25FDD6952F3DB69049BCF /* MacRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacRootView.swift; sourceTree = "<group>"; };
+		8113295BDD71A1B8E265365F /* DevelopmentFixtureTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentFixtureTypes.swift; sourceTree = "<group>"; };
+		8679683D3DEEDD50A17CE650 /* DevelopmentCharacters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentCharacters.swift; sourceTree = "<group>"; };
+		8A0397F6EEB05A188FDDCDC3 /* IOSDevelopmentFixturesUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSDevelopmentFixturesUITests.swift; sourceTree = "<group>"; };
+		90DCC5E137C0035F932E6490 /* DevelopmentMessages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentMessages.swift; sourceTree = "<group>"; };
+		9FAA47A607E2826B6F9BD1FE /* ChatBubbleShowcase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatBubbleShowcase.swift; sourceTree = "<group>"; };
+		A073B89EAC7B2742B1910292 /* ChatHistoryShowcase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistoryShowcase.swift; sourceTree = "<group>"; };
+		A0BAAA1B22BA1E9DC22A8597 /* DevelopmentFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentFixtures.swift; sourceTree = "<group>"; };
 		A6A45762D2D7B3E1DF310A20 /* IOSRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSRootView.swift; sourceTree = "<group>"; };
+		CA1B9DB1F2FA6E2FE96E30A6 /* DevelopmentBranches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentBranches.swift; sourceTree = "<group>"; };
 		CDC44D19092D3446E65555A4 /* LorepiaMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LorepiaMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D200A9BA20E638B86090AFDE /* LorepiaIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LorepiaIOSApp.swift; sourceTree = "<group>"; };
 		E41E1457FDA2CDC8845D0DCC /* IOSRootNavigationUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IOSRootNavigationUITests.swift; sourceTree = "<group>"; };
@@ -91,6 +111,7 @@
 		2ED1369A648DED0416931372 /* iOSUITests */ = {
 			isa = PBXGroup;
 			children = (
+				8A0397F6EEB05A188FDDCDC3 /* IOSDevelopmentFixturesUITests.swift */,
 				E41E1457FDA2CDC8845D0DCC /* IOSRootNavigationUITests.swift */,
 			);
 			path = iOSUITests;
@@ -106,6 +127,15 @@
 				72F25FDD6952F3DB69049BCF /* MacRootView.swift */,
 			);
 			path = macOS;
+			sourceTree = "<group>";
+		};
+		3B3B58B3E63990D5D8A3D390 /* UITestFixtures */ = {
+			isa = PBXGroup;
+			children = (
+				9FAA47A607E2826B6F9BD1FE /* ChatBubbleShowcase.swift */,
+				A073B89EAC7B2742B1910292 /* ChatHistoryShowcase.swift */,
+			);
+			path = UITestFixtures;
 			sourceTree = "<group>";
 		};
 		7A0F7226FFF89753ABA8F12D /* Tests */ = {
@@ -126,6 +156,20 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		BB81B1A542C2AD95F1651E1B /* DevelopmentFixtures */ = {
+			isa = PBXGroup;
+			children = (
+				CA1B9DB1F2FA6E2FE96E30A6 /* DevelopmentBranches.swift */,
+				8679683D3DEEDD50A17CE650 /* DevelopmentCharacters.swift */,
+				3CB4B923F7EDF793DA7A283B /* DevelopmentConversations.swift */,
+				A0BAAA1B22BA1E9DC22A8597 /* DevelopmentFixtures.swift */,
+				8113295BDD71A1B8E265365F /* DevelopmentFixtureTypes.swift */,
+				90DCC5E137C0035F932E6490 /* DevelopmentMessages.swift */,
+				307BF1D516C61C23202D7D88 /* DevelopmentProviders.swift */,
+			);
+			path = DevelopmentFixtures;
+			sourceTree = "<group>";
+		};
 		CA63674EAAFCEB7404DBE3DD /* Packages */ = {
 			isa = PBXGroup;
 			children = (
@@ -137,7 +181,9 @@
 		FC5871C11CD1AC8DB1381CA9 /* iOS */ = {
 			isa = PBXGroup;
 			children = (
+				BB81B1A542C2AD95F1651E1B /* DevelopmentFixtures */,
 				314595ED7FB306F62C341FCC /* InfoPlist.strings */,
+				3B3B58B3E63990D5D8A3D390 /* UITestFixtures */,
 				3C7F2B15C8B231EE7AE6DE3E /* Assets.xcassets */,
 				6AD0E6C48AEE69F698C6BE3F /* IOSAppDirectories.swift */,
 				A6A45762D2D7B3E1DF310A20 /* IOSRootView.swift */,
@@ -270,6 +316,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0540F222C367D2394386B95A /* IOSDevelopmentFixturesUITests.swift in Sources */,
 				2C355A7772333F8C8605236A /* IOSRootNavigationUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -288,6 +335,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F991D4A9081F039682201451 /* ChatBubbleShowcase.swift in Sources */,
+				073F15CD7098D86AEFA9AEA8 /* ChatHistoryShowcase.swift in Sources */,
+				64E3D4986763754B32085708 /* DevelopmentBranches.swift in Sources */,
+				C7DE2B5F8ABD1B83F8B37D61 /* DevelopmentCharacters.swift in Sources */,
+				6D1355FCCE6E88DD7AAA1803 /* DevelopmentConversations.swift in Sources */,
+				42BDFC8B1FF7BCD41474F851 /* DevelopmentFixtureTypes.swift in Sources */,
+				1C86EC0BAD13331CAA218726 /* DevelopmentFixtures.swift in Sources */,
+				2CA44086437A469E8C313251 /* DevelopmentMessages.swift in Sources */,
+				2EE5504576AAF07906737F64 /* DevelopmentProviders.swift in Sources */,
 				AD0B5392E47D4E66386CF441 /* IOSAppDirectories.swift in Sources */,
 				3810B7313788DAAC05176FC8 /* IOSRootView.swift in Sources */,
 				59684055EF28F6E22B302AD9 /* LorepiaIOSApp.swift in Sources */,

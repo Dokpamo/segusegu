@@ -76,7 +76,7 @@ schemes:
     run:
       config: Debug
       commandLineArguments:
-        "--lorepia-chat-bubble-showcase": true
+        "--lorepia-dev-fixtures": true
     test:
       config: Debug
       targets:

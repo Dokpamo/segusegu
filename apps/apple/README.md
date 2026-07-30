@@ -197,12 +197,44 @@ Open the committed workspace and choose `LorepiaIOS` or `LorepiaMac`:
 open apps/apple/Lorepia.xcworkspace
 ```
 
-The standard Debug Run action for `LorepiaIOS` enables the project-owned
-synthetic chat showcase with `--lorepia-chat-bubble-showcase`. It uses only
-`FakeCoreClient` and in-memory credentials, so it does not write demo chats to
-the production database or Keychain. To run against the live Rust core in
-Xcode, uncheck or remove that argument in **Product > Scheme > Edit Scheme >
-Run > Arguments**.
+The standard Debug Run action for `LorepiaIOS` enables
+`--lorepia-dev-fixtures`. This loads the comprehensive, project-owned synthetic
+development catalog in memory so character browsing, conversation history,
+search, long and empty content, message states, provider selection, and chat
+actions can be exercised without setup. The main catalog contains 12 synthetic
+characters, 36 rooms, three provider profiles, and a prebuilt two-branch story.
+
+Additional development scenarios can be selected by replacing the standard
+argument in **Product > Scheme > Edit Scheme > Run > Arguments**:
+
+- `--lorepia-dev-empty` loads the completely empty library, conversation, and
+  provider state.
+- `--lorepia-dev-provider-missing` loads the catalog without a configured
+  provider.
+- `--lorepia-dev-credential-missing` keeps the selected provider but removes
+  its synthetic credential.
+- `--lorepia-dev-provider-unselected` keeps the provider profiles but starts
+  with no selected default.
+- `--lorepia-dev-health-warning` loads the catalog with a simulated unhealthy
+  core status.
+- `--lorepia-dev-core-unavailable` exercises startup and read-error surfaces.
+- `--lorepia-dev-load` loads 60 additional rooms and 600 additional messages
+  for a total of 96 rooms.
+
+The exact, deterministic UI-test showcases remain available separately:
+
+- `--lorepia-chat-bubble-showcase` loads the fixed multi-room chat geometry
+  showcase.
+- `--lorepia-chat-history-showcase` loads the fixed long-history showcase.
+
+All fixture scenarios use in-memory test clients, project-owned synthetic
+content, and in-memory credentials. They do not read or write the production
+database, Keychain, or user data. A Debug launch without a recognized fixture
+argument also falls back to the comprehensive development catalog, so a direct
+Simulator relaunch keeps the synthetic data even when Xcode scheme arguments
+are omitted. Pass an optional scenario argument explicitly when launching
+outside the scheme. To use the live Rust core in Debug, replace the fixture
+argument with the explicit `--lorepia-live-core` opt-in.
 
 `apps/apple/project.yml` is the source of truth for the committed Xcode project
 structure. After changing targets or build settings, regenerate the project
