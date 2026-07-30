@@ -2236,10 +2236,16 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         let back = app.navigationBars.buttons["채팅"]
         let search: XCUIElement
+        let searchVisualHorizontalOffset: CGFloat
+        let usesFallbackSearch: Bool
         if #available(iOS 26.0, *) {
             search = app.buttons["검색"]
+            searchVisualHorizontalOffset = 0
+            usesFallbackSearch = false
         } else {
             search = app.buttons["chat-room-search-trigger"]
+            searchVisualHorizontalOffset = 8
+            usesFallbackSearch = true
         }
         let navigationBar = app.navigationBars.firstMatch
         let window = app.windows.firstMatch
@@ -2256,7 +2262,8 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(search.frame.midY, back.frame.midY, accuracy: 1)
         XCTAssertEqual(
             back.frame.midX - window.frame.minX,
-            window.frame.maxX - search.frame.midX,
+            window.frame.maxX
+                - (search.frame.midX + searchVisualHorizontalOffset),
             accuracy: 1
         )
         if #available(iOS 26.0, *) {
@@ -2338,11 +2345,24 @@ final class IOSRootNavigationUITests: XCTestCase {
             accuracy: 1
         )
 
-        search.tap()
+        let visualSearchCenter = search.coordinate(
+            withNormalizedOffset: CGVector(
+                dx: 0.5
+                    + searchVisualHorizontalOffset / search.frame.width,
+                dy: 0.5
+            )
+        )
+        visualSearchCenter.tap()
         let searchField = app.searchFields.firstMatch
         let closeSearch = app.buttons.matching(
             NSPredicate(format: "label == '닫기' OR label == '취소'")
         ).firstMatch
+        if usesFallbackSearch {
+            XCTAssertTrue(
+                search.waitForNonExistence(timeout: 5),
+                "A single tap must replace the search trigger."
+            )
+        }
         XCTAssertTrue(searchField.waitForExistence(timeout: 5))
         XCTAssertTrue(closeSearch.waitForExistence(timeout: 5))
         XCTAssertTrue(searchField.isHittable)
@@ -2465,6 +2485,9 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertFalse(app.searchFields.firstMatch.exists)
 
         search.tap()
+        if usesFallbackSearch {
+            XCTAssertTrue(search.waitForNonExistence(timeout: 5))
+        }
         XCTAssertTrue(searchField.waitForExistence(timeout: 5))
         XCTAssertTrue(closeSearch.waitForExistence(timeout: 5))
         XCTAssertGreaterThanOrEqual(
