@@ -1385,11 +1385,10 @@ public struct ChatView: View {
             .frame(
                 minWidth: 120,
                 idealWidth: 220,
-                maxWidth: .infinity,
+                maxWidth: 220,
                 minHeight: 36,
                 maxHeight: 36
             )
-            .layoutPriority(1)
             .transaction { transaction in
                 transaction.animation = nil
                 transaction.disablesAnimations = true
