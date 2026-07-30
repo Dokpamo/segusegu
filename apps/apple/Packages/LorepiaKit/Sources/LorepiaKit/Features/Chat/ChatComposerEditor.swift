@@ -515,8 +515,17 @@ final class ChatComposerEditorHost: UIView {
             ),
             exceedsMaximum: fittingHeight > maximumHeight + 0.5,
             exceedsExpansionLineLimit:
-                visualLineCount() > max(expansionLineLimit, 1)
+                max(visualLineCount(), explicitLineCount())
+                    > max(expansionLineLimit, 1)
         )
+    }
+
+    private func explicitLineCount() -> Int {
+        textView.text.reduce(into: 1) { count, character in
+            if character.isNewline {
+                count += 1
+            }
+        }
     }
 
     private func visualLineCount() -> Int {
