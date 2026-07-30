@@ -893,6 +893,7 @@ mod tests {
             read_request(&mut stream);
             let body = concat!(
                 "data: {\"choices\":[{\"delta\":{\"content\":\"응답😀\"}}]}\n\n",
+                "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
                 "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":9,\"completion_tokens\":2}}\n\n",
                 "data: [DONE]\n\n"
             );
