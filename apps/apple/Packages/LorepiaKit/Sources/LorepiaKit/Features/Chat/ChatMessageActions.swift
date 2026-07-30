@@ -54,7 +54,7 @@ public enum ChatMessageAction: String, CaseIterable, Identifiable, Sendable {
         case .copy:
             .copy
         case .regenerate:
-            .regenerate
+            .retry
         case .branch:
             .branch
         case .delete:

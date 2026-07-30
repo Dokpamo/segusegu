@@ -112,7 +112,7 @@ public struct SettingsView: View {
                 )
             ) {
                 LorepiaSettingsRow(
-                    glyph: .regenerate,
+                    glyph: .retry,
                     title: "취소·실패한 부분 응답 보존",
                     subtitle: "중단된 응답도 대화에 남겨 둡니다"
                 )

@@ -13,12 +13,15 @@ import UIKit
 struct ChatComposerEditor: UIViewRepresentable {
     @Binding var text: String
     @Binding var measuredHeight: CGFloat
+    @Binding var exceedsExpansionLineLimit: Bool
 
     let focus: FocusState<Bool>.Binding
     let placeholder: String
     let isEnabled: Bool
     let minimumLines: Int
     let maximumLines: Int
+    let expansionLineLimit: Int
+    let fillsAvailableHeight: Bool
     let automaticFocusID: String?
     let animatesHeightChanges: Bool
     let onSubmit: () -> Void
@@ -32,6 +35,7 @@ struct ChatComposerEditor: UIViewRepresentable {
         let host = ChatComposerEditorHost()
         let textView = host.textView
 
+        host.fillsAvailableHeight = fillsAvailableHeight
         textView.delegate = context.coordinator
         textView.text = text
         textView.selectedRange = NSRange(
@@ -69,8 +73,8 @@ struct ChatComposerEditor: UIViewRepresentable {
 
         host.updatePlaceholder(placeholder)
         host.updatePlaceholderVisibility()
-        host.onWidthChange = { [weak coordinator = context.coordinator] host in
-            coordinator?.hostWidthDidChange(host)
+        host.onSizeChange = { [weak coordinator = context.coordinator] host in
+            coordinator?.hostSizeDidChange(host)
         }
         context.coordinator.host = host
         context.coordinator.synchronizeHeight(
@@ -87,6 +91,7 @@ struct ChatComposerEditor: UIViewRepresentable {
         context.coordinator.parent = self
 
         let textView = host.textView
+        host.fillsAvailableHeight = fillsAvailableHeight
         textView.isEditable = isEnabled
         textView.isSelectable = isEnabled
         textView.accessibilityLabel = placeholder
@@ -139,9 +144,16 @@ struct ChatComposerEditor: UIViewRepresentable {
         let measurement = host.measure(
             width: width,
             minimumLines: minimumLines,
-            maximumLines: maximumLines
+            maximumLines: maximumLines,
+            expansionLineLimit: expansionLineLimit
         )
-        return CGSize(width: width, height: measurement.height)
+        return CGSize(
+            width: width,
+            height:
+                fillsAvailableHeight
+                    ? proposal.height ?? measurement.height
+                    : measurement.height
+        )
     }
 
     @MainActor
@@ -270,7 +282,7 @@ struct ChatComposerEditor: UIViewRepresentable {
             return true
         }
 
-        func hostWidthDidChange(_ host: ChatComposerEditorHost) {
+        func hostSizeDidChange(_ host: ChatComposerEditorHost) {
             host.cancelHeightTransition()
             synchronizeHeight(
                 in: host,
@@ -290,20 +302,33 @@ struct ChatComposerEditor: UIViewRepresentable {
             let measurement = host.measure(
                 width: width,
                 minimumLines: parent.minimumLines,
-                maximumLines: parent.maximumLines
+                maximumLines: parent.maximumLines,
+                expansionLineLimit: parent.expansionLineLimit
             )
+            let resolvedHeight =
+                parent.fillsAvailableHeight && host.bounds.height > 0
+                    ? host.bounds.height
+                    : measurement.height
+            let shouldScroll =
+                parent.fillsAvailableHeight
+                    ? measurement.height > resolvedHeight + 0.5
+                    : measurement.exceedsMaximum
             host.updateScrolling(
-                shouldScroll: measurement.exceedsMaximum
+                shouldScroll: shouldScroll
             )
 
-            let previousHeight = max(
-                lastReportedHeight,
-                parent.measuredHeight
-            )
+            let previousHeight =
+                parent.fillsAvailableHeight
+                    ? lastReportedHeight
+                    : max(
+                        lastReportedHeight,
+                        parent.measuredHeight
+                    )
             let heightChanged =
-                abs(measurement.height - previousHeight) > 0.5
+                abs(resolvedHeight - previousHeight) > 0.5
             var animatesResizeWhileTyping =
                 updatesTextBinding
+                    && !parent.fillsAvailableHeight
                     && parent.animatesHeightChanges
                     && lastReportedHeight > 0
                     && heightChanged
@@ -311,25 +336,25 @@ struct ChatComposerEditor: UIViewRepresentable {
             var heightTransitionToken: UUID?
 
             if heightChanged {
-                host.setHeight(measurement.height)
+                host.setHeight(resolvedHeight)
                 if animatesResizeWhileTyping {
                     heightTransitionToken =
                         host.beginHeightTransition(
                             visibleHeight: min(
                                 previousHeight,
-                                measurement.height
+                                resolvedHeight
                             ),
-                            resolvedHeight: measurement.height
+                            resolvedHeight: resolvedHeight
                         )
                     animatesResizeWhileTyping =
                         heightTransitionToken != nil
                 } else {
                     host.cancelHeightTransition()
                 }
-                lastReportedHeight = measurement.height
+                lastReportedHeight = resolvedHeight
             } else if lastReportedHeight == 0 {
-                lastReportedHeight = measurement.height
-                host.setHeight(measurement.height)
+                lastReportedHeight = resolvedHeight
+                host.setHeight(resolvedHeight)
             }
 
             let newText = host.textView.text ?? ""
@@ -338,7 +363,7 @@ struct ChatComposerEditor: UIViewRepresentable {
                 host.isHeightTransitionActive,
                 updatesTextBinding
             {
-                if measurement.exceedsMaximum {
+                if shouldScroll {
                     // Once the editor reaches its line cap, there is no
                     // remaining geometry transition to animate. Hand the
                     // surface back to the live text view immediately so the
@@ -358,6 +383,12 @@ struct ChatComposerEditor: UIViewRepresentable {
                     self.parent.measuredHeight - measurement.height
                 ) > 0.5 {
                     self.parent.measuredHeight = measurement.height
+                }
+                if self.parent.exceedsExpansionLineLimit
+                    != measurement.exceedsExpansionLineLimit
+                {
+                    self.parent.exceedsExpansionLineLimit =
+                        measurement.exceedsExpansionLineLimit
                 }
             }
             if
@@ -392,14 +423,16 @@ final class ChatComposerEditorHost: UIView {
     struct Measurement {
         let height: CGFloat
         let exceedsMaximum: Bool
+        let exceedsExpansionLineLimit: Bool
     }
 
     let textView = UITextView(frame: .zero)
-    var onWidthChange: ((ChatComposerEditorHost) -> Void)?
+    var fillsAvailableHeight = false
+    var onSizeChange: ((ChatComposerEditorHost) -> Void)?
 
     private let placeholderLabel = UILabel()
     private var textViewHeightConstraint: NSLayoutConstraint!
-    private var previousWidth: CGFloat = 0
+    private var previousSize: CGSize = .zero
     private var transitionSnapshotView: UIImageView?
     private var transitionVisibleHeight: CGFloat = 0
     private var transitionToken: UUID?
@@ -419,13 +452,21 @@ final class ChatComposerEditorHost: UIView {
     }
 
     override func layoutSubviews() {
+        if fillsAvailableHeight {
+            textViewHeightConstraint.constant = bounds.height
+        }
         super.layoutSubviews()
         updateTransitionSnapshotFrame()
-        guard abs(bounds.width - previousWidth) > 0.5 else {
+        let widthChanged =
+            abs(bounds.width - previousSize.width) > 0.5
+        let fullscreenHeightChanged =
+            fillsAvailableHeight
+                && abs(bounds.height - previousSize.height) > 0.5
+        guard widthChanged || fullscreenHeightChanged else {
             return
         }
-        previousWidth = bounds.width
-        onWidthChange?(self)
+        previousSize = bounds.size
+        onSizeChange?(self)
     }
 
     func updatePlaceholder(_ placeholder: String) {
@@ -441,7 +482,8 @@ final class ChatComposerEditorHost: UIView {
     func measure(
         width: CGFloat,
         minimumLines: Int,
-        maximumLines: Int
+        maximumLines: Int,
+        expansionLineLimit: Int
     ) -> Measurement {
         let font =
             textView.font ?? UIFont.preferredFont(forTextStyle: .body)
@@ -471,8 +513,28 @@ final class ChatComposerEditorHost: UIView {
                 max(fittingHeight, minimumHeight),
                 maximumHeight
             ),
-            exceedsMaximum: fittingHeight > maximumHeight + 0.5
+            exceedsMaximum: fittingHeight > maximumHeight + 0.5,
+            exceedsExpansionLineLimit:
+                visualLineCount() > max(expansionLineLimit, 1)
         )
+    }
+
+    private func visualLineCount() -> Int {
+        let layoutManager = textView.layoutManager
+        let textContainer = textView.textContainer
+        layoutManager.ensureLayout(for: textContainer)
+
+        let glyphRange = layoutManager.glyphRange(for: textContainer)
+        var count = 0
+        layoutManager.enumerateLineFragments(
+            forGlyphRange: glyphRange
+        ) { _, _, _, _, _ in
+            count += 1
+        }
+        if textView.text.hasSuffix("\n") {
+            count += 1
+        }
+        return max(count, 1)
     }
 
     func updateScrolling(shouldScroll: Bool) {

@@ -1,6 +1,7 @@
+import Darwin
+import Foundation
 import LorepiaKit
 import SwiftUI
-import Darwin
 
 struct IOSRootView: View {
     private enum Tab: Hashable {
@@ -65,6 +66,15 @@ struct IOSRootView: View {
                         .navigationBarTitleDisplayMode(.inline)
                         .task(id: item.id) {
                             await environment.selectConversation(item)
+#if DEBUG
+                            if let seededDraft =
+                                ProcessInfo.processInfo.environment[
+                                    "LOREPIA_UI_TEST_CHAT_DRAFT"
+                                ]
+                            {
+                                environment.chatViewModel.draft = seededDraft
+                            }
+#endif
                         }
                 }
             }

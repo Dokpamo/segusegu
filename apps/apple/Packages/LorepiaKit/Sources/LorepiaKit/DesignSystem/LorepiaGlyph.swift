@@ -8,7 +8,7 @@ import SwiftUI
 public enum LorepiaGlyph: String, CaseIterable, Sendable {
     case edit
     case copy
-    case regenerate
+    case retry
     case branch
     case plus
     case send
@@ -30,17 +30,49 @@ public enum LorepiaGlyph: String, CaseIterable, Sendable {
         case
             .edit, .copy, .branch, .plus, .send, .moreVertical, .delete,
             .shield, .settings, .waveform, .search, .close, .expand,
-            .collapse:
+            .collapse, .check:
             2
-        case .regenerate, .check:
-            1.8
+        case .retry:
+            2
         }
     }
 
+    /// Parts of a glyph drawn as a solid shape on top of the stroked path,
+    /// such as an arrowhead. `nil` when the glyph is stroke-only.
+    func solidPath(in rect: CGRect) -> Path? {
+        guard self == .retry else {
+            return nil
+        }
+        var path = Path()
+        for head in [
+            (
+                CGPoint(x: 17.63, y: 13.40),
+                CGPoint(x: 18.75, y: 18.01),
+                CGPoint(x: 21.90, y: 14.47)
+            ),
+            (
+                CGPoint(x: 6.37, y: 10.60),
+                CGPoint(x: 5.25, y: 5.99),
+                CGPoint(x: 2.10, y: 9.53)
+            ),
+        ] {
+            path.move(to: head.0)
+            path.addLine(to: head.1)
+            path.addLine(to: head.2)
+            path.closeSubpath()
+        }
+        return scaled(path, in: rect)
+    }
+
     func path(in rect: CGRect) -> Path {
-        let scale = min(rect.width, rect.height) / Self.grid
         var path = Path()
         draw(into: &path)
+        return scaled(path, in: rect)
+    }
+
+    /// Maps the 24-unit grid onto the rect the glyph is asked to fill.
+    private func scaled(_ path: Path, in rect: CGRect) -> Path {
+        let scale = min(rect.width, rect.height) / Self.grid
         return path.applying(
             CGAffineTransform(scaleX: scale, y: scale)
                 .concatenating(
@@ -104,19 +136,27 @@ public enum LorepiaGlyph: String, CaseIterable, Sendable {
                 radius: 4.5
             )
 
-        case .regenerate:
-            // No matching prepared SVG exists; preserve the established turn.
+        case .retry:
+            // Traced from the reference menu: two arcs 180° apart, each
+            // continuing into a head drawn by `solidPath`.
+            // Each arc starts its own subpath; without the move the second one
+            // is joined to the first by a chord and the gaps disappear.
+            path.move(to: CGPoint(x: 6.65, y: 6.05))
             path.addArc(
                 center: CGPoint(x: 12, y: 12),
-                radius: 7.6,
-                startAngle: .degrees(-38),
-                endAngle: .degrees(232),
+                radius: 8,
+                startAngle: .degrees(228),
+                endAngle: .degrees(374),
                 clockwise: false
             )
-            path.move(to: CGPoint(x: 15.4, y: 3.6))
-            path.addLine(to: CGPoint(x: 19.6, y: 7.2))
-            path.addLine(to: CGPoint(x: 14.4, y: 8.6))
-            path.closeSubpath()
+            path.move(to: CGPoint(x: 17.35, y: 17.95))
+            path.addArc(
+                center: CGPoint(x: 12, y: 12),
+                radius: 8,
+                startAngle: .degrees(48),
+                endAngle: .degrees(194),
+                clockwise: false
+            )
 
         case .branch:
             path.move(to: CGPoint(x: 5, y: 12))
@@ -358,9 +398,11 @@ public enum LorepiaGlyph: String, CaseIterable, Sendable {
             path.addLine(to: CGPoint(x: 19.4, y: 13.3))
 
         case .check:
-            path.move(to: CGPoint(x: 5, y: 12.5))
-            path.addLine(to: CGPoint(x: 10, y: 17.5))
-            path.addLine(to: CGPoint(x: 19, y: 6.5))
+            // Same weight and joins as the rest of the set; it used to be
+            // drawn thinner than everything beside it.
+            path.move(to: CGPoint(x: 5.2, y: 12.8))
+            path.addLine(to: CGPoint(x: 9.8, y: 17.4))
+            path.addLine(to: CGPoint(x: 18.8, y: 6.8))
 
         case .search:
             path.addEllipse(
@@ -376,18 +418,28 @@ public enum LorepiaGlyph: String, CaseIterable, Sendable {
             path.addLine(to: CGPoint(x: 5.4, y: 18.6))
 
         case .expand:
-            path.move(to: CGPoint(x: 6, y: 18))
-            path.addLine(to: CGPoint(x: 18, y: 6))
-            path.move(to: CGPoint(x: 10, y: 6))
-            path.addLine(to: CGPoint(x: 18, y: 6))
-            path.addLine(to: CGPoint(x: 18, y: 14))
+            path.move(to: CGPoint(x: 14.6, y: 4.6))
+            path.addLine(to: CGPoint(x: 19.4, y: 4.6))
+            path.addLine(to: CGPoint(x: 19.4, y: 9.4))
+            path.move(to: CGPoint(x: 19.4, y: 4.6))
+            path.addLine(to: CGPoint(x: 13.9, y: 10.1))
+            path.move(to: CGPoint(x: 9.4, y: 19.4))
+            path.addLine(to: CGPoint(x: 4.6, y: 19.4))
+            path.addLine(to: CGPoint(x: 4.6, y: 14.6))
+            path.move(to: CGPoint(x: 4.6, y: 19.4))
+            path.addLine(to: CGPoint(x: 10.1, y: 13.9))
 
         case .collapse:
-            path.move(to: CGPoint(x: 18, y: 6))
-            path.addLine(to: CGPoint(x: 6, y: 18))
-            path.move(to: CGPoint(x: 6, y: 10))
-            path.addLine(to: CGPoint(x: 6, y: 18))
-            path.addLine(to: CGPoint(x: 14, y: 18))
+            path.move(to: CGPoint(x: 14.2, y: 4.8))
+            path.addLine(to: CGPoint(x: 14.2, y: 9.8))
+            path.addLine(to: CGPoint(x: 19.2, y: 9.8))
+            path.move(to: CGPoint(x: 19.4, y: 4.6))
+            path.addLine(to: CGPoint(x: 14.2, y: 9.8))
+            path.move(to: CGPoint(x: 9.8, y: 19.2))
+            path.addLine(to: CGPoint(x: 9.8, y: 14.2))
+            path.addLine(to: CGPoint(x: 4.8, y: 14.2))
+            path.move(to: CGPoint(x: 4.6, y: 19.4))
+            path.addLine(to: CGPoint(x: 9.8, y: 14.2))
         }
     }
 
@@ -486,7 +538,26 @@ public struct LorepiaGlyphView: View {
 
     public var body: some View {
         Group {
-            if glyph == .moreVertical {
+            if glyph.solidPath(in: CGRect(x: 0, y: 0, width: 1, height: 1))
+                != nil
+            {
+                // Stroked arcs with a filled head, the way the reference draws
+                // it: neither alone reads as the same icon.
+                ZStack {
+                    LorepiaGlyphShape(glyph: glyph)
+                        .stroke(
+                            style: StrokeStyle(
+                                lineWidth:
+                                    glyph.stroke
+                                    * (size / LorepiaGlyph.grid),
+                                lineCap: .round,
+                                lineJoin: .round
+                            )
+                        )
+                    LorepiaGlyphSolidShape(glyph: glyph)
+                        .fill()
+                }
+            } else if glyph == .moreVertical {
                 LorepiaGlyphShape(glyph: glyph)
                     .fill()
             } else {
@@ -548,5 +619,14 @@ private struct LorepiaGlyphShape: Shape {
 
     func path(in rect: CGRect) -> Path {
         glyph.path(in: rect)
+    }
+}
+
+/// The filled part of a glyph, such as the retry arrowheads.
+private struct LorepiaGlyphSolidShape: Shape {
+    let glyph: LorepiaGlyph
+
+    func path(in rect: CGRect) -> Path {
+        glyph.solidPath(in: rect) ?? Path()
     }
 }

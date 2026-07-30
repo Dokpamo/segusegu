@@ -849,11 +849,24 @@ final class FeatureViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.conversation?.id, firstRoom.id)
         XCTAssertEqual(viewModel.messages, [firstMessage])
         XCTAssertEqual(viewModel.mode, .chat)
+        viewModel.draft = "  첫 방 미전송 초안  "
 
         await viewModel.setConversation(secondRoom, character: character)
         XCTAssertEqual(viewModel.conversation?.id, secondRoom.id)
         XCTAssertEqual(viewModel.messages, [secondMessage])
         XCTAssertEqual(viewModel.mode, .story)
+        XCTAssertTrue(viewModel.draft.isEmpty)
+        viewModel.draft = "둘째 방 미전송 초안"
+
+        await viewModel.setConversation(firstRoom, character: character)
+        XCTAssertEqual(viewModel.draft, "  첫 방 미전송 초안  ")
+        viewModel.draft = ""
+
+        await viewModel.setConversation(secondRoom, character: character)
+        XCTAssertEqual(viewModel.draft, "둘째 방 미전송 초안")
+
+        await viewModel.setConversation(firstRoom, character: character)
+        XCTAssertTrue(viewModel.draft.isEmpty)
     }
 
     func testChatBranchMessagesRemainIsolatedAndRestoreWhenSwitching() async throws {

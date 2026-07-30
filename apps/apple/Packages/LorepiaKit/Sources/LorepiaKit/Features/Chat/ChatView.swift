@@ -18,6 +18,10 @@ public struct ChatView: View {
     @Environment(\.timeZone) private var timeZone
 
     @ScaledMetric(relativeTo: .body) private var scaledListInset = 16
+    @ScaledMetric(relativeTo: .caption) private var scaledParticipantAvatarSize =
+        ChatParticipantLayout.baseAvatarSize
+    @ScaledMetric(relativeTo: .body) private var scaledStoryContentInset =
+        LorepiaSpacing.standard
 
     @State private var followsLatest = true
     @State private var isNearBottom = true
@@ -30,6 +34,12 @@ public struct ChatView: View {
     @State private var revealedAt: Date?
     @State private var copyFeedback = 0
     @State private var composerEditorHeight: CGFloat = 0
+    @State private var fullscreenComposerEditorHeight: CGFloat = 0
+    @State private var composerExceedsExpansionLineLimit = false
+    @State private var fullscreenComposerExceedsExpansionLineLimit = false
+    @State private var isComposerExpanded = false
+    @State private var composerAutomaticFocusID: UUID?
+    @State private var fullscreenComposerAutomaticFocusID: UUID?
     /// Restored history is not newly arrived mail. Until the first transcript
     /// of a conversation has landed, messages appear in place instead of
     /// animating in, so opening a room never looks like it is rearranging.
@@ -47,6 +57,7 @@ public struct ChatView: View {
     @State private var activeMatchID: String?
     @State private var pendingScrollTargetID: String?
     @FocusState private var isComposerFocused: Bool
+    @FocusState private var isFullscreenComposerFocused: Bool
 
     public init(
         viewModel: ChatViewModel,
@@ -57,174 +68,210 @@ public struct ChatView: View {
     }
 
     public var body: some View {
-        GeometryReader { geometry in
-            Group {
-                if viewModel.character != nil {
-                    messageList
-                } else if viewModel.isLoading {
-                    ProgressView("대화를 준비하는 중")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    ContentUnavailableView {
-                        Label(
-                            "대화를 선택하세요",
-                            systemImage: "bubble.left.and.bubble.right"
-                        )
-                    } description: {
-                        Text("채팅에서 캐릭터를 선택하면 저장된 대화를 이어갈 수 있습니다.")
-                    }
-                }
-            }
-            .background {
-                ChatSurface.background.ignoresSafeArea()
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                // Searching borrows the keyboard, so the composer steps aside
-                // rather than competing for it, and the match navigator takes
-                // the same place the way a find bar does.
-                if !isSearchActive, viewModel.character != nil {
-                    composer(
-                        restingSafeAreaInset:
-                            geometry.safeAreaInsets.bottom
-                    )
-                }
-            }
-            .overlay(alignment: .bottomTrailing) {
-                if isSearchActive {
-                    chatSearchNavigator
-                }
-            }
-            .chatConversationSearch(
-                text: $searchQuery,
-                isPresented: $isSearchActive,
-                isAvailable: viewModel.conversation != nil
-            )
-            .onChange(of: isSearchActive) { _, active in
-                if !active {
-                    searchQuery = ""
-                    activeMatchID = nil
-                }
-            }
-            .toolbar {
-#if os(macOS)
-                if let character = viewModel.character {
-                    ToolbarItem(placement: .principal) {
-                        ChatToolbarIdentity(
-                            character: character,
-                            branch: branchSummary,
-                            isEnabled: viewModel.conversation != nil
-                        ) {
-                            isRoomSettingsPresented = true
-                        }
-                    }
-                }
-
-                if viewModel.conversation != nil {
-                    ToolbarItem(placement: .primaryAction) {
-                        ChatRoomSettingsTrigger(
-                            mode: viewModel.mode,
-                            style: .toolbar,
-                            isEnabled: viewModel.conversation != nil
-                        ) {
-                            isRoomSettingsPresented = true
-                        }
-                    }
-                }
-#else
-                if viewModel.conversation != nil {
-#if compiler(>=6.2)
-                    if #available(iOS 26.0, *) {
-                        DefaultToolbarItem(
-                            kind: .search,
-                            placement: .topBarTrailing
-                        )
+        ZStack {
+            GeometryReader { geometry in
+                Group {
+                    if viewModel.character != nil {
+                        messageList
+                    } else if viewModel.isLoading {
+                        ProgressView("대화를 준비하는 중")
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
+                        ContentUnavailableView {
+                            Label(
+                                "대화를 선택하세요",
+                                systemImage: "bubble.left.and.bubble.right"
+                            )
+                        } description: {
+                            Text("채팅에서 캐릭터를 선택하면 저장된 대화를 이어갈 수 있습니다.")
+                        }
+                    }
+                }
+                .background {
+                    ChatSurface.background.ignoresSafeArea()
+                }
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    // Searching borrows the keyboard, so the composer steps
+                    // aside rather than competing for it, and the match
+                    // navigator takes the same place the way a find bar does.
+                    if !isSearchActive,
+                       viewModel.character != nil,
+                       !isComposerFullscreenPresented
+                    {
+                        composer(
+                            restingSafeAreaInset:
+                                geometry.safeAreaInsets.bottom
+                        )
+                    }
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    if isSearchActive {
+                        chatSearchNavigator
+                    }
+                }
+                .chatConversationSearch(
+                    text: $searchQuery,
+                    isPresented: $isSearchActive,
+                    isAvailable: viewModel.conversation != nil
+                )
+                .onChange(of: isSearchActive) { _, active in
+                    if !active {
+                        searchQuery = ""
+                        activeMatchID = nil
+                    }
+                }
+                .toolbar {
+#if os(macOS)
+                    if let character = viewModel.character {
+                        ToolbarItem(placement: .principal) {
+                            ChatToolbarIdentity(
+                                character: character,
+                                branch: branchSummary,
+                                isEnabled: viewModel.conversation != nil
+                            ) {
+                                isRoomSettingsPresented = true
+                            }
+                        }
+                    }
+
+                    if viewModel.conversation != nil {
+                        ToolbarItem(placement: .primaryAction) {
+                            ChatRoomSettingsTrigger(
+                                mode: viewModel.mode,
+                                style: .toolbar,
+                                isEnabled: viewModel.conversation != nil
+                            ) {
+                                isRoomSettingsPresented = true
+                            }
+                        }
+                    }
+#else
+                    if viewModel.conversation != nil {
+#if compiler(>=6.2)
+                        if #available(iOS 26.0, *) {
+                            DefaultToolbarItem(
+                                kind: .search,
+                                placement: .topBarTrailing
+                            )
+                        } else {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                chatToolbarSearchFallback
+                            }
+                        }
+#else
                         ToolbarItem(placement: .topBarTrailing) {
                             chatToolbarSearchFallback
                         }
-                    }
-#else
-                    ToolbarItem(placement: .topBarTrailing) {
-                        chatToolbarSearchFallback
+#endif
                     }
 #endif
                 }
-#endif
-            }
-            .chatRoomTitle(name: viewModel.character?.name)
-            .sheet(isPresented: $isRoomSettingsPresented) {
-                ChatRoomSettingsSheet(
-                    mode: viewModel.mode,
-                    branches: viewModel.branchOptions,
-                    selectedBranchID: viewModel.activeBranchID,
-                    isEnabled: viewModel.canManageBranches,
-                    errorMessage: viewModel.errorMessage
-                ) { mode in
-                    Task {
-                        await viewModel.setMode(mode)
-                    }
-                } onSelectBranch: { branchID in
-                    Task {
-                        await viewModel.selectBranch(id: branchID)
-                    }
-                }
-            }
-            .sheet(item: $dayPickerAnchor) { anchor in
-                ChatDayPickerSheet(
-                    availableDays: ChatTimeline.messageDays(
-                        in: viewModel.messages,
-                        calendar: timelineCalendar
-                    ),
-                    selectedDay: anchor.day,
-                    calendar: timelineCalendar,
-                    locale: locale
-                ) { day in
-                    jumpToDay(day)
-                }
-            }
-            .confirmationDialog(
-                "이 메시지부터 삭제할까요?",
-                isPresented: Binding(
-                    get: { deletingMessage != nil },
-                    set: { isPresented in
-                        if !isPresented {
-                            deletingMessage = nil
+                .chatRoomTitle(name: viewModel.character?.name)
+                .sheet(isPresented: $isRoomSettingsPresented) {
+                    ChatRoomSettingsSheet(
+                        mode: viewModel.mode,
+                        branches: viewModel.branchOptions,
+                        selectedBranchID: viewModel.activeBranchID,
+                        isEnabled: viewModel.canManageBranches,
+                        errorMessage: viewModel.errorMessage
+                    ) { mode in
+                        Task {
+                            await viewModel.setMode(mode)
+                        }
+                    } onSelectBranch: { branchID in
+                        Task {
+                            await viewModel.selectBranch(id: branchID)
                         }
                     }
-                ),
-                presenting: deletingMessage
-            ) { message in
-                Button("현재 흐름에서 삭제", role: .destructive) {
-                    Task {
-                        await viewModel.removeMessage(messageID: message.id)
+                }
+                .sheet(item: $dayPickerAnchor) { anchor in
+                    ChatDayPickerSheet(
+                        availableDays: ChatTimeline.messageDays(
+                            in: viewModel.messages,
+                            calendar: timelineCalendar
+                        ),
+                        selectedDay: anchor.day,
+                        calendar: timelineCalendar,
+                        locale: locale
+                    ) { day in
+                        jumpToDay(day)
                     }
-                    deletingMessage = nil
                 }
-                Button("취소", role: .cancel) {
-                    deletingMessage = nil
+                .confirmationDialog(
+                    "이 메시지부터 삭제할까요?",
+                    isPresented: Binding(
+                        get: { deletingMessage != nil },
+                        set: { isPresented in
+                            if !isPresented {
+                                deletingMessage = nil
+                            }
+                        }
+                    ),
+                    presenting: deletingMessage
+                ) { message in
+                    Button("현재 흐름에서 삭제", role: .destructive) {
+                        Task {
+                            await viewModel.removeMessage(
+                                messageID: message.id
+                            )
+                        }
+                        deletingMessage = nil
+                    }
+                    Button("취소", role: .cancel) {
+                        deletingMessage = nil
+                    }
+                } message: { _ in
+                    Text("이 메시지와 이후 대화를 현재 흐름에서 제거합니다. 다른 분기에는 영향이 없습니다.")
                 }
-            } message: { _ in
-                Text("이 메시지와 이후 대화를 현재 흐름에서 제거합니다. 다른 분기에는 영향이 없습니다.")
+                .chatDetailPlatformChrome()
+                .chatCopyFeedback(trigger: copyFeedback)
+                .task {
+                    await viewModel.resumeEventPolling()
+                    await viewModel.refreshProviderSelection()
+                }
+                .onChange(of: viewModel.conversation?.id) { _, _ in
+                    discardInlineEdit()
+                    resetComposerExpansion()
+                }
+                .onChange(of: viewModel.activeBranchID) { _, _ in
+                    discardInlineEdit()
+                }
+                .onChange(of: viewModel.draft) { _, draft in
+                    if draft.isEmpty, !isComposerFullscreenPresented {
+                        resetComposerExpansion()
+                    }
+                }
+                .onDisappear {
+#if os(iOS)
+                    guard !isComposerFullscreenPresented else {
+                        return
+                    }
+#endif
+                    initialLoadSettleGeneration &+= 1
+                    isComposerFocused = false
+                    discardInlineEdit()
+                    viewModel.pauseEventPolling()
+                }
+#if os(iOS)
+                .allowsHitTesting(!isComposerFullscreenPresented)
+                .accessibilityHidden(isComposerFullscreenPresented)
+#endif
             }
-            .chatDetailPlatformChrome()
-            .chatCopyFeedback(trigger: copyFeedback)
-            .task {
-                await viewModel.resumeEventPolling()
-                await viewModel.refreshProviderSelection()
+
+#if os(iOS)
+            if isComposerFullscreenPresented {
+                fullscreenComposer
+                    .transition(.identity)
+                    .zIndex(1)
             }
-            .onChange(of: viewModel.conversation?.id) { _, _ in
-                discardInlineEdit()
-            }
-            .onChange(of: viewModel.activeBranchID) { _, _ in
-                discardInlineEdit()
-            }
-            .onDisappear {
-                initialLoadSettleGeneration &+= 1
-                isComposerFocused = false
-                discardInlineEdit()
-                viewModel.pauseEventPolling()
-            }
+#endif
         }
+#if os(iOS)
+        .toolbar(
+            isComposerFullscreenPresented ? .hidden : .visible,
+            for: .navigationBar
+        )
+#endif
     }
 
     private var messageList: some View {
@@ -314,7 +361,8 @@ public struct ChatView: View {
 
                             messageRow(
                                 message: message,
-                                width: geometry.size.width
+                                width: geometry.size.width,
+                                joinsPrevious: joinsPrevious
                             )
                             .padding(
                                 .top,
@@ -356,7 +404,7 @@ public struct ChatView: View {
                     .background(alignment: .leading) {
                         threadRail
                     }
-                    .padding(.horizontal, listInset)
+                    .padding(.horizontal, transcriptHorizontalInset)
                     .padding(.top, LorepiaSpacing.compact)
                     .frame(
                         maxWidth: .infinity,
@@ -628,13 +676,87 @@ public struct ChatView: View {
         }
     }
 
+    private var currentComposerExpansion: Bool {
+        inlineEditSession?.isExpanded ?? isComposerExpanded
+    }
+
+    private var isComposerFullscreenPresented: Bool {
+#if os(iOS)
+        currentComposerExpansion
+#else
+        false
+#endif
+    }
+
+#if os(iOS)
+    private var fullscreenComposer: some View {
+        ZStack(alignment: .topTrailing) {
+            ChatSurface.background
+                .ignoresSafeArea()
+
+            composer(
+                restingSafeAreaInset: 0,
+                isFullscreen: true
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            fullscreenComposerCollapseButton
+                .padding(.top, LorepiaSpacing.compact)
+                .padding(
+                    .trailing,
+                    ChatComposerMetrics.horizontalEdgeInset
+                )
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("전체 화면 메시지 입력")
+        .accessibilityIdentifier("chat-composer-fullscreen")
+        .onAppear {
+            focusFullscreenComposer()
+        }
+    }
+
+    private var fullscreenComposerCollapseButton: some View {
+        Button {
+            dismissFullscreenComposer()
+        } label: {
+            LorepiaGlyphView(.collapse, size: 18)
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.primary)
+        .chatSearchStepSurface(isInteractive: true)
+        .disabled(inlineEditSession?.isSaving == true)
+        .accessibilityLabel(
+            inlineEditSession == nil ? "입력창 축소" : "편집창 축소"
+        )
+        .accessibilityHint("전체 화면 입력을 닫고 대화로 돌아갑니다")
+        .accessibilityIdentifier(
+            inlineEditSession == nil
+                ? "chat-composer-collapse"
+                : "chat-composer-edit-collapse"
+        )
+    }
+#endif
+
     private func composer(
-        restingSafeAreaInset: CGFloat
+        restingSafeAreaInset: CGFloat,
+        isFullscreen: Bool = false
     ) -> some View {
         ChatComposer(
             draft: composerDraft,
-            measuredEditorHeight: $composerEditorHeight,
-            focus: $isComposerFocused,
+            measuredEditorHeight:
+                isFullscreen
+                    ? $fullscreenComposerEditorHeight
+                    : $composerEditorHeight,
+            exceedsExpansionLineLimit:
+                isFullscreen
+                    ? $fullscreenComposerExceedsExpansionLineLimit
+                    : $composerExceedsExpansionLineLimit,
+            focus:
+                isFullscreen
+                    ? $isFullscreenComposerFocused
+                    : $isComposerFocused,
             placeholder: composerPlaceholder,
             isEnabled: composerIsEnabled,
             canUseTools:
@@ -648,7 +770,16 @@ public struct ChatView: View {
             isGenerating:
                 inlineEditSession == nil && viewModel.isGenerating,
             editSessionID: inlineEditSession?.token,
-            isEditExpanded: inlineEditSession?.isExpanded ?? false,
+            automaticFocusID:
+                (
+                    isFullscreen
+                        ? fullscreenComposerAutomaticFocusID
+                        : composerAutomaticFocusID
+                )?.uuidString
+                    ?? inlineEditSession?.token.uuidString,
+            isExpanded:
+                currentComposerExpansion,
+            isFullscreen: isFullscreen,
             isEditSaving: inlineEditSession?.isSaving ?? false,
             editSaveFailed: inlineEditSession?.saveFailed ?? false,
             mode: viewModel.mode,
@@ -660,6 +791,9 @@ public struct ChatView: View {
                 if inlineEditSession == nil {
                     Task {
                         await viewModel.submitMessage()
+                        if viewModel.draft.isEmpty {
+                            resetComposerExpansion()
+                        }
                     }
                 } else {
                     saveInlineEdit()
@@ -673,8 +807,8 @@ public struct ChatView: View {
             onCancelEdit: {
                 cancelInlineEdit()
             },
-            onToggleEditExpansion: {
-                toggleInlineEditExpansion()
+            onToggleExpansion: {
+                toggleComposerExpansion()
             },
             onModeChange: { mode in
                 Task {
@@ -737,20 +871,16 @@ public struct ChatView: View {
     @ViewBuilder
     private func messageRow(
         message: ChatMessage,
-        width: CGFloat
+        width: CGFloat,
+        joinsPrevious: Bool
     ) -> some View {
-        VStack(spacing: 0) {
-            ChatBubble(
+        if viewModel.mode == .story {
+            storyMessageRow(message: message, width: width)
+        } else {
+            messageContent(
                 message: message,
-                maximumWidth: maximumBubbleWidth(in: width),
-                storyMaximumWidth: maximumStoryWidth(in: width),
-                mode: viewModel.mode,
-                highlight: searchHighlight,
-                isActiveMatch: activeMatchID == message.id
-            )
-            .contentShape(Rectangle())
-            .accessibilityIdentifier(
-                "chat-message-\(message.role.rawValue)-\(message.id)"
+                width: width,
+                showsSenderIdentity: !joinsPrevious
             )
             .onLongPressGesture(minimumDuration: 0.35) {
                 revealActions(for: message)
@@ -788,7 +918,142 @@ public struct ChatView: View {
                     }
                 }
             }
+        }
+    }
 
+    private func storyMessageRow(
+        message: ChatMessage,
+        width: CGFloat
+    ) -> some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
+                if let sender = chatParticipant(for: message) {
+                    storyParticipantHeader(
+                        sender,
+                        message: message
+                    )
+                }
+
+                messageContent(
+                    message: message,
+                    width: width,
+                    showsSenderIdentity: false
+                )
+
+                if !ChatMessageActionPresentation.actions(
+                    for: message.role
+                ).isEmpty {
+                    ChatMessageActionRow(
+                        message: message,
+                        isMutationEnabled: viewModel.canMutateMessage(message),
+                        isCopied: copiedMessageID == message.id
+                    ) { action in
+                        handleMessageAction(action, for: message)
+                    }
+                    .frame(
+                        maxWidth: messageActionMaximumWidth(
+                            for: message,
+                            in: width
+                        ),
+                        alignment: messageActionRowAlignment(for: message)
+                    )
+                    .frame(
+                        maxWidth: .infinity,
+                        alignment: messageActionContainerAlignment(for: message)
+                    )
+                }
+            }
+            .frame(
+                width: storyContentWidth(in: width),
+                alignment: .leading
+            )
+        }
+        .frame(
+            width: maximumStoryWidth(in: width),
+            alignment: .center
+        )
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private func storyParticipantHeader(
+        _ sender: ChatParticipantIdentity,
+        message: ChatMessage
+    ) -> some View {
+        HStack(spacing: ChatParticipantLayout.spacing) {
+            LorepiaAvatar(
+                symbolName: sender.symbolName,
+                size: participantAvatarSize,
+                name: sender.displayName
+            )
+            .accessibilityIdentifier(
+                "chat-sender-avatar-\(message.role.rawValue)-\(message.id)"
+            )
+
+            Text(sender.displayName)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+                .accessibilityIdentifier(
+                    "chat-sender-name-\(message.role.rawValue)-\(message.id)"
+                )
+
+            Spacer(minLength: 0)
+        }
+        .padding(.top, LorepiaSpacing.standard)
+    }
+
+    private func messageContent(
+        message: ChatMessage,
+        width: CGFloat,
+        showsSenderIdentity: Bool
+    ) -> some View {
+        let sender = chatParticipant(for: message)
+        return ChatBubble(
+            message: message,
+            maximumWidth: maximumBubbleWidth(
+                in: width,
+                reservesSenderIdentity:
+                    viewModel.mode == .chat && sender != nil
+            ),
+            storyMaximumWidth: storyContentWidth(in: width),
+            mode: viewModel.mode,
+            sender: sender,
+            showsSenderIdentity: showsSenderIdentity,
+            senderAvatarSize: participantAvatarSize,
+            highlight: searchHighlight,
+            isActiveMatch: activeMatchID == message.id
+        )
+        .contentShape(Rectangle())
+        .accessibilityIdentifier(
+            "chat-message-\(message.role.rawValue)-\(message.id)"
+        )
+    }
+
+    private func chatParticipant(
+        for message: ChatMessage
+    ) -> ChatParticipantIdentity? {
+        switch message.role {
+        case .user:
+            return ChatParticipantIdentity(
+                displayName: "게스트",
+                symbolName: "person.fill"
+            )
+        case .assistant:
+            let name = viewModel.character?.name.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            let symbolName = viewModel.character?.symbolName
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return ChatParticipantIdentity(
+                displayName:
+                    name.flatMap { $0.isEmpty ? nil : $0 } ?? "캐릭터",
+                symbolName:
+                    symbolName.flatMap { $0.isEmpty ? nil : $0 }
+                        ?? "person.crop.circle"
+            )
+        case .system, .notice:
+            return nil
         }
     }
 
@@ -1243,7 +1508,7 @@ public struct ChatView: View {
         in containerWidth: CGFloat
     ) -> CGFloat {
         if viewModel.mode == .story, message.role != .notice {
-            return maximumStoryWidth(in: containerWidth)
+            return storyContentWidth(in: containerWidth)
         }
         return maximumBubbleWidth(in: containerWidth)
     }
@@ -1382,19 +1647,105 @@ public struct ChatView: View {
         guard inlineEditSession != nil else {
             return
         }
-        inlineEditSession = nil
-        composerEditorHeight = 0
+        updateComposerPresentationWithoutAnimation {
+            inlineEditSession = nil
+            composerEditorHeight = 0
+        }
     }
 
-    private func toggleInlineEditExpansion() {
-        guard var session = inlineEditSession,
-              !session.isSaving
-        else {
+    private func resetComposerExpansion() {
+        updateComposerPresentationWithoutAnimation {
+            isComposerExpanded = false
+            composerExceedsExpansionLineLimit = false
+            fullscreenComposerExceedsExpansionLineLimit = false
+            composerEditorHeight = 0
+            fullscreenComposerEditorHeight = 0
+            composerAutomaticFocusID = nil
+            fullscreenComposerAutomaticFocusID = nil
+        }
+    }
+
+    private func toggleComposerExpansion() {
+        setComposerExpansion(!currentComposerExpansion)
+    }
+
+    private func setComposerExpansion(_ isExpanded: Bool) {
+        updateComposerPresentationWithoutAnimation {
+            if inlineEditSession == nil {
+                isComposerExpanded = isExpanded
+                return
+            }
+
+            guard var session = inlineEditSession, !session.isSaving else {
+                return
+            }
+            session.isExpanded = isExpanded
+            inlineEditSession = session
+        }
+    }
+
+    private func updateComposerPresentationWithoutAnimation(
+        _ update: () -> Void
+    ) {
+#if os(iOS)
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction, update)
+#else
+        update()
+#endif
+    }
+
+#if os(iOS)
+    private func focusFullscreenComposer() {
+        isComposerFocused = false
+        fullscreenComposerEditorHeight = 0
+        fullscreenComposerExceedsExpansionLineLimit = false
+        let focusID = UUID()
+        fullscreenComposerAutomaticFocusID = focusID
+
+        Task { @MainActor in
+            await Task.yield()
+            guard fullscreenComposerAutomaticFocusID == focusID else {
+                return
+            }
+            isFullscreenComposerFocused = true
+            try? await Task.sleep(for: .seconds(1))
+            if fullscreenComposerAutomaticFocusID == focusID {
+                fullscreenComposerAutomaticFocusID = nil
+            }
+        }
+    }
+
+    private func dismissFullscreenComposer() {
+        guard isComposerFullscreenPresented else {
             return
         }
-        session.isExpanded.toggle()
-        inlineEditSession = session
+
+        isFullscreenComposerFocused = false
+        fullscreenComposerAutomaticFocusID = nil
+        fullscreenComposerEditorHeight = 0
+        setComposerExpansion(false)
+        requestComposerFocusAfterFullscreenDismissal()
     }
+
+    private func requestComposerFocusAfterFullscreenDismissal() {
+        let focusID = UUID()
+        composerAutomaticFocusID = focusID
+
+        Task { @MainActor in
+            await Task.yield()
+            guard composerAutomaticFocusID == focusID else {
+                return
+            }
+            isComposerFocused = true
+            try? await Task.sleep(for: .seconds(1))
+            if composerAutomaticFocusID == focusID {
+                composerAutomaticFocusID = nil
+            }
+        }
+    }
+#endif
 
     private func saveInlineEdit() {
         guard var session = inlineEditSession,
@@ -1428,7 +1779,15 @@ public struct ChatView: View {
                 currentSession.isSaving = false
                 currentSession.saveFailed = true
                 inlineEditSession = currentSession
+#if os(iOS)
+                if isComposerFullscreenPresented {
+                    focusFullscreenComposer()
+                } else {
+                    isComposerFocused = true
+                }
+#else
                 isComposerFocused = true
+#endif
             }
         }
     }
@@ -1437,36 +1796,75 @@ public struct ChatView: View {
         min(max(scaledListInset, 12), 28)
     }
 
+    private var transcriptHorizontalInset: CGFloat {
+#if os(iOS)
+        if viewModel.mode == .story {
+            return ChatComposerMetrics.horizontalEdgeInset
+        }
+#endif
+        return listInset
+    }
+
+    private var storyContentInset: CGFloat {
+        min(max(scaledStoryContentInset, 12), 28)
+    }
+
+    private var participantAvatarSize: CGFloat {
+        min(
+            max(
+                scaledParticipantAvatarSize,
+                ChatParticipantLayout.minimumAvatarSize
+            ),
+            ChatParticipantLayout.maximumAvatarSize
+        )
+    }
+
     private func followThreshold(for viewportHeight: CGFloat) -> CGFloat {
         min(max(viewportHeight * 0.14, 72), 160)
     }
 
-    private func maximumBubbleWidth(in containerWidth: CGFloat) -> CGFloat {
+    private func maximumBubbleWidth(
+        in containerWidth: CGFloat,
+        reservesSenderIdentity: Bool = false
+    ) -> CGFloat {
         let availableWidth = max(
-            containerWidth - (listInset * 2) - railGutter,
+            containerWidth
+                - (transcriptHorizontalInset * 2)
+                - railGutter,
             0
         )
+        let senderLane: CGFloat =
+            reservesSenderIdentity
+                ? participantAvatarSize
+                    + ChatParticipantLayout.spacing
+                : 0
+        let messageLane = max(availableWidth - senderLane, 0)
         let ratio: CGFloat
 
         if dynamicTypeSize.isAccessibilitySize {
-            ratio = 0.92
+            ratio = 1
         } else if horizontalSizeClass == .compact {
-            ratio = 0.82
+            ratio = reservesSenderIdentity ? 0.86 : 0.82
         } else {
-            ratio = 0.68
+            ratio = reservesSenderIdentity ? 0.72 : 0.68
         }
 
         let readableMaximum: CGFloat =
             horizontalSizeClass == .compact ? 520 : 680
-        return min(availableWidth * ratio, readableMaximum)
+        return min(messageLane * ratio, readableMaximum)
     }
 
     private func maximumStoryWidth(in containerWidth: CGFloat) -> CGFloat {
         let availableWidth = max(
-            containerWidth - (listInset * 2) - railGutter,
+            containerWidth
+                - (transcriptHorizontalInset * 2)
+                - railGutter,
             0
         )
 
+#if os(iOS)
+        return availableWidth
+#else
         if dynamicTypeSize.isAccessibilitySize
             || horizontalSizeClass == .compact
         {
@@ -1474,6 +1872,15 @@ public struct ChatView: View {
         }
 
         return availableWidth * 0.72
+#endif
+    }
+
+    private func storyContentWidth(in containerWidth: CGFloat) -> CGFloat {
+        max(
+            maximumStoryWidth(in: containerWidth)
+                - (storyContentInset * 2),
+            0
+        )
     }
 
     private var scrollState: ChatScrollState {
@@ -1630,6 +2037,10 @@ private struct ChatForkMarker: View {
 /// Glyphs and emphasized circles stay fixed while the shared Liquid Glass
 /// surface reflows around them.
 enum ChatComposerMetrics {
+    /// Keep the compact editor at five lines. Longer drafts can be expanded
+    /// explicitly without making every room's composer dominate the screen.
+    static let expansionLineLimit = 5
+
 #if os(iOS)
     /// Visible primary-action circle inside its larger touch target.
     static let control: CGFloat = 32
@@ -1704,6 +2115,18 @@ enum ChatThreadRail {
 struct ChatBranchSummary: Equatable {
     let label: String
     let description: String
+}
+
+private struct ChatParticipantIdentity: Equatable {
+    let displayName: String
+    let symbolName: String
+}
+
+private enum ChatParticipantLayout {
+    static let baseAvatarSize: CGFloat = 32
+    static let minimumAvatarSize: CGFloat = 28
+    static let maximumAvatarSize: CGFloat = 44
+    static let spacing: CGFloat = 8
 }
 
 #if os(macOS)
@@ -1781,6 +2204,7 @@ private struct ChatInlineEditSession {
 private struct ChatComposer: View {
     @Binding var draft: String
     @Binding var measuredEditorHeight: CGFloat
+    @Binding var exceedsExpansionLineLimit: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
@@ -1798,7 +2222,9 @@ private struct ChatComposer: View {
     let canSubmit: Bool
     let isGenerating: Bool
     let editSessionID: UUID?
-    let isEditExpanded: Bool
+    let automaticFocusID: String?
+    let isExpanded: Bool
+    let isFullscreen: Bool
     let isEditSaving: Bool
     let editSaveFailed: Bool
     let mode: ConversationMode
@@ -1808,7 +2234,7 @@ private struct ChatComposer: View {
     let onSubmit: () -> Void
     let onCancel: () -> Void
     let onCancelEdit: () -> Void
-    let onToggleEditExpansion: () -> Void
+    let onToggleExpansion: () -> Void
     let onModeChange: (ConversationMode) -> Void
     let onProviderProfileChange: (String) -> Void
     let onOpenConversationSettings: () -> Void
@@ -1822,7 +2248,13 @@ private struct ChatComposer: View {
     @ViewBuilder
     var body: some View {
 #if os(iOS)
-        composerLayout
+        Group {
+            if isFullscreen {
+                fullscreenComposerLayout
+            } else {
+                composerLayout
+            }
+        }
             .onReceive(
                 NotificationCenter.default.publisher(
                     for: UIResponder.keyboardWillChangeFrameNotification
@@ -1841,6 +2273,58 @@ private struct ChatComposer: View {
         composerLayout
 #endif
     }
+
+#if os(iOS)
+    private var fullscreenComposerLayout: some View {
+        GeometryReader { geometry in
+            let topInset =
+                ChatComposerMetrics.target + LorepiaSpacing.standard
+            let bottomInset =
+                ChatComposerMetrics.target + LorepiaSpacing.compact
+            let editorHeight = max(
+                geometry.size.height - topInset - bottomInset,
+                minimumEditorHeight
+            )
+
+            ZStack(alignment: .topLeading) {
+                messageField
+                    .frame(
+                        width: max(
+                            geometry.size.width
+                                - ChatComposerMetrics.fieldHorizontalInset * 2,
+                            0
+                        ),
+                        height: editorHeight,
+                        alignment: .topLeading
+                    )
+                    .offset(
+                        x: ChatComposerMetrics.fieldHorizontalInset,
+                        y: topInset
+                    )
+
+                sendControl
+                    .frame(width: 44, height: 44)
+                    .offset(
+                        x: geometry.size.width
+                            - ChatComposerMetrics.horizontalEdgeInset
+                            - 44,
+                        y: geometry.size.height - bottomInset
+                    )
+            }
+            .frame(
+                width: geometry.size.width,
+                height: geometry.size.height,
+                alignment: .topLeading
+            )
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("메시지 입력 영역")
+        .accessibilityValue(isEditing ? "메시지 편집 중" : "입력 준비")
+        .accessibilityIdentifier("chat-composer-surface")
+        .chatSendFeedback(trigger: sendFeedback)
+    }
+#endif
 
     private var composerLayout: some View {
         composerRow
@@ -1871,10 +2355,6 @@ private struct ChatComposer: View {
                 value: isFocused
             )
 #endif
-            .animation(
-                reduceMotion ? nil : .smooth(duration: 0.26),
-                value: isSoftwareKeyboardVisible
-            )
     }
 
     @ViewBuilder
@@ -1909,7 +2389,7 @@ private struct ChatComposer: View {
                 .padding(.vertical, verticalInset)
 
             if isEditing {
-                editExpansionControl
+                expansionControl
             }
 
             sendControl
@@ -1977,19 +2457,21 @@ private struct ChatComposer: View {
 
     private var composerControlRail: some View {
         HStack(spacing: 0) {
-            if isEditing {
-                editCancelControl
-                editStatus
-            } else {
-                toolsMenu
-                modelMenuControl
-                modeMenuControl
+            if !isFullscreen {
+                if isEditing {
+                    editCancelControl
+                    editStatus
+                } else {
+                    toolsMenu
+                    modelMenuControl
+                    modeMenuControl
+                }
             }
 
             Spacer(minLength: 4)
 
-            if isEditing {
-                editExpansionControl
+            if !isFullscreen, showsExpansionControl {
+                expansionControl
             }
             sendControl
         }
@@ -2005,29 +2487,23 @@ private struct ChatComposer: View {
     @ViewBuilder
     private var messageField: some View {
 #if os(iOS)
-        ChatComposerEditor(
-            text: $draft,
-            measuredHeight: $measuredEditorHeight,
-            focus: focus,
-            placeholder: placeholder,
-            isEnabled: isEnabled,
-            minimumLines: minimumEditorLines,
-            maximumLines: maximumEditorLines,
-            automaticFocusID: editSessionID?.uuidString,
-            animatesHeightChanges: !reduceMotion,
-            onSubmit: submit,
-            onEndEditing: {
-                setSoftwareKeyboardVisible(false)
-            }
-        )
-        .id(editorIdentity)
-        .frame(
-            height: max(
-                measuredEditorHeight,
-                minimumEditorHeight
-            ),
-            alignment: .bottom
-        )
+        if isFullscreen {
+            iosMessageEditor
+                .frame(
+                    maxWidth: .infinity,
+                    maxHeight: .infinity,
+                    alignment: .topLeading
+                )
+        } else {
+            iosMessageEditor
+                .frame(
+                    height: max(
+                        measuredEditorHeight,
+                        minimumEditorHeight
+                    ),
+                    alignment: .bottom
+                )
+        }
 #else
         TextField(
             placeholder,
@@ -2044,6 +2520,31 @@ private struct ChatComposer: View {
         .onSubmit(submit)
 #endif
     }
+
+#if os(iOS)
+    private var iosMessageEditor: some View {
+        ChatComposerEditor(
+            text: $draft,
+            measuredHeight: $measuredEditorHeight,
+            exceedsExpansionLineLimit: $exceedsExpansionLineLimit,
+            focus: focus,
+            placeholder: placeholder,
+            isEnabled: isEnabled,
+            minimumLines: minimumEditorLines,
+            maximumLines: maximumEditorLines,
+            expansionLineLimit: ChatComposerMetrics.expansionLineLimit,
+            fillsAvailableHeight: isFullscreen,
+            automaticFocusID: automaticFocusID,
+            animatesHeightChanges:
+                !reduceMotion && automaticFocusID == nil,
+            onSubmit: submit,
+            onEndEditing: {
+                setSoftwareKeyboardVisible(false)
+            }
+        )
+        .id(editorIdentity)
+    }
+#endif
 
     @ViewBuilder
     private var sendControl: some View {
@@ -2094,10 +2595,10 @@ private struct ChatComposer: View {
         .accessibilityIdentifier("chat-composer-edit-cancel")
     }
 
-    private var editExpansionControl: some View {
-        Button(action: onToggleEditExpansion) {
+    private var expansionControl: some View {
+        Button(action: onToggleExpansion) {
             LorepiaGlyphView(
-                isEditExpanded ? .collapse : .expand,
+                isExpanded ? .collapse : .expand,
                 size: 18
             )
             .frame(
@@ -2111,18 +2612,14 @@ private struct ChatComposer: View {
         .foregroundStyle(.secondary)
         .disabled(isEditSaving)
         .accessibilityLabel(
-            isEditExpanded ? "편집창 축소" : "편집창 확대"
+            isExpanded
+                ? "\(expansionControlName) 축소"
+                : "\(expansionControlName) 확대"
         )
         .accessibilityHint(
-            isEditExpanded
-                ? "메시지 편집창의 높이를 줄입니다"
-                : "메시지 편집창의 높이를 늘립니다"
+            expansionControlHint
         )
-        .accessibilityIdentifier(
-            isEditExpanded
-                ? "chat-composer-edit-collapse"
-                : "chat-composer-edit-expand"
-        )
+        .accessibilityIdentifier(expansionControlIdentifier)
     }
 
     private var editStatus: some View {
@@ -2337,12 +2834,43 @@ private struct ChatComposer: View {
         editSessionID != nil
     }
 
+    private var showsExpansionControl: Bool {
+#if os(iOS)
+        !isFullscreen && (isExpanded || exceedsExpansionLineLimit)
+#else
+        isEditing
+#endif
+    }
+
+    private var expansionControlName: String {
+        isEditing ? "편집창" : "입력창"
+    }
+
+    private var expansionControlIdentifier: String {
+        let state = isExpanded ? "collapse" : "expand"
+        return isEditing
+            ? "chat-composer-edit-\(state)"
+            : "chat-composer-\(state)"
+    }
+
+    private var expansionControlHint: String {
+#if os(iOS)
+        "전체 화면 입력을 엽니다"
+#else
+        isExpanded
+            ? "입력 영역의 높이를 줄입니다"
+            : "입력 영역의 높이를 늘립니다"
+#endif
+    }
+
     private var editorIdentity: String {
-        editSessionID.map { "edit-\($0.uuidString)" } ?? "compose"
+        let identity =
+            editSessionID.map { "edit-\($0.uuidString)" } ?? "compose"
+        return isFullscreen ? "fullscreen-\(identity)" : identity
     }
 
     private var minimumEditorLines: Int {
-        guard isEditing, isEditExpanded else {
+        guard isExpanded else {
             return 1
         }
 #if os(iOS)
@@ -2356,19 +2884,22 @@ private struct ChatComposer: View {
     }
 
     private var maximumEditorLines: Int {
-        if isEditing, !isEditExpanded {
-            return 4
+        if isFullscreen {
+            return 1_000
+        }
+        if !isExpanded {
+            return ChatComposerMetrics.expansionLineLimit
         }
 #if os(iOS)
         if verticalSizeClass == .compact {
-            return isEditing ? 6 : 4
+            return 6
         }
         if dynamicTypeSize.isAccessibilitySize {
-            return isEditing ? 8 : 6
+            return 8
         }
         return 10
 #else
-        return isEditing ? 10 : 5
+        return 10
 #endif
     }
 
@@ -2450,8 +2981,8 @@ private struct ChatComposer: View {
             Circle()
                 .fill(sendBackgroundStyle)
                 .frame(
-                    width: ChatComposerMetrics.control * 22 / 24,
-                    height: ChatComposerMetrics.control * 22 / 24
+                    width: primaryActionCircleDiameter,
+                    height: primaryActionCircleDiameter
                 )
 
             LorepiaGlyphView(
@@ -2461,8 +2992,8 @@ private struct ChatComposer: View {
             .foregroundStyle(sendForegroundStyle)
         }
             .frame(
-                width: ChatComposerMetrics.control,
-                height: ChatComposerMetrics.control
+                width: primaryActionContentDiameter,
+                height: primaryActionContentDiameter
             )
             .chatSendGlyphEffect(
                 trigger: sendFeedback,
@@ -2483,8 +3014,8 @@ private struct ChatComposer: View {
             Circle()
                 .fill(sendBackgroundStyle)
                 .frame(
-                    width: ChatComposerMetrics.control * 22 / 24,
-                    height: ChatComposerMetrics.control * 22 / 24
+                    width: primaryActionCircleDiameter,
+                    height: primaryActionCircleDiameter
                 )
 
             if isEditSaving {
@@ -2500,8 +3031,8 @@ private struct ChatComposer: View {
             }
         }
         .frame(
-            width: ChatComposerMetrics.control,
-            height: ChatComposerMetrics.control
+            width: primaryActionContentDiameter,
+            height: primaryActionContentDiameter
         )
         .frame(minWidth: 44, minHeight: 44)
         .contentShape(Rectangle())
@@ -2517,12 +3048,28 @@ private struct ChatComposer: View {
             )
             .foregroundStyle(Color.white)
             .frame(
-                width: ChatComposerMetrics.control,
-                height: ChatComposerMetrics.control
+                width:
+                    isFullscreen
+                        ? ChatComposerMetrics.target
+                        : ChatComposerMetrics.control,
+                height:
+                    isFullscreen
+                        ? ChatComposerMetrics.target
+                        : ChatComposerMetrics.control
             )
             .background(LorepiaColor.ember, in: Circle())
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
+    }
+
+    private var primaryActionCircleDiameter: CGFloat {
+        isFullscreen
+            ? ChatComposerMetrics.target
+            : ChatComposerMetrics.control * 22 / 24
+    }
+
+    private var primaryActionContentDiameter: CGFloat {
+        max(ChatComposerMetrics.control, primaryActionCircleDiameter)
     }
 
     private var sendForegroundStyle: Color {
@@ -2600,6 +3147,9 @@ private struct ChatBubble: View {
     let maximumWidth: CGFloat
     let storyMaximumWidth: CGFloat
     let mode: ConversationMode
+    let sender: ChatParticipantIdentity?
+    let showsSenderIdentity: Bool
+    let senderAvatarSize: CGFloat
     var highlight: String = ""
     var isActiveMatch = false
 
@@ -2607,11 +3157,9 @@ private struct ChatBubble: View {
 
     @ScaledMetric(relativeTo: .body) private var scaledHorizontalPadding = 14
     @ScaledMetric(relativeTo: .body) private var scaledVerticalPadding = 7
-    @ScaledMetric(relativeTo: .body) private var scaledStoryHorizontalPadding =
-        LorepiaSpacing.standard
     @ScaledMetric(relativeTo: .body) private var scaledStoryLineSpacing = 5
     @ScaledMetric(relativeTo: .body) private var scaledStoryVerticalPadding =
-        LorepiaSpacing.standard
+        LorepiaSpacing.compact
     @ScaledMetric(relativeTo: .caption2) private var scaledTimestampDrop = 1
 
     var body: some View {
@@ -2723,37 +3271,111 @@ private struct ChatBubble: View {
         mode == .story && message.role == .user
     }
 
+    @ViewBuilder
     private var bubble: some View {
+        if let sender {
+            participantBubble(sender)
+        } else {
+            standaloneBubble
+        }
+    }
+
+    private func participantBubble(
+        _ sender: ChatParticipantIdentity
+    ) -> some View {
+        HStack(alignment: .top, spacing: ChatParticipantLayout.spacing) {
+            if message.role == .user {
+                Spacer(minLength: 0)
+            } else {
+                participantAvatar(sender)
+            }
+
+            VStack(alignment: participantAlignment, spacing: 4) {
+                if showsSenderIdentity {
+                    Text(sender.displayName)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .accessibilityIdentifier(
+                            "chat-sender-name-\(message.role.rawValue)-\(message.id)"
+                        )
+                }
+
+                bubbleSurface
+            }
+            .frame(maxWidth: maximumWidth, alignment: alignment)
+
+            if message.role == .user {
+                participantAvatar(sender)
+            } else {
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: alignment)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    private var standaloneBubble: some View {
         HStack(spacing: 0) {
             if message.role == .user {
                 Spacer(minLength: 0)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
-                bubbleBody
-                if message.status != .complete {
-                    Text(statusText)
-                        .font(.caption2)
-                        .opacity(0.75)
-                }
-            }
-            .padding(.horizontal, horizontalPadding)
-            // Korean glyphs sit low in the line box, so equal padding leaves
-            // the ink noticeably higher than it looks. The two halves are
-            // shifted until the gaps above and below the text read the same.
-            .padding(.top, verticalPadding - lineBoxOpticalShift)
-            .padding(.bottom, verticalPadding + lineBoxOpticalShift)
-            .foregroundStyle(foregroundStyle)
-            .background(backgroundStyle, in: bubbleShape)
-            .frame(maxWidth: maximumWidth, alignment: alignment)
+            bubbleSurface
 
             if message.role != .user {
                 Spacer(minLength: 0)
             }
         }
         .frame(maxWidth: .infinity, alignment: alignment)
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
+    }
+
+    private var bubbleSurface: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            bubbleBody
+            if message.status != .complete {
+                Text(statusText)
+                    .font(.caption2)
+                    .opacity(0.75)
+            }
+        }
+        .padding(.horizontal, horizontalPadding)
+        // Korean glyphs sit low in the line box, so equal padding leaves the
+        // ink noticeably higher than it looks. The two halves are shifted
+        // until the gaps above and below the text read the same.
+        .padding(.top, verticalPadding - lineBoxOpticalShift)
+        .padding(.bottom, verticalPadding + lineBoxOpticalShift)
+        .foregroundStyle(foregroundStyle)
+        .background(backgroundStyle, in: bubbleShape)
+        .frame(maxWidth: maximumWidth, alignment: alignment)
+    }
+
+    @ViewBuilder
+    private func participantAvatar(
+        _ sender: ChatParticipantIdentity
+    ) -> some View {
+        if showsSenderIdentity {
+            LorepiaAvatar(
+                symbolName: sender.symbolName,
+                size: senderAvatarSize,
+                name: sender.displayName
+            )
+            .accessibilityIdentifier(
+                "chat-sender-avatar-\(message.role.rawValue)-\(message.id)"
+            )
+        } else {
+            Color.clear
+                .frame(width: senderAvatarSize, height: senderAvatarSize)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var participantAlignment: HorizontalAlignment {
+        message.role == .user ? .trailing : .leading
     }
 
     private var storyProse: some View {
@@ -2770,7 +3392,6 @@ private struct ChatBubble: View {
             }
         }
         .foregroundStyle(.primary)
-        .padding(.horizontal, scaledStoryHorizontalPadding)
         .padding(.vertical, scaledStoryVerticalPadding)
         .frame(width: storyMaximumWidth, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .center)
@@ -2778,30 +3399,22 @@ private struct ChatBubble: View {
         .accessibilityLabel(accessibilityText)
     }
 
-    /// The reader's own story entry keeps the accent marker that distinguishes
-    /// it from the character's prose without changing the reading rhythm.
+    /// The reader's own story entry keeps the accent text color while sharing
+    /// the same leading rail as the profile, prose, and action row.
     private var storyUserLine: some View {
-        HStack(alignment: .top, spacing: LorepiaSpacing.snug) {
-            Capsule()
-                .fill(LorepiaColor.loreFill)
-                .frame(width: 2)
-                .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(highlightedText)
+                .font(.system(.body, design: .serif))
+                .lineSpacing(scaledStoryLineSpacing)
+                .foregroundStyle(LorepiaColor.loreAccent)
+                .textSelection(.enabled)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(highlightedText)
-                    .font(.system(.body, design: .serif))
-                    .lineSpacing(scaledStoryLineSpacing)
-                    .foregroundStyle(LorepiaColor.loreAccent)
-                    .textSelection(.enabled)
-
-                if message.status != .complete {
-                    Text(statusText)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+            if message.status != .complete {
+                Text(statusText)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
             }
         }
-        .padding(.horizontal, scaledStoryHorizontalPadding)
         .padding(.vertical, scaledStoryVerticalPadding)
         .frame(width: storyMaximumWidth, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .center)
@@ -2887,9 +3500,9 @@ private struct ChatBubble: View {
     private var accessibilityText: String {
         let speaker = switch message.role {
         case .user:
-            "나"
+            sender?.displayName ?? "나"
         case .assistant:
-            "캐릭터"
+            sender?.displayName ?? "캐릭터"
         case .system:
             "시스템"
         case .notice:

@@ -92,7 +92,7 @@ public struct ImportReviewView: View {
                     VStack(alignment: .leading, spacing: LorepiaSpacing.compact) {
                         LorepiaGlyphLabel(
                             "저장하지 못했습니다",
-                            glyph: .regenerate
+                            glyph: .retry
                         )
                         .font(.headline)
                         .foregroundStyle(.orange)

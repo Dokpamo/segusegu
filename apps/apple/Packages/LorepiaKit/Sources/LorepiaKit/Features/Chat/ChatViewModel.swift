@@ -40,6 +40,7 @@ public final class ChatViewModel: ObservableObject {
     private var credentialFailureProfileID: String?
     private var providerRefreshErrorMessage: String?
     private var idlePollsSinceReconciliation = 0
+    private var draftByConversationID: [String: String] = [:]
 
     private static let idlePollsBeforeReconciliation = 10
     private static let credentialAccessFailureMessage =
@@ -199,6 +200,7 @@ public final class ChatViewModel: ObservableObject {
         if self.character?.id == character.id, conversation != nil {
             return
         }
+        stashDraftForActiveConversation()
         pollingTask?.cancel()
         pollingTask = nil
         let generationToCancel = activeGenerationID
@@ -261,6 +263,7 @@ public final class ChatViewModel: ObservableObject {
             return
         }
 
+        stashDraftForActiveConversation()
         pollingTask?.cancel()
         pollingTask = nil
         let generationToCancel = activeGenerationID
@@ -324,6 +327,9 @@ public final class ChatViewModel: ObservableObject {
             return
         }
         self.conversation = conversation
+        draft = draftByConversationID.removeValue(
+            forKey: conversation.id
+        ) ?? ""
         branches = loadedBranches
         activeBranchID = state.activeBranchID
         mode = state.selectedMode
@@ -332,6 +338,17 @@ public final class ChatViewModel: ObservableObject {
         activeGenerationID = messages.last(where: {
             $0.status == .pending && $0.generationID != nil
         })?.generationID
+    }
+
+    private func stashDraftForActiveConversation() {
+        guard let conversationID = conversation?.id else {
+            return
+        }
+        if draft.isEmpty {
+            draftByConversationID.removeValue(forKey: conversationID)
+        } else {
+            draftByConversationID[conversationID] = draft
+        }
     }
 
     public func selectBranch(id branchID: String) async {

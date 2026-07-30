@@ -23,7 +23,7 @@ public struct CoreStatusPanel: View {
                         await viewModel.refresh()
                     }
                 } label: {
-                    LorepiaGlyphView(.regenerate, size: 18)
+                    LorepiaGlyphView(.retry, size: 18)
                         .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.borderless)

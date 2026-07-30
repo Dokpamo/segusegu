@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 744 504" width="744" height="504">
+<rect width="744" height="504" fill="#ffffff"/>
+<g transform="translate(38.0,26) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="3.5" y="8" width="12.5" height="12.5" rx="4.5"/>
+  <path d="M8 8A4.5 4.5 0 0 1 12.5 3.5h3.5A4.5 4.5 0 0 1 20.5 8v3.5A4.5 4.5 0 0 1 16 16"/>
+</g>
+<text x="62.0" y="100" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">copy</text>
+<g transform="translate(162.0,26) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M3.4 9.1h3.4l5.3-4.7v15.2l-5.3-4.7H3.4z"/>
+  <path d="M15.5 9.1a4.7 4.7 0 0 1 0 5.8"/>
+  <path d="M18.7 6.4a9.2 9.2 0 0 1 0 11.2"/>
+</g>
+<text x="186.0" y="100" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">speaker</text>
+<g transform="translate(286.0,26) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="17.8" cy="5.6" r="2.3"/>
+  <circle cx="17.8" cy="18.4" r="2.3"/>
+  <circle cx="6.2" cy="12" r="2.3"/>
+  <path d="M15.8 6.8 8.2 10.9"/>
+  <path d="M8.2 13.1l7.6 4.1"/>
+</g>
+<text x="310.0" y="100" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">share</text>
+<g transform="translate(410.0,26) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="12" cy="5" r="1.6" fill="#1a1a1a" stroke="none"/>
+  <circle cx="12" cy="12" r="1.6" fill="#1a1a1a" stroke="none"/>
+  <circle cx="12" cy="19" r="1.6" fill="#1a1a1a" stroke="none"/>
+</g>
+<text x="434.0" y="100" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">more</text>
+<g transform="translate(534.0,26) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M12 5v14"/>
+  <path d="M5 12h14"/>
+</g>
+<text x="558.0" y="100" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">plus</text>
+<g transform="translate(658.0,26) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="9.1" y="2.8" width="5.8" height="8.6" rx="2.9"/>
+  <path d="M6.4 11.1a5.6 5.6 0 0 0 11.2 0"/>
+  <path d="M12 16.7v4.1"/>
+</g>
+<text x="682.0" y="100" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">mic</text>
+<g transform="translate(38.0,150) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M14 4H8a4 4 0 0 0-4 4v8a4 4 0 0 0 4 4h8a4 4 0 0 0 4-4v-6"/>
+  <path d="m10.5 13.5 9-9"/>
+</g>
+<text x="62.0" y="224" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">edit</text>
+<g transform="translate(162.0,150) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="12" cy="12" r="11" fill="#1a1a1a" stroke="none"/>
+  <path d="M12 17.2V6.8" stroke="#fff"/>
+  <path d="M7.6 11.2 12 6.8l4.4 4.4" stroke="#fff"/>
+</g>
+<text x="186.0" y="224" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">send</text>
+<g transform="translate(286.0,150) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="12" cy="12" r="11" fill="#1a1a1a" stroke="none"/>
+  <path d="M7.4 10.4v3.2" stroke="#fff" stroke-width="1.9"/>
+  <path d="M10.5 7.6v8.8" stroke="#fff" stroke-width="1.9"/>
+  <path d="M13.5 9.2v5.6" stroke="#fff" stroke-width="1.9"/>
+  <path d="M16.6 10.9v2.2" stroke="#fff" stroke-width="1.9"/>
+</g>
+<text x="310.0" y="224" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">voice</text>
+<g transform="translate(410.0,150) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M3.5 6.9h17"/>
+  <path d="M9.3 6.9V5A1.8 1.8 0 0 1 11.1 3.2h1.8A1.8 1.8 0 0 1 14.7 5v1.9"/>
+  <path d="M5.9 6.9l.8 9.4a4.1 4.1 0 0 0 4.1 3.8h2.4a4.1 4.1 0 0 0 4.1-3.8l.8-9.4"/>
+</g>
+<text x="434.0" y="224" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">trash</text>
+<g transform="translate(534.0,150) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M5 12h3.9c2.3 0 3.6-1.2 5.1-2.9l4.6-4.6"/>
+  <path d="M13.8 4.5h5.6v5.6"/>
+  <path d="M14.5 13.7 19.4 18.6"/>
+  <path d="M13.8 19.3h5.6v-5.6"/>
+</g>
+<text x="558.0" y="224" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">branch</text>
+<g transform="translate(658.0,150) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M14.6 4.6h4.8v4.8"/>
+  <path d="M19.4 4.6 13.9 10.1"/>
+  <path d="M9.4 19.4H4.6v-4.8"/>
+  <path d="M4.6 19.4 10.1 13.9"/>
+</g>
+<text x="682.0" y="224" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">expand</text>
+<g transform="translate(38.0,274) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M14.2 4.8v5h5"/>
+  <path d="M19.4 4.6 14.2 9.8"/>
+  <path d="M9.8 19.2v-5h-5"/>
+  <path d="M4.6 19.4 9.8 14.2"/>
+</g>
+<text x="62.0" y="348" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">collapse</text>
+<g transform="translate(162.0,274) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="10.8" cy="10.8" r="6.8"/>
+  <path d="M15.7 15.7 20.6 20.6"/>
+</g>
+<text x="186.0" y="348" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">search</text>
+<g transform="translate(286.0,274) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M5.4 5.4 18.6 18.6"/>
+  <path d="M18.6 5.4 5.4 18.6"/>
+</g>
+<text x="310.0" y="348" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">close</text>
+<g transform="translate(410.0,274) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M12.00 3.40C12.75 3.42 13.49 3.84 14.00 4.54C14.51 5.23 14.86 5.87 15.37 6.16C15.89 6.44 16.68 6.35 17.57 6.43C18.45 6.52 19.09 7.04 19.45 7.70C19.80 8.36 19.81 9.21 19.46 10.00C19.12 10.79 18.74 11.41 18.75 12.00C18.76 12.59 19.24 13.23 19.60 14.04C19.97 14.85 19.84 15.66 19.45 16.30C19.05 16.94 18.32 17.37 17.46 17.46C16.61 17.56 15.88 17.54 15.37 17.84C14.87 18.15 14.55 18.88 14.04 19.60C13.52 20.33 12.75 20.62 12.00 20.60C11.25 20.58 10.51 20.16 10.00 19.46C9.49 18.77 9.14 18.13 8.63 17.84C8.11 17.56 7.32 17.65 6.43 17.57C5.55 17.48 4.91 16.96 4.55 16.30C4.20 15.64 4.19 14.79 4.54 14.00C4.88 13.21 5.26 12.59 5.25 12.00C5.24 11.41 4.76 10.77 4.40 9.96C4.03 9.15 4.16 8.34 4.55 7.70C4.95 7.06 5.68 6.63 6.54 6.54C7.39 6.44 8.12 6.46 8.63 6.16C9.13 5.85 9.45 5.12 9.96 4.40C10.48 3.67 11.25 3.38 12.00 3.40Z"/>
+  <circle cx="12" cy="12" r="2.2"/>
+</g>
+<text x="434.0" y="348" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">settings</text>
+<g transform="translate(534.0,274) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M6.4 10.4a5.6 5.6 0 0 1 11.2 0v3.5l1.5 2.7a1 1 0 0 1-.9 1.5H5.8a1 1 0 0 1-.9-1.5l1.5-2.7z"/>
+  <path d="M9.8 20.4a2.4 2.4 0 0 0 4.4 0"/>
+</g>
+<text x="558.0" y="348" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">bell</text>
+<g transform="translate(658.0,274) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="12" cy="12" r="4.4"/>
+  <path d="M18.60 12.00L21.20 12.00"/>
+  <path d="M16.67 16.67L18.51 18.51"/>
+  <path d="M12.00 18.60L12.00 21.20"/>
+  <path d="M7.33 16.67L5.49 18.51"/>
+  <path d="M5.40 12.00L2.80 12.00"/>
+  <path d="M7.33 7.33L5.49 5.49"/>
+  <path d="M12.00 5.40L12.00 2.80"/>
+  <path d="M16.67 7.33L18.51 5.49"/>
+</g>
+<text x="682.0" y="348" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">display</text>
+<g transform="translate(38.0,398) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M12 3.2 19.4 6v6.1c0 4.3-3 7.4-7.4 8.7-4.4-1.3-7.4-4.4-7.4-8.7V6z"/>
+  <path d="m8.9 11.9 2.3 2.3 4-4.2"/>
+</g>
+<text x="62.0" y="472" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">shield</text>
+<g transform="translate(162.0,398) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<ellipse cx="12" cy="6.6" rx="7.4" ry="3"/>
+  <path d="M4.6 6.6v10.8c0 1.7 3.3 3 7.4 3s7.4-1.3 7.4-3V6.6"/>
+  <path d="M4.6 12c0 1.7 3.3 3 7.4 3s7.4-1.3 7.4-3"/>
+</g>
+<text x="186.0" y="472" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">storage</text>
+<g transform="translate(286.0,398) scale(2)" fill="none" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M5.4 10.6v2.8"/>
+  <path d="M10.4 6.4v11.2"/>
+  <path d="M15 8.8v6.4"/>
+  <path d="M19.4 10.7v2.6"/>
+</g>
+<text x="310.0" y="472" text-anchor="middle" font-family="-apple-system,Helvetica,sans-serif" font-size="12" fill="#6b6b6b">waveform</text>
+</svg>

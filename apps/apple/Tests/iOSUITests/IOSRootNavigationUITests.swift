@@ -971,6 +971,73 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
+    func testChatShowsNamedSendersOnTheirMessageSides() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-chat-bubble-showcase"]
+        app.launch()
+
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 10))
+        chats.tap()
+
+        let conversationRow = app.descendants(matching: .any)[
+            "conversation-row-showcase-library-secret"
+        ]
+        XCTAssertTrue(conversationRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(conversationRow.isHittable)
+        conversationRow.tap()
+
+        let userName = app.descendants(matching: .any)[
+            "chat-sender-name-user-showcase-library-secret-fixture-1"
+        ]
+        let assistantName = app.descendants(matching: .any)[
+            "chat-sender-name-assistant-showcase-library-secret-fixture-2"
+        ]
+        let userAvatar = app.descendants(matching: .any)[
+            "chat-sender-avatar-user-showcase-library-secret-fixture-1"
+        ]
+        let assistantAvatar = app.descendants(matching: .any)[
+            "chat-sender-avatar-assistant-showcase-library-secret-fixture-2"
+        ]
+        let window = app.windows.firstMatch
+        XCTAssertTrue(userName.waitForExistence(timeout: 5))
+        XCTAssertTrue(assistantName.waitForExistence(timeout: 5))
+        XCTAssertTrue(userAvatar.waitForExistence(timeout: 5))
+        XCTAssertTrue(assistantAvatar.waitForExistence(timeout: 5))
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
+        XCTAssertEqual(userName.label, "게스트")
+        XCTAssertEqual(assistantName.label, "미리보기 안내자")
+
+        let windowMidX = window.frame.midX
+        XCTAssertGreaterThan(userName.frame.midX, windowMidX)
+        XCTAssertGreaterThan(userAvatar.frame.midX, windowMidX)
+        XCTAssertLessThan(assistantName.frame.midX, windowMidX)
+        XCTAssertLessThan(assistantAvatar.frame.midX, windowMidX)
+        XCTAssertLessThan(userName.frame.maxX, userAvatar.frame.minX)
+        XCTAssertLessThan(
+            assistantAvatar.frame.maxX,
+            assistantName.frame.minX
+        )
+
+        for avatar in [userAvatar, assistantAvatar] {
+            XCTAssertGreaterThanOrEqual(avatar.frame.width, 28)
+            XCTAssertGreaterThanOrEqual(avatar.frame.height, 28)
+            XCTAssertEqual(
+                avatar.frame.width,
+                avatar.frame.height,
+                accuracy: 1
+            )
+        }
+
+        let screenshotAttachment = XCTAttachment(
+            screenshot: XCUIScreen.main.screenshot()
+        )
+        screenshotAttachment.name = "chat-named-senders"
+        screenshotAttachment.lifetime = .keepAlways
+        add(screenshotAttachment)
+    }
+
+    @MainActor
     func testStoryModeSeparatesProseWithDividerAndBreathingRoom() {
         let app = XCUIApplication()
         app.launchArguments = ["--lorepia-chat-bubble-showcase"]
@@ -993,15 +1060,104 @@ final class IOSRootNavigationUITests: XCTestCase {
         let assistantMessage = app.descendants(matching: .any)[
             "chat-message-assistant-showcase-last-scene-fixture-2"
         ]
+        let userAvatar = app.descendants(matching: .any)[
+            "chat-sender-avatar-user-showcase-last-scene-fixture-1"
+        ]
+        let assistantAvatar = app.descendants(matching: .any)[
+            "chat-sender-avatar-assistant-showcase-last-scene-fixture-2"
+        ]
+        let userName = app.descendants(matching: .any)[
+            "chat-sender-name-user-showcase-last-scene-fixture-1"
+        ]
+        let assistantName = app.descendants(matching: .any)[
+            "chat-sender-name-assistant-showcase-last-scene-fixture-2"
+        ]
+        let userActionRow = app.descendants(matching: .any)[
+            "chat-message-action-row-user-showcase-last-scene-fixture-1"
+        ]
+        let assistantActionRow = app.descendants(matching: .any)[
+            "chat-message-action-row-assistant-showcase-last-scene-fixture-2"
+        ]
+        let userEditID =
+            "chat-message-action-edit-user-showcase-last-scene-fixture-1"
+        let assistantRegenerateID =
+            "chat-message-action-regenerate-assistant-"
+                + "showcase-last-scene-fixture-2"
+        let userEdit = app.buttons[userEditID]
+        let assistantRegenerate = app.buttons[assistantRegenerateID]
         let composerMode = app.buttons["chat-composer-mode"]
         XCTAssertTrue(userMessage.waitForExistence(timeout: 5))
         XCTAssertTrue(assistantMessage.waitForExistence(timeout: 5))
+        XCTAssertTrue(userAvatar.waitForExistence(timeout: 5))
+        XCTAssertTrue(assistantAvatar.waitForExistence(timeout: 5))
+        XCTAssertTrue(userName.waitForExistence(timeout: 5))
+        XCTAssertTrue(assistantName.waitForExistence(timeout: 5))
+        XCTAssertTrue(userActionRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(assistantActionRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(userEdit.waitForExistence(timeout: 5))
+        XCTAssertTrue(assistantRegenerate.waitForExistence(timeout: 5))
         XCTAssertTrue(composerMode.waitForExistence(timeout: 5))
         XCTAssertEqual(composerMode.value as? String, "스토리 모드")
+        XCTAssertTrue(userActionRow.isHittable)
+        XCTAssertTrue(assistantActionRow.isHittable)
+        XCTAssertTrue(userEdit.isHittable)
+        XCTAssertTrue(assistantRegenerate.isHittable)
+        XCTAssertEqual(userName.label, "게스트")
+        XCTAssertEqual(assistantName.label, "별빛 지도사")
+        for avatar in [userAvatar, assistantAvatar] {
+            XCTAssertGreaterThanOrEqual(avatar.frame.width, 28)
+            XCTAssertGreaterThanOrEqual(avatar.frame.height, 28)
+            XCTAssertEqual(
+                avatar.frame.width,
+                avatar.frame.height,
+                accuracy: 1
+            )
+        }
+        for action in [userEdit, assistantRegenerate] {
+            XCTAssertGreaterThanOrEqual(action.frame.width, 44)
+            XCTAssertGreaterThanOrEqual(action.frame.height, 44)
+        }
+
+        let window = app.windows.firstMatch
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
+        for (avatar, message) in [
+            (userAvatar, userMessage),
+            (assistantAvatar, assistantMessage),
+        ] {
+            XCTAssertEqual(
+                avatar.frame.minX - window.frame.minX,
+                28,
+                accuracy: 1
+            )
+            XCTAssertEqual(
+                message.frame.minX - window.frame.minX,
+                28,
+                accuracy: 1
+            )
+            XCTAssertEqual(
+                window.frame.maxX - message.frame.maxX,
+                28,
+                accuracy: 1
+            )
+        }
 
         let userFrame = userMessage.frame
         let assistantFrame = assistantMessage.frame
         XCTAssertLessThan(userFrame.midY, assistantFrame.midY)
+        XCTAssertEqual(
+            userActionRow.frame.minY,
+            userFrame.maxY,
+            accuracy: 1
+        )
+        XCTAssertLessThan(
+            userActionRow.frame.maxY,
+            assistantFrame.minY
+        )
+        XCTAssertEqual(
+            assistantActionRow.frame.minY,
+            assistantFrame.maxY,
+            accuracy: 1
+        )
 
         let screenshot = XCUIScreen.main.screenshot()
         guard let userTextFrame = recognizedFrame(
@@ -1015,8 +1171,23 @@ final class IOSRootNavigationUITests: XCTestCase {
             XCTFail("스토리 구분선 양쪽의 합성 문장을 찾지 못했습니다.")
             return
         }
-        XCTAssertTrue(userFrame.contains(userTextFrame))
-        XCTAssertTrue(assistantFrame.contains(assistantTextFrame))
+        XCTAssertTrue(
+            userFrame.insetBy(dx: -4, dy: -2).contains(userTextFrame)
+        )
+        XCTAssertTrue(
+            assistantFrame.insetBy(dx: -4, dy: -2)
+                .contains(assistantTextFrame)
+        )
+        XCTAssertLessThan(userAvatar.frame.maxY, userTextFrame.minY)
+        XCTAssertLessThan(userTextFrame.maxY, userActionRow.frame.minY)
+        XCTAssertLessThan(
+            assistantAvatar.frame.maxY,
+            assistantTextFrame.minY
+        )
+        XCTAssertLessThan(
+            assistantTextFrame.maxY,
+            assistantActionRow.frame.minY
+        )
         let readingBreak =
             assistantTextFrame.minY - userTextFrame.maxY
         XCTAssertGreaterThanOrEqual(
@@ -1032,6 +1203,19 @@ final class IOSRootNavigationUITests: XCTestCase {
             "story-mode-divider-and-breathing-room"
         screenshotAttachment.lifetime = .keepAlways
         add(screenshotAttachment)
+
+        userMessage.press(forDuration: 0.6)
+        XCTAssertEqual(
+            app.buttons.matching(identifier: userEditID).count,
+            1,
+            "스토리 메시지를 길게 눌러도 편집 팝오버를 중복 생성하면 안 됩니다."
+        )
+        assistantMessage.press(forDuration: 0.6)
+        XCTAssertEqual(
+            app.buttons.matching(identifier: assistantRegenerateID).count,
+            1,
+            "스토리 메시지를 길게 눌러도 재생성 팝오버를 중복 생성하면 안 됩니다."
+        )
     }
 
     @MainActor
@@ -1124,6 +1308,60 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(composer.waitForNonExistence(timeout: 5))
         XCTAssertTrue(conversationRow.waitForExistence(timeout: 5))
         XCTAssertTrue(conversationRow.isHittable)
+    }
+
+    @MainActor
+    func testChatRestoresIndependentDraftsWhenReenteringRooms() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-chat-bubble-showcase"]
+        app.launch()
+
+        let chats = app.tabBars.buttons["채팅"]
+        XCTAssertTrue(chats.waitForExistence(timeout: 10))
+        chats.tap()
+
+        let firstRoom = app.descendants(matching: .any)[
+            "conversation-row-showcase-morning-walk"
+        ]
+        let secondRoom = app.descendants(matching: .any)[
+            "conversation-row-showcase-last-scene"
+        ]
+        XCTAssertTrue(firstRoom.waitForExistence(timeout: 5))
+        XCTAssertTrue(secondRoom.waitForExistence(timeout: 5))
+
+        let composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        firstRoom.tap()
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        composer.tap()
+        composer.typeText("첫 방 미전송 초안")
+        app.navigationBars.buttons["채팅"].tap()
+        XCTAssertTrue(firstRoom.waitForExistence(timeout: 5))
+
+        secondRoom.tap()
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertEqual(composer.value as? String, "")
+        composer.tap()
+        composer.typeText("둘째 방 미전송 초안")
+        app.navigationBars.buttons["채팅"].tap()
+        XCTAssertTrue(secondRoom.waitForExistence(timeout: 5))
+
+        firstRoom.tap()
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            composer.value as? String,
+            "첫 방 미전송 초안"
+        )
+        app.navigationBars.buttons["채팅"].tap()
+        XCTAssertTrue(firstRoom.waitForExistence(timeout: 5))
+
+        secondRoom.tap()
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            composer.value as? String,
+            "둘째 방 미전송 초안"
+        )
     }
 
     @MainActor
@@ -1433,8 +1671,9 @@ final class IOSRootNavigationUITests: XCTestCase {
         send.tap()
         let transcript = app.descendants(matching: .any).matching(
             NSPredicate(
-                format: "label == %@",
-                "캐릭터: 이 응답은 테스트용 합성 메시지입니다."
+                format: "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                "chat-message-assistant-",
+                "이 응답은 테스트용 합성 메시지입니다."
             )
         ).firstMatch
         XCTAssertTrue(transcript.waitForExistence(timeout: 5))
@@ -2982,7 +3221,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         let editExpand = app.buttons["chat-composer-edit-expand"]
         XCTAssertTrue(editCancel.waitForExistence(timeout: 5))
         XCTAssertTrue(editSave.waitForExistence(timeout: 5))
-        XCTAssertTrue(editExpand.waitForExistence(timeout: 5))
+        XCTAssertFalse(editExpand.exists)
         XCTAssertEqual(
             composerSurface.value as? String,
             "메시지 편집 중"
@@ -3015,9 +3254,227 @@ final class IOSRootNavigationUITests: XCTestCase {
     }
 
     @MainActor
-    func testInlineMessageEditorExpandsAndCollapsesAboveAnchoredRail() {
+    func testComposerExpansionAppearsOnlyBeyondFiveLines() {
+        let app = XCUIApplication()
+        app.launchArguments = [
+            "--lorepia-native-navigation-ui-test",
+            "-UIPreferredContentSizeCategoryName",
+            "UICTContentSizeCategoryL",
+        ]
+
+        let fiveLines = "가\n나\n다\n라\n마"
+        app.launchEnvironment["LOREPIA_UI_TEST_CHAT_DRAFT"] = fiveLines
+        app.launch()
+
+        guard openPreviewChat(in: app) else {
+            return
+        }
+
+        var composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        let fiveLineDraft = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "value == %@",
+                fiveLines
+            ),
+            object: composer
+        )
+        wait(for: [fiveLineDraft], timeout: 5)
+        XCTAssertFalse(app.buttons["chat-composer-expand"].exists)
+        XCTAssertFalse(app.buttons["chat-composer-collapse"].exists)
+
+        app.terminate()
+
+        let sixLines = "가\n나\n다\n라\n마\n바"
+        app.launchEnvironment["LOREPIA_UI_TEST_CHAT_DRAFT"] = sixLines
+        app.launch()
+
+        guard openPreviewChat(in: app) else {
+            return
+        }
+
+        composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        let composerSurface = app.descendants(matching: .any)[
+            "chat-composer-surface"
+        ]
+        let expand = app.buttons["chat-composer-expand"]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertTrue(composerSurface.waitForExistence(timeout: 5))
+        let sixLineDraft = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "value == %@",
+                sixLines
+            ),
+            object: composer
+        )
+        wait(for: [sixLineDraft], timeout: 5)
+        XCTAssertTrue(expand.waitForExistence(timeout: 5))
+        XCTAssertTrue(expand.isHittable)
+        XCTAssertEqual(expand.label, "입력창 확대")
+        XCTAssertFalse(app.buttons["chat-composer-collapse"].exists)
+
+        composer.tap()
+        let collapsedFocus = expectation(
+            for: NSPredicate(format: "hasKeyboardFocus == true"),
+            evaluatedWith: composer
+        )
+        wait(for: [collapsedFocus], timeout: 5)
+        expand.tap()
+
+        let fullscreen = app.descendants(matching: .any)[
+            "chat-composer-fullscreen"
+        ]
+        let collapse = app.buttons["chat-composer-collapse"]
+        XCTAssertTrue(fullscreen.waitForExistence(timeout: 5))
+        XCTAssertTrue(collapse.waitForExistence(timeout: 5))
+        let collapseReady = expectation(
+            for: NSPredicate(format: "isHittable == true"),
+            evaluatedWith: collapse
+        )
+        wait(for: [collapseReady], timeout: 5)
+        XCTAssertTrue(expand.waitForNonExistence(timeout: 2))
+        XCTAssertEqual(collapse.label, "입력창 축소")
+        XCTAssertEqual(collapse.frame.width, 44, accuracy: 1)
+        XCTAssertEqual(collapse.frame.height, 44, accuracy: 1)
+        XCTAssertGreaterThan(
+            collapse.frame.midX,
+            app.windows.firstMatch.frame.midX
+        )
+        XCTAssertLessThanOrEqual(
+            app.windows.firstMatch.frame.maxX - collapse.frame.maxX,
+            24
+        )
+        XCTAssertLessThan(collapse.frame.minY, 100)
+
+        composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        let fullscreenSurface = app.descendants(matching: .any)[
+            "chat-composer-surface"
+        ]
+        let fullscreenSend = app.buttons["메시지 보내기"]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        XCTAssertTrue(fullscreenSurface.waitForExistence(timeout: 5))
+        XCTAssertTrue(fullscreenSend.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            fullscreenSend.frame.width,
+            collapse.frame.width,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            fullscreenSend.frame.height,
+            collapse.frame.height,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            fullscreenSend.frame.midX,
+            collapse.frame.midX,
+            accuracy: 1
+        )
+        XCTAssertEqual(
+            app.windows.firstMatch.frame.maxX - fullscreenSend.frame.maxX,
+            app.windows.firstMatch.frame.maxX - collapse.frame.maxX,
+            accuracy: 1
+        )
+        let fullscreenFocus = expectation(
+            for: NSPredicate(format: "hasKeyboardFocus == true"),
+            evaluatedWith: composer
+        )
+        wait(for: [fullscreenFocus], timeout: 5)
+        XCTAssertEqual(composer.value as? String, sixLines)
+        XCTAssertTrue(fullscreenSend.isEnabled)
+        XCTAssertFalse(app.buttons["chat-composer-tools"].exists)
+        XCTAssertFalse(app.buttons["chat-composer-model"].exists)
+        XCTAssertFalse(app.buttons["chat-composer-mode"].exists)
+        XCTAssertFalse(app.buttons["chat-composer-edit-cancel"].exists)
+        XCTAssertFalse(
+            app.staticTexts["chat-composer-edit-status"].exists
+        )
+        XCTAssertFalse(app.navigationBars.firstMatch.isHittable)
+        XCTAssertGreaterThanOrEqual(
+            composer.frame.minY,
+            collapse.frame.maxY - 4
+        )
+        XCTAssertEqual(
+            composer.frame.maxY,
+            fullscreenSend.frame.minY,
+            accuracy: 4
+        )
+        XCTAssertGreaterThan(
+            composer.frame.height,
+            fullscreenSurface.frame.height
+                - collapse.frame.height
+                - fullscreenSend.frame.height
+                - 40
+        )
+        XCTAssertLessThanOrEqual(
+            fullscreenSurface.frame.maxY - fullscreenSend.frame.maxY,
+            24
+        )
+
+        composer.typeText(" 확장 유지")
+        XCTAssertTrue(
+            String(describing: composer.value).contains("확장 유지")
+        )
+        collapse.tap()
+        XCTAssertTrue(fullscreen.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(expand.waitForExistence(timeout: 5))
+        XCTAssertTrue(collapse.waitForNonExistence(timeout: 2))
+        composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        let restoredFocus = expectation(
+            for: NSPredicate(format: "hasKeyboardFocus == true"),
+            evaluatedWith: composer
+        )
+        wait(for: [restoredFocus], timeout: 5)
+        XCTAssertTrue(
+            String(describing: composer.value).contains("확장 유지")
+        )
+
+        app.terminate()
+
+        let wrappedDraft = String(
+            repeating: "자동 줄바꿈으로 다섯 줄을 넘는 문장 ",
+            count: 12
+        )
+        app.launchEnvironment["LOREPIA_UI_TEST_CHAT_DRAFT"] = wrappedDraft
+        app.launch()
+
+        guard openPreviewChat(in: app) else {
+            return
+        }
+
+        composer = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        XCTAssertTrue(composer.waitForExistence(timeout: 5))
+        let restoredWrappedDraft = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "value == %@",
+                wrappedDraft
+            ),
+            object: composer
+        )
+        wait(for: [restoredWrappedDraft], timeout: 5)
+        XCTAssertTrue(
+            app.buttons["chat-composer-expand"]
+                .waitForExistence(timeout: 5)
+        )
+    }
+
+    @MainActor
+    func testInlineMessageEditorUsesFullscreenExpansion() {
         let app = XCUIApplication()
         app.launchArguments = ["--lorepia-native-navigation-ui-test"]
+        let longDraft =
+            "편집 확대 첫째 줄\n둘째 줄\n셋째 줄\n넷째 줄\n다섯째 줄\n여섯째 줄"
+        app.launchEnvironment["LOREPIA_UI_TEST_CHAT_DRAFT"] = longDraft
         app.launch()
 
         guard openPreviewChat(in: app) else {
@@ -3031,15 +3488,23 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(composer.waitForExistence(timeout: 5))
         XCTAssertTrue(send.waitForExistence(timeout: 5))
 
-        composer.tap()
-        composer.typeText("확대 축소 확인")
+        let restoredDraft = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "value == %@",
+                longDraft
+            ),
+            object: composer
+        )
+        wait(for: [restoredDraft], timeout: 5)
         XCTAssertTrue(send.isEnabled)
         send.tap()
 
         let userMessage = app.descendants(matching: .any).matching(
             NSPredicate(
-                format: "identifier BEGINSWITH %@",
-                "chat-message-user-"
+                format:
+                    "identifier BEGINSWITH %@ AND label CONTAINS %@",
+                "chat-message-user-",
+                "편집 확대 첫째 줄"
             )
         ).firstMatch
         XCTAssertTrue(userMessage.waitForExistence(timeout: 5))
@@ -3072,82 +3537,115 @@ final class IOSRootNavigationUITests: XCTestCase {
             composerSurface.value as? String,
             "메시지 편집 중"
         )
+        composer.tap()
+        let editFocus = expectation(
+            for: NSPredicate(format: "hasKeyboardFocus == true"),
+            evaluatedWith: composer
+        )
+        wait(for: [editFocus], timeout: 5)
 
-        let collapsedSurface = composerSurface.frame
-        let collapsedField = composer.frame
         editExpand.tap()
 
+        let fullscreen = app.descendants(matching: .any)[
+            "chat-composer-fullscreen"
+        ]
         let editCollapse = app.buttons["chat-composer-edit-collapse"]
+        XCTAssertTrue(fullscreen.waitForExistence(timeout: 5))
         XCTAssertTrue(editCollapse.waitForExistence(timeout: 5))
+        let editCollapseReady = expectation(
+            for: NSPredicate(format: "isHittable == true"),
+            evaluatedWith: editCollapse
+        )
+        wait(for: [editCollapseReady], timeout: 5)
         XCTAssertTrue(editExpand.waitForNonExistence(timeout: 2))
-        let expandedHeight = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                composerSurface.frame.height
-                    > collapsedSurface.height + 8
-            },
-            object: composerSurface
-        )
-        wait(for: [expandedHeight], timeout: 2)
-        let expandedSurface = composerSurface.frame
-        let expandedField = composer.frame
+        XCTAssertEqual(editCollapse.label, "편집창 축소")
+        XCTAssertEqual(editCollapse.frame.width, 44, accuracy: 1)
+        XCTAssertEqual(editCollapse.frame.height, 44, accuracy: 1)
         XCTAssertGreaterThan(
-            expandedField.height,
-            collapsedField.height + 8
+            editCollapse.frame.midX,
+            app.windows.firstMatch.frame.midX
         )
-        XCTAssertGreaterThan(
-            expandedSurface.height,
-            collapsedSurface.height + 8
+        XCTAssertLessThanOrEqual(
+            app.windows.firstMatch.frame.maxX - editCollapse.frame.maxX,
+            24
         )
+
+        let fullscreenField = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        let fullscreenSurface = app.descendants(matching: .any)[
+            "chat-composer-surface"
+        ]
+        XCTAssertTrue(fullscreenField.waitForExistence(timeout: 5))
+        XCTAssertTrue(fullscreenSurface.waitForExistence(timeout: 5))
+        let fullscreenEditFocus = expectation(
+            for: NSPredicate(format: "hasKeyboardFocus == true"),
+            evaluatedWith: fullscreenField
+        )
+        wait(for: [fullscreenEditFocus], timeout: 5)
         XCTAssertEqual(
-            expandedSurface.maxY,
-            collapsedSurface.maxY,
-            accuracy: 3
+            fullscreenSurface.value as? String,
+            "메시지 편집 중"
         )
-        // The native editor remains first responder across the height change.
-        composer.typeText(" 포커스 유지")
         XCTAssertTrue(
-            String(describing: composer.value).contains(
+            String(describing: fullscreenField.value).contains(
+                "편집 확대 첫째 줄"
+            )
+        )
+        XCTAssertTrue(app.buttons["chat-composer-edit-save"].exists)
+        XCTAssertFalse(app.buttons["chat-composer-edit-cancel"].exists)
+        XCTAssertFalse(
+            app.staticTexts["chat-composer-edit-status"].exists
+        )
+        XCTAssertFalse(app.buttons["chat-composer-tools"].exists)
+        XCTAssertFalse(app.buttons["chat-composer-model"].exists)
+        XCTAssertFalse(app.buttons["chat-composer-mode"].exists)
+        XCTAssertFalse(app.navigationBars.firstMatch.isHittable)
+        XCTAssertFalse(userMessage.isHittable)
+
+        // The full-screen native editor receives focus without another tap.
+        fullscreenField.typeText(" 포커스 유지")
+        XCTAssertTrue(
+            String(describing: fullscreenField.value).contains(
                 "포커스 유지"
             )
         )
 
         editCollapse.tap()
+        XCTAssertTrue(fullscreen.waitForNonExistence(timeout: 5))
         XCTAssertTrue(editExpand.waitForExistence(timeout: 5))
         XCTAssertTrue(editCollapse.waitForNonExistence(timeout: 2))
-        let collapsedHeight = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                abs(
-                    composerSurface.frame.height
-                        - collapsedSurface.height
-                ) <= 3
-            },
-            object: composerSurface
+
+        let collapsedField = app.descendants(matching: .any)[
+            "chat-composer-field"
+        ]
+        let collapsedSurface = app.descendants(matching: .any)[
+            "chat-composer-surface"
+        ]
+        let collapsedEditSave = app.buttons["chat-composer-edit-save"]
+        XCTAssertTrue(collapsedField.waitForExistence(timeout: 5))
+        XCTAssertTrue(collapsedSurface.waitForExistence(timeout: 5))
+        XCTAssertTrue(editCancel.waitForExistence(timeout: 5))
+        XCTAssertTrue(collapsedEditSave.waitForExistence(timeout: 5))
+        let collapsedEditFocus = expectation(
+            for: NSPredicate(format: "hasKeyboardFocus == true"),
+            evaluatedWith: collapsedField
         )
-        wait(for: [collapsedHeight], timeout: 2)
+        wait(for: [collapsedEditFocus], timeout: 5)
         XCTAssertEqual(
-            composer.frame.height,
-            collapsedField.height,
-            accuracy: 3
-        )
-        XCTAssertEqual(
-            composerSurface.frame.height,
-            collapsedSurface.height,
-            accuracy: 3
-        )
-        XCTAssertEqual(
-            composerSurface.frame.maxY,
-            collapsedSurface.maxY,
-            accuracy: 3
-        )
-        XCTAssertEqual(
-            composerSurface.value as? String,
+            collapsedSurface.value as? String,
             "메시지 편집 중"
         )
-        XCTAssertTrue(editSave.isEnabled)
+        XCTAssertTrue(
+            String(describing: collapsedField.value).contains(
+                "포커스 유지"
+            )
+        )
+        XCTAssertTrue(collapsedEditSave.isEnabled)
 
-        editSave.tap()
-        XCTAssertTrue(editSave.waitForNonExistence(timeout: 5))
-        XCTAssertEqual(composerSurface.value as? String, "입력 준비")
+        collapsedEditSave.tap()
+        XCTAssertTrue(collapsedEditSave.waitForNonExistence(timeout: 5))
+        XCTAssertEqual(collapsedSurface.value as? String, "입력 준비")
 
         let editedMessage = app.descendants(matching: .any).matching(
             NSPredicate(
