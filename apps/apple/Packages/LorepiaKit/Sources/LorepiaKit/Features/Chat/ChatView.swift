@@ -1372,22 +1372,24 @@ public struct ChatView: View {
 
 #if os(iOS)
     /// Older navigation bars do not reliably install a newly inserted
-    /// principal item after a toolbar button changes state. Keep both toolbar
-    /// slots mounted and replace only their contents.
+    /// principal view after a toolbar button changes state. Keep the toolbar
+    /// slots and their native controls mounted for the lifetime of the room.
     @ToolbarContentBuilder
     private var chatFallbackSearchToolbar: some ToolbarContent {
         ToolbarItem(placement: .principal) {
-            Group {
-                if isSearchActive {
-                    chatToolbarSearchField
-                } else {
-                    Text(viewModel.character?.name ?? "")
-                        .font(.headline)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .accessibilityAddTraits(.isHeader)
-                }
-            }
+            ChatToolbarPrincipalControl(
+                title: viewModel.character?.name ?? "",
+                text: $searchQuery,
+                isSearching: isSearchActive
+            )
+            .frame(
+                minWidth: 120,
+                idealWidth: 220,
+                maxWidth: .infinity,
+                minHeight: 36,
+                maxHeight: 36
+            )
+            .layoutPriority(1)
             .transaction { transaction in
                 transaction.animation = nil
                 transaction.disablesAnimations = true
@@ -1395,13 +1397,7 @@ public struct ChatView: View {
         }
 
         ToolbarItem(placement: .topBarTrailing) {
-            Group {
-                if isSearchActive {
-                    chatToolbarSearchClose
-                } else {
-                    chatToolbarSearchFallback
-                }
-            }
+            chatToolbarSearchControl
             .transaction { transaction in
                 transaction.animation = nil
                 transaction.disablesAnimations = true
@@ -1410,55 +1406,42 @@ public struct ChatView: View {
     }
 
     /// Older iOS releases do not expose a relocatable default search item, so
-    /// the inactive toolbar keeps the prepared glyph in the trailing slot.
-    private var chatToolbarSearchFallback: some View {
+    /// one native toolbar button owns both the inactive glyph and close action.
+    private var chatToolbarSearchControl: some View {
         Button {
-            openSearch()
+            if isSearchActive {
+                closeSearch()
+            } else {
+                openSearch()
+            }
         } label: {
-            Color.clear
+            ZStack {
+                Color.clear
+                LorepiaGlyphView(.search, size: 23)
+                    .offset(x: 8)
+                    .opacity(isSearchActive ? 0 : 1)
+                    .accessibilityHidden(true)
+                Text("취소")
+                    .opacity(isSearchActive ? 1 : 0)
+                    .accessibilityHidden(true)
+            }
                 .frame(width: 36, height: 36)
-                .overlay {
-                    // Keep the native button in its reliable toolbar slot
-                    // while matching the back control's visible inset.
-                    LorepiaGlyphView(.search, size: 23)
-                        .offset(x: 8)
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
                 .contentShape(Circle())
         }
-        .accessibilityLabel("대화 내 검색")
-        .accessibilityIdentifier("chat-room-search-trigger")
+        .accessibilityLabel(isSearchActive ? "취소" : "대화 내 검색")
+        .accessibilityIdentifier(
+            isSearchActive
+                ? "chat-room-search-close"
+                : "chat-room-search-trigger"
+        )
     }
 
-    /// The pre-iOS 26 field stays inside the principal navigation-bar slot.
-    /// It is created only after the explicit toolbar action, so pulling the
-    /// transcript down can never reveal a second search surface.
-    private var chatToolbarSearchField: some View {
-        ChatToolbarSearchTextField(
-            text: $searchQuery,
-            requestsFocus: isSearchActive
-        )
-        .frame(
-            minWidth: 120,
-            idealWidth: 220,
-            maxWidth: .infinity,
-            minHeight: 36,
-            maxHeight: 36
-        )
-        .layoutPriority(1)
-    }
-
-    private var chatToolbarSearchClose: some View {
-        Button("취소") {
-            var transaction = Transaction(animation: nil)
-            transaction.disablesAnimations = true
-            withTransaction(transaction) {
-                isSearchActive = false
-            }
+    private func closeSearch() {
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            isSearchActive = false
         }
-        .accessibilityLabel("취소")
-        .accessibilityIdentifier("chat-room-search-close")
     }
 #endif
 
@@ -2065,62 +2048,38 @@ public struct ChatView: View {
 }
 
 #if os(iOS)
-/// A toolbar-sized search control whose UIKit accessibility role remains a
-/// search field. SwiftUI's plain `TextField` is exposed as a generic text
-/// field, which would discard the established VoiceOver and UI-test contract.
-private struct ChatToolbarSearchTextField: UIViewRepresentable {
+/// Keeps both the room title and the native search field attached to the
+/// navigation bar. iOS 18 can drop a representable inserted into an existing
+/// principal toolbar item, so presentation changes only UIKit state.
+private struct ChatToolbarPrincipalControl: UIViewRepresentable {
+    let title: String
     @Binding var text: String
-    let requestsFocus: Bool
+    let isSearching: Bool
 
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text)
     }
 
-    func makeUIView(context: Context) -> FocusableSearchTextField {
-        let textField = FocusableSearchTextField()
-        textField.placeholder = "대화 내 검색"
-        textField.accessibilityLabel = "대화 내 검색"
-        textField.accessibilityIdentifier = "chat-room-search-field"
-        textField.autocapitalizationType = .none
-        textField.autocorrectionType = .no
-        textField.clearButtonMode = .whileEditing
-        textField.returnKeyType = .search
-        textField.font = .preferredFont(forTextStyle: .body)
-        textField.adjustsFontForContentSizeCategory = true
-        textField.setContentHuggingPriority(
-            .defaultLow,
-            for: .horizontal
-        )
-        textField.setContentCompressionResistancePriority(
-            .defaultLow,
-            for: .horizontal
-        )
-        textField.addTarget(
+    func makeUIView(context: Context) -> ChatToolbarPrincipalContainer {
+        let container = ChatToolbarPrincipalContainer()
+        container.searchField.addTarget(
             context.coordinator,
             action: #selector(Coordinator.textDidChange(_:)),
             for: .editingChanged
         )
-        return textField
+        return container
     }
 
     func updateUIView(
-        _ textField: FocusableSearchTextField,
+        _ container: ChatToolbarPrincipalContainer,
         context: Context
     ) {
         context.coordinator.text = $text
-        if textField.text != text {
-            textField.text = text
-        }
-        textField.requestsFocus = requestsFocus
-
-        if requestsFocus,
-           textField.window != nil,
-           !textField.isFirstResponder
-        {
-            textField.becomeFirstResponder()
-        } else if !requestsFocus, textField.isFirstResponder {
-            textField.resignFirstResponder()
-        }
+        container.update(
+            title: title,
+            text: text,
+            isSearching: isSearching
+        )
     }
 
     @MainActor
@@ -2138,18 +2097,141 @@ private struct ChatToolbarSearchTextField: UIViewRepresentable {
     }
 }
 
-/// The principal toolbar item can be updated before UIKit has attached its
-/// field to a window. Focusing on attachment avoids a delayed layout or an
-/// animated relocation just to make the keyboard appear.
+private final class ChatToolbarPrincipalContainer: UIView {
+    let searchField = FocusableSearchTextField()
+
+    private let titleLabel = UILabel()
+    private var isSearching = false
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+
+        isAccessibilityElement = false
+
+        titleLabel.font = .preferredFont(forTextStyle: .headline)
+        titleLabel.adjustsFontForContentSizeCategory = true
+        titleLabel.numberOfLines = 1
+        titleLabel.lineBreakMode = .byTruncatingTail
+        titleLabel.textAlignment = .center
+        titleLabel.accessibilityTraits.insert(.header)
+        titleLabel.setContentHuggingPriority(
+            .defaultLow,
+            for: .horizontal
+        )
+        titleLabel.setContentCompressionResistancePriority(
+            .defaultLow,
+            for: .horizontal
+        )
+
+        searchField.placeholder = "대화 내 검색"
+        searchField.accessibilityLabel = "대화 내 검색"
+        searchField.accessibilityIdentifier = "chat-room-search-field"
+        searchField.autocapitalizationType = .none
+        searchField.autocorrectionType = .no
+        searchField.clearButtonMode = .whileEditing
+        searchField.returnKeyType = .search
+        searchField.font = .preferredFont(forTextStyle: .body)
+        searchField.adjustsFontForContentSizeCategory = true
+        searchField.setContentHuggingPriority(
+            .defaultLow,
+            for: .horizontal
+        )
+        searchField.setContentCompressionResistancePriority(
+            .defaultLow,
+            for: .horizontal
+        )
+
+        for view in [titleLabel, searchField] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(view)
+        }
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: leadingAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: trailingAnchor),
+            titleLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
+            searchField.leadingAnchor.constraint(equalTo: leadingAnchor),
+            searchField.trailingAnchor.constraint(equalTo: trailingAnchor),
+            searchField.topAnchor.constraint(equalTo: topAnchor),
+            searchField.bottomAnchor.constraint(equalTo: bottomAnchor),
+        ])
+
+        applyPresentation(isSearching: false)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is unavailable")
+    }
+
+    func update(
+        title: String,
+        text: String,
+        isSearching: Bool
+    ) {
+        titleLabel.text = title
+        titleLabel.accessibilityLabel = title
+        if searchField.text != text {
+            searchField.text = text
+        }
+        guard isSearching != self.isSearching else {
+            return
+        }
+        applyPresentation(isSearching: isSearching)
+    }
+
+    private func applyPresentation(isSearching: Bool) {
+        self.isSearching = isSearching
+        searchField.requestsFocus = isSearching
+
+        UIView.performWithoutAnimation {
+            if !isSearching, searchField.isFirstResponder {
+                searchField.resignFirstResponder()
+            }
+
+            titleLabel.isHidden = isSearching
+            titleLabel.isAccessibilityElement = !isSearching
+            titleLabel.accessibilityElementsHidden = isSearching
+            searchField.isHidden = !isSearching
+            searchField.isUserInteractionEnabled = isSearching
+            searchField.isAccessibilityElement = isSearching
+            searchField.accessibilityElementsHidden = !isSearching
+            layoutIfNeeded()
+        }
+
+        guard isSearching else {
+            return
+        }
+        searchField.requestFocusWhenReady()
+    }
+}
+
+/// The field is mounted before presentation. A one-turn fallback covers the
+/// initial navigation-bar attachment without moving the toolbar or animating.
 private final class FocusableSearchTextField: UISearchTextField {
     var requestsFocus = false
 
-    override func didMoveToWindow() {
-        super.didMoveToWindow()
-        guard window != nil, requestsFocus, !isFirstResponder else {
+    func requestFocusWhenReady() {
+        guard requestsFocus else {
             return
         }
-        becomeFirstResponder()
+        if window != nil, !isFirstResponder {
+            becomeFirstResponder()
+        }
+        DispatchQueue.main.async { [weak self] in
+            guard let self,
+                  self.requestsFocus,
+                  self.window != nil,
+                  !self.isFirstResponder
+            else {
+                return
+            }
+            self.becomeFirstResponder()
+        }
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        requestFocusWhenReady()
     }
 }
 #endif
