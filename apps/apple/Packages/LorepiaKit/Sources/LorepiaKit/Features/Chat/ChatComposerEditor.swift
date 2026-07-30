@@ -131,6 +131,7 @@ struct ChatComposerEditor: UIViewRepresentable {
         coordinator: Coordinator
     ) {
         coordinator.cancelAutomaticFocus()
+        coordinator.cancelExpansionMeasurementPublication()
     }
 
     func sizeThatFits(
@@ -138,13 +139,26 @@ struct ChatComposerEditor: UIViewRepresentable {
         uiView host: ChatComposerEditorHost,
         context: Context
     ) -> CGSize? {
-        guard let width = proposal.width, width > 0 else {
+        guard let width = proposal.width,
+              width > 0,
+              width.isFinite
+        else {
             return nil
         }
+        context.coordinator.parent = self
+        host.recordProposedMeasurementWidth(width)
+        let measuredText = host.textView.text ?? ""
         let measurement = host.measure(
             width: width,
             minimumLines: minimumLines,
             maximumLines: maximumLines,
+            expansionLineLimit: expansionLineLimit
+        )
+        context.coordinator.scheduleExpansionPublication(
+            measurement.exceedsExpansionLineLimit,
+            from: host,
+            width: width,
+            text: measuredText,
             expansionLineLimit: expansionLineLimit
         )
         return CGSize(
@@ -165,6 +179,8 @@ struct ChatComposerEditor: UIViewRepresentable {
         private var lastRequestedFocus = false
         private var lastAutomaticFocusID: String?
         private var automaticFocusTask: Task<Void, Never>?
+        private var expansionMeasurementGeneration: UInt = 0
+        private var expansionMeasurementTask: Task<Void, Never>?
 
         init(parent: ChatComposerEditor) {
             self.parent = parent
@@ -259,6 +275,54 @@ struct ChatComposerEditor: UIViewRepresentable {
             automaticFocusTask = nil
         }
 
+        func scheduleExpansionPublication(
+            _ exceedsExpansionLineLimit: Bool,
+            from host: ChatComposerEditorHost,
+            width: CGFloat,
+            text: String,
+            expansionLineLimit: Int
+        ) {
+            expansionMeasurementGeneration &+= 1
+            let generation = expansionMeasurementGeneration
+            expansionMeasurementTask?.cancel()
+            expansionMeasurementTask = Task { @MainActor [weak self, weak host] in
+                await Task.yield()
+                guard let self else {
+                    return
+                }
+                defer {
+                    if self.expansionMeasurementGeneration == generation {
+                        self.expansionMeasurementTask = nil
+                    }
+                }
+                guard !Task.isCancelled,
+                      self.expansionMeasurementGeneration == generation,
+                      let host,
+                      self.host === host,
+                      let proposedWidth =
+                          host.proposedMeasurementWidth,
+                      abs(proposedWidth - width) <= 0.5,
+                      host.textView.text == text,
+                      self.parent.text == text,
+                      self.parent.expansionLineLimit == expansionLineLimit
+                else {
+                    return
+                }
+                if self.parent.exceedsExpansionLineLimit
+                    != exceedsExpansionLineLimit
+                {
+                    self.parent.exceedsExpansionLineLimit =
+                        exceedsExpansionLineLimit
+                }
+            }
+        }
+
+        func cancelExpansionMeasurementPublication() {
+            expansionMeasurementGeneration &+= 1
+            expansionMeasurementTask?.cancel()
+            expansionMeasurementTask = nil
+        }
+
         func textViewDidChange(_ textView: UITextView) {
             guard let host else {
                 return
@@ -294,10 +358,10 @@ struct ChatComposerEditor: UIViewRepresentable {
             in host: ChatComposerEditorHost,
             updatesTextBinding: Bool
         ) {
-            let width = host.bounds.width
-            guard width > 0 else {
+            guard let width = host.resolvedMeasurementWidth else {
                 return
             }
+            cancelExpansionMeasurementPublication()
 
             let measurement = host.measure(
                 width: width,
@@ -429,6 +493,7 @@ final class ChatComposerEditorHost: UIView {
     let textView = UITextView(frame: .zero)
     var fillsAvailableHeight = false
     var onSizeChange: ((ChatComposerEditorHost) -> Void)?
+    private(set) var proposedMeasurementWidth: CGFloat?
 
     private let placeholderLabel = UILabel()
     private var textViewHeightConstraint: NSLayoutConstraint!
@@ -439,6 +504,14 @@ final class ChatComposerEditorHost: UIView {
 
     var isHeightTransitionActive: Bool {
         transitionSnapshotView != nil
+    }
+
+    var resolvedMeasurementWidth: CGFloat? {
+        if let proposedMeasurementWidth {
+            return proposedMeasurementWidth
+        }
+        let width = bounds.width
+        return width.isFinite && width > 0 ? width : nil
     }
 
     override init(frame: CGRect) {
@@ -473,6 +546,13 @@ final class ChatComposerEditorHost: UIView {
         placeholderLabel.text = placeholder
         placeholderLabel.font =
             textView.font ?? UIFont.preferredFont(forTextStyle: .body)
+    }
+
+    func recordProposedMeasurementWidth(_ width: CGFloat) {
+        guard width.isFinite, width > 0 else {
+            return
+        }
+        proposedMeasurementWidth = width
     }
 
     func updatePlaceholderVisibility() {
