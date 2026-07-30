@@ -1768,9 +1768,9 @@ fn apply_migrations(connection: &mut Connection) -> CoreResult<()> {
 }
 
 fn validate_legacy_messages_for_branch_migration(connection: &Connection) -> CoreResult<()> {
-    let invalid_enum_count = connection
-        .query_row(
-            "SELECT COUNT(*)
+    let invalid_enum_count = legacy_branch_migration_count(
+        connection,
+        "SELECT COUNT(*)
              FROM messages
              WHERE role NOT IN ('system', 'user', 'assistant')
                 OR status NOT IN ('pending', 'complete', 'cancelled', 'failed')
@@ -1788,10 +1788,7 @@ fn validate_legacy_messages_for_branch_migration(connection: &Connection) -> Cor
                 )
                 OR (role <> 'assistant' AND generation_id IS NOT NULL)
                 OR (role <> 'assistant' AND status <> 'complete')",
-            [],
-            |row| row.get::<_, u64>(0),
-        )
-        .map_err(storage_db_error)?;
+    )?;
     if invalid_enum_count != 0 {
         return Err(CoreError::new(
             CoreErrorCode::StorageCorrupted,
@@ -1799,9 +1796,9 @@ fn validate_legacy_messages_for_branch_migration(connection: &Connection) -> Cor
             false,
         ));
     }
-    let duplicate_generation_count = connection
-        .query_row(
-            "SELECT COUNT(*)
+    let duplicate_generation_count = legacy_branch_migration_count(
+        connection,
+        "SELECT COUNT(*)
              FROM (
                SELECT generation_id
                FROM messages
@@ -1809,10 +1806,7 @@ fn validate_legacy_messages_for_branch_migration(connection: &Connection) -> Cor
                GROUP BY generation_id
                HAVING COUNT(*) > 1
              )",
-            [],
-            |row| row.get::<_, u64>(0),
-        )
-        .map_err(storage_db_error)?;
+    )?;
     if duplicate_generation_count != 0 {
         return Err(CoreError::new(
             CoreErrorCode::StorageCorrupted,
@@ -1820,9 +1814,9 @@ fn validate_legacy_messages_for_branch_migration(connection: &Connection) -> Cor
             false,
         ));
     }
-    let inconsistent_parent_count = connection
-        .query_row(
-            "WITH migration_order AS (
+    let inconsistent_parent_count = legacy_branch_migration_count(
+        connection,
+        "WITH migration_order AS (
                SELECT message.id,
                       message.conversation_id,
                       message.parent_id,
@@ -1859,10 +1853,7 @@ fn validate_legacy_messages_for_branch_migration(connection: &Connection) -> Cor
              FROM lineage
              WHERE parent_id IS NOT NULL
                AND parent_id IS NOT expected_parent_id",
-            [],
-            |row| row.get::<_, u64>(0),
-        )
-        .map_err(storage_db_error)?;
+    )?;
     if inconsistent_parent_count != 0 {
         return Err(CoreError::new(
             CoreErrorCode::StorageCorrupted,
@@ -1871,6 +1862,12 @@ fn validate_legacy_messages_for_branch_migration(connection: &Connection) -> Cor
         ));
     }
     Ok(())
+}
+
+fn legacy_branch_migration_count(connection: &Connection, query: &str) -> CoreResult<u64> {
+    connection
+        .query_row(query, [], |row| row.get::<_, u64>(0))
+        .map_err(storage_db_error)
 }
 
 fn recover_interrupted_work(root: &Path, connection: &mut Connection) -> CoreResult<()> {
@@ -4208,9 +4205,8 @@ mod tests {
         );
         drop(connection);
 
-        let error = match Storage::open(root.path()) {
-            Ok(_) => panic!("orphan assistant must be rejected"),
-            Err(error) => error,
+        let Err(error) = Storage::open(root.path()) else {
+            panic!("orphan assistant must be rejected");
         };
         assert_eq!(error.code, CoreErrorCode::StorageCorrupted);
 

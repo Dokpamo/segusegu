@@ -78,23 +78,7 @@ impl Provider for OpenAiCompatibleProvider {
         if *cancelled.borrow() {
             return Err(cancelled_error());
         }
-        let payload = RequestPayload {
-            model: request.model,
-            messages: request
-                .messages
-                .into_iter()
-                .map(|message| RequestMessage {
-                    role: role_name(message.role),
-                    content: message.content,
-                })
-                .collect(),
-            stream: true,
-            temperature: request.temperature,
-            max_tokens: request.max_output_tokens,
-            stream_options: StreamOptions {
-                include_usage: true,
-            },
-        };
+        let payload = request_payload(request);
         let mut builder = self.client.post(self.endpoint.clone()).json(&payload);
         if let Some(credential) = credential.filter(|value| !value.is_empty()) {
             builder = builder.bearer_auth(credential);
@@ -193,6 +177,26 @@ impl Provider for OpenAiCompatibleProvider {
             ));
         }
         Err(stream_state.incomplete_error())
+    }
+}
+
+fn request_payload(request: GenerationRequest) -> RequestPayload {
+    RequestPayload {
+        model: request.model,
+        messages: request
+            .messages
+            .into_iter()
+            .map(|message| RequestMessage {
+                role: role_name(message.role),
+                content: message.content,
+            })
+            .collect(),
+        stream: true,
+        temperature: request.temperature,
+        max_tokens: request.max_output_tokens,
+        stream_options: StreamOptions {
+            include_usage: true,
+        },
     }
 }
 
