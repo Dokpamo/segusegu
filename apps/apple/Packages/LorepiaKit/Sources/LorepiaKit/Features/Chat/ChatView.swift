@@ -1775,8 +1775,6 @@ public struct ChatView: View {
     private func resetComposerExpansion() {
         updateComposerPresentationWithoutAnimation {
             isComposerExpanded = false
-            composerExceedsExpansionLineLimit = false
-            fullscreenComposerExceedsExpansionLineLimit = false
             composerEditorHeight = 0
             fullscreenComposerEditorHeight = 0
             composerAutomaticFocusID = nil
@@ -1819,7 +1817,6 @@ public struct ChatView: View {
     private func focusFullscreenComposer() {
         isComposerFocused = false
         fullscreenComposerEditorHeight = 0
-        fullscreenComposerExceedsExpansionLineLimit = false
         let focusID = UUID()
         fullscreenComposerAutomaticFocusID = focusID
 
