@@ -758,6 +758,32 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -781,13 +807,23 @@ fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_cancel_generation(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_commit_import(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_conversation(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_conversation_branch(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_database_stats(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_provider_profile(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_discard_import(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_edit_user_message(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_character(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_conversation(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_conversation_state(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_settings(
 ): Short
@@ -795,9 +831,15 @@ fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_health_check(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_inspect_import(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_branch_messages(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_characters(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversation_branches(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations_for_character(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_messages(
 ): Short
@@ -807,7 +849,17 @@ fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_open_conversation(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_events(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_regenerate_assistant_message(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_remove_message_from_branch(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_select_conversation_branch(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message_to_branch(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_set_conversation_mode(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_update_settings(
 ): Short
@@ -874,13 +926,23 @@ fun uniffi_lorepia_uniffi_fn_method_lorepiacore_cancel_generation(`ptr`: Pointer
 ): Unit
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_commit_import(`ptr`: Pointer,`inspectionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_create_conversation(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,`title`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_create_conversation_branch(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`fromMessageId`: RustBuffer.ByValue,`title`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_database_stats(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_provider_profile(`ptr`: Pointer,`profileId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_discard_import(`ptr`: Pointer,`inspectionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_edit_user_message(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,`replacementText`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_character(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_conversation(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_conversation_state(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_settings(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -888,9 +950,15 @@ fun uniffi_lorepia_uniffi_fn_method_lorepiacore_health_check(`ptr`: Pointer,unif
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_inspect_import(`ptr`: Pointer,`stagedPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_branch_messages(`ptr`: Pointer,`branchId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_characters(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversation_branches(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversations(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversations_for_character(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_messages(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -900,7 +968,17 @@ fun uniffi_lorepia_uniffi_fn_method_lorepiacore_open_conversation(`ptr`: Pointer
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_events(`ptr`: Pointer,`maxEvents`: Int,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_regenerate_assistant_message(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_remove_message_from_branch(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_select_conversation_branch(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`text`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message_to_branch(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,`text`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_set_conversation_mode(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_update_settings(`ptr`: Pointer,`settings`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -1048,6 +1126,12 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_commit_import() != 10817.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_conversation() != 42878.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_conversation_branch() != 45496.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_database_stats() != 40106.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1057,7 +1141,16 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_discard_import() != 58614.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_edit_user_message() != 1681.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_character() != 14947.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_conversation() != 28073.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_conversation_state() != 54639.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_settings() != 17684.toShort()) {
@@ -1069,10 +1162,19 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_inspect_import() != 2442.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_branch_messages() != 10026.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_characters() != 14524.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversation_branches() != 47027.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations() != 38055.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations_for_character() != 45805.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_messages() != 26339.toShort()) {
@@ -1087,7 +1189,22 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_events() != 26212.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_regenerate_assistant_message() != 55399.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_remove_message_from_branch() != 43222.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_select_conversation_branch() != 62171.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message() != 36804.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message_to_branch() != 19800.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_set_conversation_mode() != 60815.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_update_settings() != 60549.toShort()) {
@@ -1473,13 +1590,23 @@ public interface LorepiaCoreInterface {
     
     fun `commitImport`(`inspectionId`: kotlin.String): FfiCharacter
     
+    fun `createConversation`(`characterId`: kotlin.String, `title`: kotlin.String, `mode`: kotlin.String): FfiConversation
+    
+    fun `createConversationBranch`(`conversationId`: kotlin.String, `fromMessageId`: kotlin.String?, `title`: kotlin.String?): FfiConversationBranch
+    
     fun `databaseStats`(): FfiDatabaseStats
     
     fun `deleteProviderProfile`(`profileId`: kotlin.String)
     
     fun `discardImport`(`inspectionId`: kotlin.String)
     
+    fun `editUserMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `replacementText`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration
+    
     fun `getCharacter`(`characterId`: kotlin.String): FfiCharacter
+    
+    fun `getConversation`(`conversationId`: kotlin.String): FfiConversation
+    
+    fun `getConversationState`(`conversationId`: kotlin.String): FfiConversationState
     
     fun `getSettings`(): FfiAppSettings
     
@@ -1487,9 +1614,15 @@ public interface LorepiaCoreInterface {
     
     fun `inspectImport`(`stagedPath`: kotlin.String): FfiImportInspection
     
+    fun `listBranchMessages`(`branchId`: kotlin.String): List<FfiMessage>
+    
     fun `listCharacters`(): List<FfiCharacter>
     
+    fun `listConversationBranches`(`conversationId`: kotlin.String): List<FfiConversationBranch>
+    
     fun `listConversations`(): List<FfiConversation>
+    
+    fun `listConversationsForCharacter`(`characterId`: kotlin.String): List<FfiConversation>
     
     fun `listMessages`(`conversationId`: kotlin.String): List<FfiMessage>
     
@@ -1502,7 +1635,17 @@ public interface LorepiaCoreInterface {
      */
     fun `pollEvents`(`maxEvents`: kotlin.UInt): FfiEventBatch
     
+    fun `regenerateAssistantMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration
+    
+    fun `removeMessageFromBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String): FfiConversationBranch
+    
+    fun `selectConversationBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String): FfiConversationState
+    
     fun `sendMessage`(`conversationId`: kotlin.String, `text`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): kotlin.String
+    
+    fun `sendMessageToBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `mode`: kotlin.String, `text`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): kotlin.String
+    
+    fun `setConversationMode`(`conversationId`: kotlin.String, `mode`: kotlin.String): FfiConversationState
     
     fun `updateSettings`(`settings`: FfiAppSettings): FfiAppSettings
     
@@ -1619,6 +1762,32 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `createConversation`(`characterId`: kotlin.String, `title`: kotlin.String, `mode`: kotlin.String): FfiConversation {
+            return FfiConverterTypeFfiConversation.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_create_conversation(
+        it, FfiConverterString.lower(`characterId`),FfiConverterString.lower(`title`),FfiConverterString.lower(`mode`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `createConversationBranch`(`conversationId`: kotlin.String, `fromMessageId`: kotlin.String?, `title`: kotlin.String?): FfiConversationBranch {
+            return FfiConverterTypeFfiConversationBranch.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_create_conversation_branch(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterOptionalString.lower(`fromMessageId`),FfiConverterOptionalString.lower(`title`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `databaseStats`(): FfiDatabaseStats {
             return FfiConverterTypeFfiDatabaseStats.lift(
     callWithPointer {
@@ -1656,12 +1825,51 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `editUserMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `replacementText`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration {
+            return FfiConverterTypeFfiMessageActionGeneration.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_edit_user_message(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`messageId`),FfiConverterString.lower(`replacementText`),FfiConverterString.lower(`providerProfileId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `getCharacter`(`characterId`: kotlin.String): FfiCharacter {
             return FfiConverterTypeFfiCharacter.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_get_character(
         it, FfiConverterString.lower(`characterId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `getConversation`(`conversationId`: kotlin.String): FfiConversation {
+            return FfiConverterTypeFfiConversation.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_get_conversation(
+        it, FfiConverterString.lower(`conversationId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `getConversationState`(`conversationId`: kotlin.String): FfiConversationState {
+            return FfiConverterTypeFfiConversationState.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_get_conversation_state(
+        it, FfiConverterString.lower(`conversationId`),_status)
 }
     }
     )
@@ -1708,6 +1916,19 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `listBranchMessages`(`branchId`: kotlin.String): List<FfiMessage> {
+            return FfiConverterSequenceTypeFfiMessage.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_branch_messages(
+        it, FfiConverterString.lower(`branchId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `listCharacters`(): List<FfiCharacter> {
             return FfiConverterSequenceTypeFfiCharacter.lift(
     callWithPointer {
@@ -1721,12 +1942,38 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `listConversationBranches`(`conversationId`: kotlin.String): List<FfiConversationBranch> {
+            return FfiConverterSequenceTypeFfiConversationBranch.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversation_branches(
+        it, FfiConverterString.lower(`conversationId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `listConversations`(): List<FfiConversation> {
             return FfiConverterSequenceTypeFfiConversation.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversations(
         it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listConversationsForCharacter`(`characterId`: kotlin.String): List<FfiConversation> {
+            return FfiConverterSequenceTypeFfiConversation.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversations_for_character(
+        it, FfiConverterString.lower(`characterId`),_status)
 }
     }
     )
@@ -1789,12 +2036,77 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `regenerateAssistantMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration {
+            return FfiConverterTypeFfiMessageActionGeneration.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_regenerate_assistant_message(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`messageId`),FfiConverterString.lower(`providerProfileId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `removeMessageFromBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String): FfiConversationBranch {
+            return FfiConverterTypeFfiConversationBranch.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_remove_message_from_branch(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`messageId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `selectConversationBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String): FfiConversationState {
+            return FfiConverterTypeFfiConversationState.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_select_conversation_branch(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `sendMessage`(`conversationId`: kotlin.String, `text`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): kotlin.String {
             return FfiConverterString.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message(
         it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`text`),FfiConverterString.lower(`providerProfileId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `sendMessageToBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `mode`: kotlin.String, `text`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): kotlin.String {
+            return FfiConverterString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message_to_branch(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`mode`),FfiConverterString.lower(`text`),FfiConverterString.lower(`providerProfileId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `setConversationMode`(`conversationId`: kotlin.String, `mode`: kotlin.String): FfiConversationState {
+            return FfiConverterTypeFfiConversationState.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_set_conversation_mode(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`mode`),_status)
 }
     }
     )
@@ -1965,6 +2277,8 @@ data class FfiChatEvent (
     var `eventVersion`: kotlin.UInt, 
     var `generationId`: kotlin.String, 
     var `conversationId`: kotlin.String, 
+    var `branchId`: kotlin.String?, 
+    var `assistantMessageId`: kotlin.String?, 
     var `sequence`: kotlin.ULong, 
     var `emittedAt`: kotlin.String, 
     var `kind`: kotlin.String, 
@@ -1989,6 +2303,8 @@ public object FfiConverterTypeFfiChatEvent: FfiConverterRustBuffer<FfiChatEvent>
             FfiConverterUInt.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
             FfiConverterULong.read(buf),
             FfiConverterString.read(buf),
             FfiConverterString.read(buf),
@@ -2006,6 +2322,8 @@ public object FfiConverterTypeFfiChatEvent: FfiConverterRustBuffer<FfiChatEvent>
             FfiConverterUInt.allocationSize(value.`eventVersion`) +
             FfiConverterString.allocationSize(value.`generationId`) +
             FfiConverterString.allocationSize(value.`conversationId`) +
+            FfiConverterOptionalString.allocationSize(value.`branchId`) +
+            FfiConverterOptionalString.allocationSize(value.`assistantMessageId`) +
             FfiConverterULong.allocationSize(value.`sequence`) +
             FfiConverterString.allocationSize(value.`emittedAt`) +
             FfiConverterString.allocationSize(value.`kind`) +
@@ -2022,6 +2340,8 @@ public object FfiConverterTypeFfiChatEvent: FfiConverterRustBuffer<FfiChatEvent>
             FfiConverterUInt.write(value.`eventVersion`, buf)
             FfiConverterString.write(value.`generationId`, buf)
             FfiConverterString.write(value.`conversationId`, buf)
+            FfiConverterOptionalString.write(value.`branchId`, buf)
+            FfiConverterOptionalString.write(value.`assistantMessageId`, buf)
             FfiConverterULong.write(value.`sequence`, buf)
             FfiConverterString.write(value.`emittedAt`, buf)
             FfiConverterString.write(value.`kind`, buf)
@@ -2075,6 +2395,98 @@ public object FfiConverterTypeFfiConversation: FfiConverterRustBuffer<FfiConvers
             FfiConverterString.write(value.`characterId`, buf)
             FfiConverterString.write(value.`title`, buf)
             FfiConverterString.write(value.`createdAt`, buf)
+            FfiConverterString.write(value.`updatedAt`, buf)
+    }
+}
+
+
+
+data class FfiConversationBranch (
+    var `id`: kotlin.String, 
+    var `conversationId`: kotlin.String, 
+    var `title`: kotlin.String?, 
+    var `forkMessageId`: kotlin.String?, 
+    var `headMessageId`: kotlin.String?, 
+    var `createdAt`: kotlin.String, 
+    var `updatedAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiConversationBranch: FfiConverterRustBuffer<FfiConversationBranch> {
+    override fun read(buf: ByteBuffer): FfiConversationBranch {
+        return FfiConversationBranch(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiConversationBranch) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`conversationId`) +
+            FfiConverterOptionalString.allocationSize(value.`title`) +
+            FfiConverterOptionalString.allocationSize(value.`forkMessageId`) +
+            FfiConverterOptionalString.allocationSize(value.`headMessageId`) +
+            FfiConverterString.allocationSize(value.`createdAt`) +
+            FfiConverterString.allocationSize(value.`updatedAt`)
+    )
+
+    override fun write(value: FfiConversationBranch, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`conversationId`, buf)
+            FfiConverterOptionalString.write(value.`title`, buf)
+            FfiConverterOptionalString.write(value.`forkMessageId`, buf)
+            FfiConverterOptionalString.write(value.`headMessageId`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+            FfiConverterString.write(value.`updatedAt`, buf)
+    }
+}
+
+
+
+data class FfiConversationState (
+    var `conversationId`: kotlin.String, 
+    var `activeBranchId`: kotlin.String, 
+    var `selectedMode`: kotlin.String, 
+    var `updatedAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiConversationState: FfiConverterRustBuffer<FfiConversationState> {
+    override fun read(buf: ByteBuffer): FfiConversationState {
+        return FfiConversationState(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiConversationState) = (
+            FfiConverterString.allocationSize(value.`conversationId`) +
+            FfiConverterString.allocationSize(value.`activeBranchId`) +
+            FfiConverterString.allocationSize(value.`selectedMode`) +
+            FfiConverterString.allocationSize(value.`updatedAt`)
+    )
+
+    override fun write(value: FfiConversationState, buf: ByteBuffer) {
+            FfiConverterString.write(value.`conversationId`, buf)
+            FfiConverterString.write(value.`activeBranchId`, buf)
+            FfiConverterString.write(value.`selectedMode`, buf)
             FfiConverterString.write(value.`updatedAt`, buf)
     }
 }
@@ -2434,6 +2846,38 @@ public object FfiConverterTypeFfiMessage: FfiConverterRustBuffer<FfiMessage> {
             FfiConverterString.write(value.`status`, buf)
             FfiConverterOptionalString.write(value.`generationId`, buf)
             FfiConverterString.write(value.`createdAt`, buf)
+    }
+}
+
+
+
+data class FfiMessageActionGeneration (
+    var `branch`: FfiConversationBranch, 
+    var `generationId`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiMessageActionGeneration: FfiConverterRustBuffer<FfiMessageActionGeneration> {
+    override fun read(buf: ByteBuffer): FfiMessageActionGeneration {
+        return FfiMessageActionGeneration(
+            FfiConverterTypeFfiConversationBranch.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiMessageActionGeneration) = (
+            FfiConverterTypeFfiConversationBranch.allocationSize(value.`branch`) +
+            FfiConverterString.allocationSize(value.`generationId`)
+    )
+
+    override fun write(value: FfiMessageActionGeneration, buf: ByteBuffer) {
+            FfiConverterTypeFfiConversationBranch.write(value.`branch`, buf)
+            FfiConverterString.write(value.`generationId`, buf)
     }
 }
 
@@ -2799,6 +3243,34 @@ public object FfiConverterSequenceTypeFfiConversation: FfiConverterRustBuffer<Li
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeFfiConversation.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiConversationBranch: FfiConverterRustBuffer<List<FfiConversationBranch>> {
+    override fun read(buf: ByteBuffer): List<FfiConversationBranch> {
+        val len = buf.getInt()
+        return List<FfiConversationBranch>(len) {
+            FfiConverterTypeFfiConversationBranch.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiConversationBranch>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiConversationBranch.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiConversationBranch>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiConversationBranch.write(it, buf)
         }
     }
 }

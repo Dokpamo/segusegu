@@ -39,6 +39,7 @@ public enum CoreClientFailure: Error, Equatable, Sendable {
     case bindingsUnavailable
     case startupFailed(String)
     case invalidResponse(String)
+    case configurationRequired(String)
 }
 
 extension CoreClientFailure: LocalizedError {
@@ -50,6 +51,8 @@ extension CoreClientFailure: LocalizedError {
             "Rust 코어를 열지 못했습니다: \(message)"
         case let .invalidResponse(message):
             "Rust 코어 응답을 해석할 수 없습니다: \(message)"
+        case let .configurationRequired(message):
+            message
         }
     }
 }
@@ -65,13 +68,72 @@ public protocol CoreClient: Sendable {
     func commitImport(inspectionID: String) async throws -> CoreCharacter
     func listConversations() async throws -> [CoreConversation]
     func openConversation(characterID: String) async throws -> CoreConversation
+    func createConversation(
+        characterID: String,
+        title: String,
+        mode: ConversationMode
+    ) async throws -> CoreConversation
+    func listConversations(characterID: String) async throws -> [CoreConversation]
+    func getConversation(id: String) async throws -> CoreConversation
+    func getConversationState(
+        conversationID: String
+    ) async throws -> CoreConversationState
+    func listConversationBranches(
+        conversationID: String
+    ) async throws -> [CoreConversationBranch]
+    func createConversationBranch(
+        conversationID: String,
+        fromMessageID: String?,
+        title: String?
+    ) async throws -> CoreConversationBranch
+    func selectConversationBranch(
+        conversationID: String,
+        branchID: String
+    ) async throws -> CoreConversationState
+    func setConversationMode(
+        conversationID: String,
+        mode: ConversationMode
+    ) async throws -> CoreConversationState
     func listMessages(conversationID: String) async throws -> [ChatMessage]
+    func listBranchMessages(branchID: String) async throws -> [ChatMessage]
     func sendMessage(
         conversationID: String,
         text: String,
         providerProfileID: String,
         credential: String?
     ) async throws -> String
+    func sendMessageToBranch(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        mode: ConversationMode,
+        text: String,
+        providerProfileID: String,
+        credential: String?
+    ) async throws -> String
+    func editUserMessage(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        replacementText: String,
+        providerProfileID: String,
+        credential: String?
+    ) async throws -> CoreMessageActionGeneration
+    func regenerateAssistantMessage(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        providerProfileID: String,
+        credential: String?
+    ) async throws -> CoreMessageActionGeneration
+    func removeMessageFromBranch(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String
+    ) async throws -> CoreConversationBranch
     func cancelGeneration(generationID: String) async throws
     func pollEvents(maxEvents: UInt32) async throws -> ChatEventBatch
     func listProviderProfiles() async throws -> [ProviderProfile]
@@ -79,6 +141,9 @@ public protocol CoreClient: Sendable {
     func deleteProviderProfile(id: String) async throws
     func getSettings() async throws -> CoreAppSettings
     func updateSettings(_ settings: CoreAppSettings) async throws -> CoreAppSettings
+    func setPreservePartialGenerations(_ value: Bool) async throws
+        -> CoreAppSettings
+    func selectProviderProfile(id: String?) async throws -> CoreAppSettings
     func databaseStats() async throws -> DatabaseStats
 }
 

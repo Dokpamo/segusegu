@@ -331,9 +331,11 @@ private fun event(
     kind: String,
     text: String? = null,
 ) = ChatEvent(
-    eventVersion = 1u,
+    eventVersion = 2u,
     generationId = generationId,
     conversationId = conversationId,
+    branchId = "branch-1",
+    assistantMessageId = "assistant-1",
     sequence = sequence,
     emittedAt = "2026-01-01T00:00:01Z",
     kind = kind,

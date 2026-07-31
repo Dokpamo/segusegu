@@ -31,7 +31,7 @@ class ChatViewModel(
     private var loadJob: Job? = null
     private var pollingJob: Job? = null
     private var routeReconciliationJob: Job? = null
-    private var supportedEventVersion: UInt = 1u
+    private var supportedEventVersion: UInt = 2u
     private var lastSequence = 0uL
     private var routeActive = true
 

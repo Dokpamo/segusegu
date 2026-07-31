@@ -81,6 +81,12 @@ Platform instructions:
 Cross-platform test layers, fixture rules, and repeatable performance scenarios
 are documented in [the testing guide](docs/development/testing.md).
 
+Current review and research records:
+
+- [2026-07-28 repository code review](docs/reviews/2026-07-28-repository-review.md)
+- [Hermes/OpenClaw agent-capability research](docs/architecture/agent-capabilities-research.md)
+- [third-party license intake policy](docs/development/third-party-license-policy.md)
+
 The current product has no account system, operated backend, cloud sync,
 billing, marketplace, or web frontend. Model requests go only to an endpoint
 explicitly selected by the user.

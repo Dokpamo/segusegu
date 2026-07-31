@@ -62,7 +62,7 @@ failed or cancelled partial assistant response is preserved.
 ### C ABI contract
 
 `bindings/c-api/include/lorepia.h` at the repository root is the source of
-truth. `apps/windows/include/lorepia.h` is its checked-in mirror. ABI version 2
+truth. `apps/windows/include/lorepia.h` is its checked-in mirror. ABI version 3
 covers:
 
 - core create, destroy, version, health, and structured last error;
@@ -77,7 +77,9 @@ owned by .NET through `NativeBuffer` and is released exactly once with
 `lorepia_buffer_free`. A successful core pointer is owned by one
 `SafeCoreHandle` and released exactly once with `lorepia_core_destroy`.
 
-`CoreClient` requires ABI version `2`, validates high-level inputs, uses strict
+ABI version 3 is the first revision whose event batches may contain event
+schema version 2 branch and assistant-message routing metadata. `CoreClient`
+requires ABI version `3`, validates high-level inputs, uses strict
 UTF-8 decoding, and maps native error JSON to `CoreInteropException`
 properties: `Status`, `Code`, `Recoverable`, and `OperationId`.
 

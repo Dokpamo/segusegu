@@ -2,4 +2,7 @@
 
 mod database;
 
-pub use database::{DatabaseStats, StagedAssetImport, Storage};
+pub use database::{
+    DatabaseStats, MessageGenerationAction, MessageGenerationActionContext, StagedAssetImport,
+    Storage,
+};

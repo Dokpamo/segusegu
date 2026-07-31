@@ -150,6 +150,8 @@ data class ChatEvent(
     val eventVersion: UInt,
     val generationId: String,
     val conversationId: String,
+    val branchId: String?,
+    val assistantMessageId: String?,
     val sequence: ULong,
     val emittedAt: String,
     val kind: String,

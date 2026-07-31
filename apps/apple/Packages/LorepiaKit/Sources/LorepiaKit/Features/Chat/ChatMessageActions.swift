@@ -1,0 +1,456 @@
+import SwiftUI
+
+public enum ChatMessageAction: String, CaseIterable, Identifiable, Sendable {
+    case edit
+    case copy
+    case regenerate
+    case branch
+    case delete
+
+    public var id: Self {
+        self
+    }
+
+    public var title: String {
+        switch self {
+        case .edit:
+            "편집"
+        case .copy:
+            "복사"
+        case .regenerate:
+            "재생성"
+        case .branch:
+            "여기서 분기"
+        case .delete:
+            "삭제"
+        }
+    }
+
+    /// Used where the platform owns icon rasterization, such as context menus.
+    ///
+    /// LorePia-owned surfaces use `glyph`; native menus keep a system symbol
+    /// because their bridge does not reliably preserve an arbitrary Shape.
+    public var systemImage: String {
+        switch self {
+        case .edit:
+            "pencil"
+        case .copy:
+            "doc.on.doc"
+        case .regenerate:
+            "arrow.clockwise"
+        case .branch:
+            "arrow.triangle.branch"
+        case .delete:
+            "trash"
+        }
+    }
+
+    /// Used in surfaces we draw ourselves, where one icon family matters more
+    /// than matching the system symbol set.
+    var glyph: LorepiaGlyph {
+        switch self {
+        case .edit:
+            .edit
+        case .copy:
+            .copy
+        case .regenerate:
+            .retry
+        case .branch:
+            .branch
+        case .delete:
+            .delete
+        }
+    }
+}
+
+enum ChatMessageActionPresentation {
+    static func actions(
+        for role: ChatMessage.Role
+    ) -> [ChatMessageAction] {
+        switch role {
+        case .user:
+            [.edit, .copy, .branch, .delete]
+        case .assistant:
+            [.copy, .regenerate, .branch, .delete]
+        case .system, .notice:
+            []
+        }
+    }
+}
+
+/// The actions as a menu: each one named, in LorePia's own glyphs.
+public struct ChatMessageActionMenu: View {
+    private let message: ChatMessage
+    private let isMutationEnabled: Bool
+    private let isCopied: Bool
+    private let onAction: (ChatMessageAction) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var pendingAction: ChatMessageAction?
+
+    public init(
+        message: ChatMessage,
+        isMutationEnabled: Bool,
+        isCopied: Bool = false,
+        onAction: @escaping (ChatMessageAction) -> Void
+    ) {
+        self.message = message
+        self.isMutationEnabled = isMutationEnabled
+        self.isCopied = isCopied
+        self.onAction = onAction
+    }
+
+    public var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(
+                ChatMessageActionPresentation.actions(for: message.role)
+            ) { action in
+                Button {
+                    // Copying stays open long enough to show that it worked.
+                    if action == .copy {
+                        onAction(action)
+                    } else {
+                        // Presenting an edit sheet or delete dialog while this
+                        // popover is still leaving can make SwiftUI reject the
+                        // second presentation. Deliver the action only after
+                        // the menu has actually disappeared.
+                        pendingAction = action
+                        dismiss()
+                    }
+                } label: {
+                    HStack(spacing: LorepiaSpacing.snug) {
+                        LorepiaGlyphView(
+                            action == .copy && isCopied ? .check : action.glyph,
+                            size: 18
+                        )
+                        .frame(width: 22)
+
+                        Text(title(for: action))
+                            .font(.body)
+
+                        Spacer(minLength: 0)
+                    }
+                    .foregroundStyle(color(for: action))
+                    .padding(.horizontal, LorepiaSpacing.standard)
+                    .frame(height: 44)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(ChatMessageActionMenuButtonStyle())
+                .disabled(!isEnabled(action))
+                .accessibilityIdentifier(
+                    "chat-message-action-\(action.rawValue)-\(message.role.rawValue)-\(message.id)"
+                )
+            }
+        }
+        .padding(.vertical, LorepiaSpacing.compact)
+        .frame(minWidth: 208)
+        .onDisappear {
+            guard let pendingAction else {
+                return
+            }
+            self.pendingAction = nil
+            onAction(pendingAction)
+        }
+    }
+
+    private func title(for action: ChatMessageAction) -> String {
+        action == .copy && isCopied ? "복사됨" : action.title
+    }
+
+    private func color(for action: ChatMessageAction) -> Color {
+        if action == .delete {
+            return .red
+        }
+        if action == .copy, isCopied {
+            return LorepiaColor.loreAccent
+        }
+        return .primary
+    }
+
+    private func isEnabled(_ action: ChatMessageAction) -> Bool {
+        if action == .copy {
+            return !message.text.isEmpty
+        }
+        return isMutationEnabled
+    }
+}
+
+private struct ChatMessageActionMenuButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(
+                configuration.isPressed
+                    ? Color.primary.opacity(0.08)
+                    : Color.clear
+            )
+            .opacity(isEnabled ? 1 : 0.35)
+    }
+}
+
+public struct ChatMessageActionRow: View {
+    private let message: ChatMessage
+    private let isMutationEnabled: Bool
+    private let isCopied: Bool
+    private let onAction: (ChatMessageAction) -> Void
+
+    @ScaledMetric(relativeTo: .body) private var scaledGlyphSize = 16
+
+    public init(
+        message: ChatMessage,
+        isMutationEnabled: Bool,
+        isCopied: Bool = false,
+        onAction: @escaping (ChatMessageAction) -> Void
+    ) {
+        self.message = message
+        self.isMutationEnabled = isMutationEnabled
+        self.isCopied = isCopied
+        self.onAction = onAction
+    }
+
+    public var body: some View {
+        HStack(spacing: 0) {
+            ForEach(
+                ChatMessageActionPresentation.actions(for: message.role)
+            ) { action in
+                Button(role: action == .delete ? .destructive : nil) {
+                    onAction(action)
+                } label: {
+                    LorepiaGlyphView(
+                        action == .copy && isCopied ? .check : action.glyph,
+                        size: glyphSize
+                    )
+                    .offset(y: -8)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(ChatMessageActionButtonStyle())
+                .foregroundStyle(color(for: action))
+                .disabled(!isEnabled(action))
+                .accessibilityLabel(accessibilityLabel(for: action))
+                .accessibilityHint(accessibilityHint(for: action))
+                .accessibilityIdentifier(
+                    "chat-message-action-\(action.rawValue)-\(message.role.rawValue)-\(message.id)"
+                )
+            }
+        }
+        // Each button keeps its 44pt target, but the padding those targets add
+        // around the outer glyphs would float the row inside the bubble's
+        // width. Pulling it back lines the end glyphs up with the bubble edge.
+        .padding(.horizontal, -(44 - glyphSize) / 2)
+        .fixedSize(horizontal: true, vertical: false)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(
+            "chat-message-action-row-\(message.role.rawValue)-\(message.id)"
+        )
+    }
+
+    /// Our glyphs sit on a 24-unit grid, so they need more room than an SF
+    /// Symbol at the same point size to read at the same optical weight.
+    private var glyphSize: CGFloat {
+        min(max(scaledGlyphSize, 15), 18) * 1.25
+    }
+
+    private func color(for action: ChatMessageAction) -> Color {
+        if action == .copy, isCopied {
+            return LorepiaColor.loreAccent
+        }
+        return Color.secondary
+    }
+
+    private func isEnabled(_ action: ChatMessageAction) -> Bool {
+        if action == .copy {
+            return !message.text.isEmpty
+        }
+        return isMutationEnabled
+    }
+
+    private func accessibilityHint(
+        for action: ChatMessageAction
+    ) -> String {
+        switch action {
+        case .edit:
+            "이 메시지를 수정하고 새 흐름에서 응답을 다시 생성합니다"
+        case .copy:
+            "메시지 내용을 클립보드에 복사합니다"
+        case .regenerate:
+            "새 흐름에서 이 응답을 다시 생성합니다"
+        case .branch:
+            "이 메시지까지 포함한 새 대화 흐름을 만듭니다"
+        case .delete:
+            "확인 후 이 메시지와 이후 대화를 현재 흐름에서 제거합니다"
+        }
+    }
+
+    private func accessibilityLabel(
+        for action: ChatMessageAction
+    ) -> String {
+        if action == .copy, isCopied {
+            return "복사됨"
+        }
+        return switch (message.role, action) {
+        case (.user, .edit):
+            "메시지 편집"
+        case (.user, .copy):
+            "메시지 복사"
+        case (.assistant, .copy):
+            "응답 복사"
+        case (.assistant, .regenerate):
+            "응답 재생성"
+        case (_, .branch):
+            "여기서 분기"
+        case (.user, .delete):
+            "메시지 삭제"
+        case (.assistant, .delete):
+            "응답 삭제"
+        default:
+            action.title
+        }
+    }
+}
+
+private struct ChatMessageActionButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background {
+                Circle()
+                    .fill(.thinMaterial)
+                    .overlay {
+                        Circle()
+                            .strokeBorder(
+                                Color.primary.opacity(
+                                    colorSchemeContrast == .increased
+                                        ? 0.22
+                                        : 0.08
+                                ),
+                                lineWidth: 0.5
+                            )
+                    }
+                    .frame(width: 34, height: 34)
+                    .offset(y: -8)
+                    .opacity(configuration.isPressed ? 1 : 0)
+                    .scaleEffect(
+                        reduceMotion
+                            ? 1
+                            : (configuration.isPressed ? 1 : 0.86)
+                    )
+            }
+            .scaleEffect(
+                reduceMotion
+                    ? 1
+                    : (configuration.isPressed ? 0.94 : 1)
+            )
+            .opacity(isEnabled ? 1 : 0.36)
+            .chatMessageActionSymbolPressEffect(
+                isActive:
+                    isEnabled
+                        && configuration.isPressed
+                        && !reduceMotion
+            )
+            .animation(
+                reduceMotion
+                    ? nil
+                    : .snappy(duration: 0.18, extraBounce: 0.02),
+                value: configuration.isPressed
+            )
+    }
+}
+
+public extension View {
+    /// The action row as a popover anchored to the message.
+    ///
+    /// It keeps LorePia's own glyphs, which a system context menu would
+    /// replace with SF Symbols, and it costs the transcript no height.
+    @ViewBuilder
+    func chatMessageActionPopover(
+        isPresented: Binding<Bool>,
+        message: ChatMessage,
+        isMutationEnabled: Bool,
+        isCopied: Bool,
+        onAction: @escaping (ChatMessageAction) -> Void
+    ) -> some View {
+        popover(isPresented: isPresented, arrowEdge: .top) {
+            ChatMessageActionMenu(
+                message: message,
+                isMutationEnabled: isMutationEnabled,
+                isCopied: isCopied,
+                onAction: onAction
+            )
+            .chatMessageActionPopoverSizing()
+        }
+    }
+
+    @ViewBuilder
+    func chatMessageContextMenu(
+        message: ChatMessage,
+        isMutationEnabled: Bool,
+        onAction: @escaping (ChatMessageAction) -> Void
+    ) -> some View {
+        let actions = ChatMessageActionPresentation.actions(
+            for: message.role
+        )
+        if actions.isEmpty {
+            self
+        } else {
+            contextMenu {
+                ForEach(actions) { action in
+                    Button(
+                        role: action == .delete ? .destructive : nil
+                    ) {
+                        onAction(action)
+                    } label: {
+                        Label(action.title, systemImage: action.systemImage)
+                    }
+                    .disabled(
+                        action == .copy
+                            ? message.text.isEmpty
+                            : !isMutationEnabled
+                    )
+                }
+            }
+        }
+    }
+}
+
+private extension View {
+    /// iPhone would present a popover as a sheet without this.
+    @ViewBuilder
+    func chatMessageActionPopoverSizing() -> some View {
+#if os(iOS)
+        presentationCompactAdaptation(.popover)
+#else
+        self
+#endif
+    }
+
+    @ViewBuilder
+    func chatMessageActionSymbolPressEffect(isActive: Bool) -> some View {
+#if compiler(>=6.2)
+        if #available(iOS 26.0, macOS 26.0, *) {
+            symbolEffect(
+                .drawOn.wholeSymbol,
+                options: .nonRepeating.speed(1.6),
+                isActive: isActive
+            )
+        } else {
+            symbolEffect(
+                .pulse,
+                options: .nonRepeating.speed(1.6),
+                isActive: isActive
+            )
+        }
+#else
+        symbolEffect(
+            .pulse,
+            options: .nonRepeating.speed(1.6),
+            isActive: isActive
+        )
+#endif
+    }
+}

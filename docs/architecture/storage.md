@@ -30,11 +30,27 @@ non-following metadata. A symlink or other non-directory in that hierarchy is
 reported as `storage_corrupted`; import and recovery never traverse it.
 
 The schema stores characters, sources, assets, character-to-asset roles,
-conversations, messages, non-secret provider profiles, application settings,
-and import jobs. WAL and foreign keys are enabled. A file and SQLite cannot
-share one transaction, so the import journal records source and asset hashes
-for deterministic cleanup after an interrupted cross-resource commit. An
-inspection is removed from the in-memory review map when commit or discard
-claims it, so concurrent commit/commit and commit/discard races have one
-winner. A failed commit restores the review only after a database read proves
-that its character was not committed.
+conversation rooms, parent-linked messages, branches, per-room active
+branch/mode state, generation snapshots, non-secret provider profiles,
+application settings, and import jobs. A version-3 migration converts each
+legacy room's timestamp-ordered messages into one safe default lineage before
+creating its root branch and `chat` state. WAL and foreign keys are enabled.
+
+Branch publication uses an expected-head comparison in the same SQLite
+transaction that inserts the user message, pending assistant message, and
+generation. Branch rows point at their current head while messages retain their
+parent, so common ancestors are shared and sibling histories remain isolated.
+
+Edit and regeneration publish a new branch, replacement user message, pending
+assistant message, generation record, and active-branch selection in one
+transaction after revalidating the source lineage and expected head. Logical
+message removal updates only the selected branch head with the same compare-and-
+swap guard. It never deletes shared message rows, and therefore cannot corrupt a
+sibling branch that still reaches them.
+
+A file and SQLite cannot share one transaction, so the import journal records
+source and asset hashes for deterministic cleanup after an interrupted
+cross-resource commit. An inspection is removed from the in-memory review map
+when commit or discard claims it, so concurrent commit/commit and
+commit/discard races have one winner. A failed commit restores the review only
+after a database read proves that its character was not committed.

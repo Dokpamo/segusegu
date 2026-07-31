@@ -2,62 +2,78 @@ import SwiftUI
 
 public struct ImportReviewView: View {
     @ObservedObject private var viewModel: ImportReviewViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let onPickFile: () -> Void
     private let onFinished: () -> Void
+    private let finishTitle: String
 
     public init(
         viewModel: ImportReviewViewModel,
         onPickFile: @escaping () -> Void,
+        finishTitle: String = "서재로 이동",
         onFinished: @escaping () -> Void = {}
     ) {
         self.viewModel = viewModel
         self.onPickFile = onPickFile
+        self.finishTitle = finishTitle
         self.onFinished = onFinished
     }
 
     public var body: some View {
         Group {
-            switch viewModel.state {
-            case .empty:
-                ContentUnavailableView {
-                    Label("검토할 파일이 없습니다", systemImage: "doc.badge.plus")
-                } description: {
-                    Text("플랫폼 문서 선택기에서 캐릭터 패키지를 선택하세요.")
-                } actions: {
-                    Button("파일 선택", action: onPickFile)
-                        .buttonStyle(.borderedProminent)
-                }
-            case let .loading(fileName):
-                progress(title: "안전하게 복사하고 검사하는 중", detail: fileName)
-            case let .review(inspection):
-                review(inspection, commitError: nil)
-            case let .committing(inspection):
-                progress(title: "서재에 저장하는 중", detail: inspection.displayName)
-            case let .completed(character):
-                ContentUnavailableView {
-                    Label("가져오기 완료", systemImage: "checkmark.circle.fill")
-                } description: {
-                    Text("\(character.name)을(를) 서재에 저장했습니다.")
-                } actions: {
-                    Button("서재로 이동", action: onFinished)
-                        .buttonStyle(.borderedProminent)
-                }
-            case let .commitFailed(inspection, message):
-                review(inspection, commitError: message)
-            case let .failed(fileName, message):
-                ContentUnavailableView {
-                    Label("가져오지 못했습니다", systemImage: "exclamationmark.triangle")
-                } description: {
-                    VStack(spacing: LorepiaSpacing.compact) {
-                        Text(fileName)
-                        Text(message)
+            Group {
+                switch viewModel.state {
+                case .empty:
+                    ContentUnavailableView {
+                        Label("검토할 파일이 없습니다", systemImage: "doc.badge.plus")
+                    } description: {
+                        Text("플랫폼 문서 선택기에서 캐릭터 패키지를 선택하세요.")
+                    } actions: {
+                        Button("파일 선택", action: onPickFile)
+                            .buttonStyle(.borderedProminent)
                     }
-                } actions: {
-                    Button("다른 파일 선택", action: onPickFile)
-                        .buttonStyle(.borderedProminent)
+                case let .loading(fileName):
+                    progress(title: "안전하게 복사하고 검사하는 중", detail: fileName)
+                case let .review(inspection):
+                    review(inspection, commitError: nil)
+                case let .committing(inspection):
+                    progress(title: "서재에 저장하는 중", detail: inspection.displayName)
+                case let .completed(character):
+                    ContentUnavailableView {
+                        LorepiaGlyphLabel(
+                            "가져오기 완료",
+                            glyph: .check,
+                            size: 24
+                        )
+                    } description: {
+                        Text("\(character.name)을(를) 서재에 저장했습니다.")
+                    } actions: {
+                        Button(finishTitle, action: onFinished)
+                            .buttonStyle(.borderedProminent)
+                    }
+                case let .commitFailed(inspection, message):
+                    review(inspection, commitError: message)
+                case let .failed(fileName, message):
+                    ContentUnavailableView {
+                        Label("가져오지 못했습니다", systemImage: "exclamationmark.triangle")
+                    } description: {
+                        VStack(spacing: LorepiaSpacing.compact) {
+                            Text(fileName)
+                            Text(message)
+                        }
+                    } actions: {
+                        Button("다른 파일 선택", action: onPickFile)
+                            .buttonStyle(.borderedProminent)
+                    }
                 }
             }
+            .id(statePhase)
+            .transition(.opacity)
         }
+        .animation(
+            reduceMotion ? nil : .smooth(duration: 0.22),
+            value: statePhase
+        )
         .padding(LorepiaSpacing.standard)
         .onDisappear {
             Task {
@@ -74,9 +90,12 @@ public struct ImportReviewView: View {
             VStack(alignment: .leading, spacing: LorepiaSpacing.roomy) {
                 if let commitError {
                     VStack(alignment: .leading, spacing: LorepiaSpacing.compact) {
-                        Label("저장하지 못했습니다", systemImage: "arrow.clockwise.circle")
-                            .font(.headline)
-                            .foregroundStyle(.orange)
+                        LorepiaGlyphLabel(
+                            "저장하지 못했습니다",
+                            glyph: .retry
+                        )
+                        .font(.headline)
+                        .foregroundStyle(.orange)
                         Text(commitError)
                             .font(.callout)
                         Text("검사 결과는 유지되었습니다. 다시 저장하거나 안전하게 버릴 수 있습니다.")
@@ -88,7 +107,10 @@ public struct ImportReviewView: View {
                 }
 
                 VStack(alignment: .leading, spacing: LorepiaSpacing.compact) {
-                    Label("Rust 코어 검사 결과", systemImage: "checkmark.shield")
+                    LorepiaGlyphLabel(
+                        "Rust 코어 검사 결과",
+                        glyph: .shield
+                    )
                         .font(.headline)
                     Text(inspection.displayName)
                         .font(.title3)
@@ -169,32 +191,77 @@ public struct ImportReviewView: View {
                     .accessibilityElement(children: .combine)
                 }
 
-                HStack {
-                    Button(
-                        commitError == nil ? "취소" : "검사 결과 버리기",
-                        role: commitError == nil ? nil : .destructive
-                    ) {
-                        Task {
-                            await viewModel.discardPending()
-                        }
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        discardButton(commitError: commitError)
+                        Spacer()
+                        commitButton(
+                            inspection: inspection,
+                            commitError: commitError
+                        )
                     }
-                    Spacer()
-                    Button(commitError == nil ? "서재에 저장" : "다시 저장") {
-                        Task {
-                            await viewModel.commit()
-                        }
+
+                    VStack(spacing: LorepiaSpacing.compact) {
+                        commitButton(
+                            inspection: inspection,
+                            commitError: commitError
+                        )
+                        .frame(maxWidth: .infinity)
+                        discardButton(commitError: commitError)
+                            .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!inspection.isAllowed)
-                    .accessibilityHint(
-                        inspection.isAllowed
-                            ? "검사한 콘텐츠를 앱 서재에 저장합니다"
-                            : "검사 결과에 차단 사유가 있어 저장할 수 없습니다"
-                    )
                 }
             }
             .frame(maxWidth: 680)
         }
+    }
+
+    private var statePhase: Int {
+        switch viewModel.state {
+        case .empty:
+            0
+        case .loading:
+            1
+        case .review:
+            2
+        case .committing:
+            3
+        case .completed:
+            4
+        case .commitFailed:
+            5
+        case .failed:
+            6
+        }
+    }
+
+    private func discardButton(commitError: String?) -> some View {
+        Button(
+            commitError == nil ? "취소" : "검사 결과 버리기",
+            role: commitError == nil ? nil : .destructive
+        ) {
+            Task {
+                await viewModel.discardPending()
+            }
+        }
+    }
+
+    private func commitButton(
+        inspection: ImportInspection,
+        commitError: String?
+    ) -> some View {
+        Button(commitError == nil ? "서재에 저장" : "다시 저장") {
+            Task {
+                await viewModel.commit()
+            }
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(!inspection.isAllowed)
+        .accessibilityHint(
+            inspection.isAllowed
+                ? "검사한 콘텐츠를 앱 서재에 저장합니다"
+                : "검사 결과에 차단 사유가 있어 저장할 수 없습니다"
+        )
     }
 
     private func progress(title: String, detail: String) -> some View {

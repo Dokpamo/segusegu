@@ -5,8 +5,8 @@
 This directory contains two native SwiftUI applications in one Xcode
 workspace:
 
-- `LorepiaIOS` owns the iPhone and iPad app lifecycle, tab navigation,
-  document picking, and other iOS integration.
+- `LorepiaIOS` owns the iPhone and iPad app lifecycle, tab navigation, and
+  other iOS integration.
 - `LorepiaMac` owns the macOS app lifecycle, split-view navigation, menus,
   keyboard shortcuts, document picking, and drop handling.
 - `Packages/LorepiaKit` owns shared native state, view models, small SwiftUI
@@ -14,22 +14,33 @@ workspace:
   adapter.
 
 Rust remains the only owner of package parsing, domain rules, SQLite
-persistence, chat orchestration, and provider networking. Swift copies a
-security-scoped document into a bounded app-owned staging directory, then
-passes only that staged path to Rust. Neither Apple app parses a content
-package or accesses SQLite.
+persistence, chat orchestration, and provider networking. When a platform
+host exposes import, Swift copies a security-scoped document into a bounded
+app-owned staging directory, then passes only that staged path to Rust.
+Neither Apple app parses a content package or accesses SQLite.
 
 The implemented native vertical slices are:
 
+- iOS Home is intentionally reduced to one lower-screen `추가하기` action
+  that opens an otherwise empty Create tab. Conversation-list rows do not
+  render a separate chat/story mode badge.
+- Matching edit, copy, regenerate, branch, delete, and selection actions in
+  LorePia-owned surfaces use the LorePia-drawn glyph family. Platform symbols
+  remain for native menus and where that family has no semantic counterpart,
+  such as tabs, warnings, modes, and chevrons.
 - Library reload and character selection from the persisted Rust store.
 - Import staging with a 128 MiB maximum, inspection review, warning and block
   display, discard, commit, and Library refresh. A failed commit retains the
   Rust-owned inspection for retry or discard. A cancelled transport copy
-  removes its partial staging file.
+  removes its partial staging file. The shared flow remains available to
+  native hosts that expose import; the intentionally blank iOS Create tab
+  currently provides no document-picker or import entry point.
 - Conversation restore by character, persisted message reload, send,
   streaming delta polling, dropped-event recovery, generation and sequence
-  filtering, and cancel. Empty-poll intervals and view resume reconcile
-  against persisted messages.
+  filtering, and cancel. Chat and story mode plus branch selection live in the
+  native room-settings sheet. User and assistant messages expose compact,
+  always-visible copy, edit or regenerate, branch, and logical-delete actions.
+  Empty-poll intervals and view resume reconcile against persisted messages.
 - Provider profile create, update, delete, and selected-provider settings.
 - API credentials stored only in Keychain. Credentials are not placed in the
   Rust database or application logs.
@@ -39,12 +50,13 @@ identifier, media type, byte count, and unsupported optional CCv3 field names
 returned by Rust. Swift does not receive a Rust staging path or raw preview
 bytes.
 
-The `CoreClient` adapter maps the complete UniFFI v2 surface: version metadata,
+The `CoreClient` adapter maps the complete UniFFI v4 surface: version metadata,
 health, characters, import inspection, commit and discard, conversations,
-messages, send, cancel, event batches, provider profiles, settings, and
-database statistics. A production build without the UniFFI binary shows an
-explicit unavailable-core state. `FakeCoreClient` is selected explicitly by
-tests and previews; it is not a production fallback.
+messages, branch-safe edit/regeneration/removal, send, cancel, event batches,
+provider profiles, settings, and database statistics. A production build
+without the UniFFI binary shows an explicit unavailable-core state.
+`FakeCoreClient` is selected explicitly by tests and previews; it is not a
+production fallback.
 
 This repository intentionally has no open-source license. Its source and
 generated bindings do not grant permission to copy, redistribute, or
@@ -184,6 +196,45 @@ Open the committed workspace and choose `LorepiaIOS` or `LorepiaMac`:
 ```bash
 open apps/apple/Lorepia.xcworkspace
 ```
+
+The standard Debug Run action for `LorepiaIOS` enables
+`--lorepia-dev-fixtures`. This loads the comprehensive, project-owned synthetic
+development catalog in memory so character browsing, conversation history,
+search, long and empty content, message states, provider selection, and chat
+actions can be exercised without setup. The main catalog contains 12 synthetic
+characters, 36 rooms, three provider profiles, and a prebuilt two-branch story.
+
+Additional development scenarios can be selected by replacing the standard
+argument in **Product > Scheme > Edit Scheme > Run > Arguments**:
+
+- `--lorepia-dev-empty` loads the completely empty library, conversation, and
+  provider state.
+- `--lorepia-dev-provider-missing` loads the catalog without a configured
+  provider.
+- `--lorepia-dev-credential-missing` keeps the selected provider but removes
+  its synthetic credential.
+- `--lorepia-dev-provider-unselected` keeps the provider profiles but starts
+  with no selected default.
+- `--lorepia-dev-health-warning` loads the catalog with a simulated unhealthy
+  core status.
+- `--lorepia-dev-core-unavailable` exercises startup and read-error surfaces.
+- `--lorepia-dev-load` loads 60 additional rooms and 600 additional messages
+  for a total of 96 rooms.
+
+The exact, deterministic UI-test showcases remain available separately:
+
+- `--lorepia-chat-bubble-showcase` loads the fixed multi-room chat geometry
+  showcase.
+- `--lorepia-chat-history-showcase` loads the fixed long-history showcase.
+
+All fixture scenarios use in-memory test clients, project-owned synthetic
+content, and in-memory credentials. They do not read or write the production
+database, Keychain, or user data. Only a recognized fixture argument selects
+synthetic data. A Debug launch with no fixture argument, or with an unknown or
+mistyped argument, uses the live local core. The committed `project.yml`
+continues to pass `--lorepia-dev-fixtures` explicitly for the standard Xcode
+Run action; remove that argument (or replace it with `--lorepia-live-core`) to
+run the live core from Xcode.
 
 `apps/apple/project.yml` is the source of truth for the committed Xcode project
 structure. After changing targets or build settings, regenerate the project

@@ -1,125 +1,112 @@
+import Darwin
+import Foundation
 import LorepiaKit
 import SwiftUI
-import UniformTypeIdentifiers
-import Darwin
 
 struct IOSRootView: View {
     private enum Tab: Hashable {
-        case library
-        case chat
+        case home
+        case chats
+        case create
         case settings
     }
 
     let environment: AppEnvironment
-    @ObservedObject private var importReviewViewModel: ImportReviewViewModel
+    @ObservedObject private var settingsViewModel: SettingsViewModel
 
-    @State private var selectedTab: Tab = .library
-    @State private var showsFileImporter = false
-    @State private var showsImportReview = false
+    @State private var selectedTab: Tab = .home
+    @State private var chatNavigationPath: [ConversationListItem] = []
+    @State private var settingsNavigationPath: [SettingsDestination] = []
 
     init(environment: AppEnvironment) {
         self.environment = environment
-        importReviewViewModel = environment.importReviewViewModel
+        settingsViewModel = environment.settingsViewModel
     }
 
     var body: some View {
         TabView(selection: $selectedTab) {
             NavigationStack {
-                LibraryView(
-                    viewModel: environment.libraryViewModel,
-                    onImport: {
-                        showsFileImporter = true
-                    },
-                    onOpenChat: { character in
-                        selectedTab = .chat
-                        Task {
-                            await environment.selectCharacter(character)
+                IOSHomeView {
+                    selectedTab = .create
+                }
+                .navigationTitle("홈")
+            }
+            .tabItem {
+                Label("홈", image: "TabHome")
+            }
+            .tag(Tab.home)
+
+            NavigationStack(path: $chatNavigationPath) {
+                ConversationListView(
+                    viewModel: environment.conversationListViewModel,
+                    onOpenConversation: { item in
+                        guard chatNavigationPath.isEmpty else {
+                            return
                         }
+                        // The system push carries the room in from the
+                        // trailing edge and pairs with the back swipe.
+                        chatNavigationPath.append(item)
+                    },
+                    onRequestCharacter: {
+                        selectedTab = .create
                     }
                 )
-                .navigationTitle("서재")
-                .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            showsFileImporter = true
-                        } label: {
-                            Label("가져오기", systemImage: "square.and.arrow.down")
+                .navigationTitle("채팅")
+                .navigationDestination(for: ConversationListItem.self) { item in
+                    ChatView(
+                        viewModel: environment.chatViewModel,
+                        onOpenProviderSettings: {
+                            settingsNavigationPath = [.providerProfile]
+                            selectedTab = .settings
+                            Task {
+                                await settingsViewModel
+                                    .refreshPreservingUnsavedEditor()
+                            }
                         }
-                    }
+                    )
+                        .navigationBarTitleDisplayMode(.inline)
+                        .task(id: item.id) {
+                            await environment.selectConversation(item)
+#if DEBUG
+                            if let seededDraft =
+                                ProcessInfo.processInfo.environment[
+                                    "LOREPIA_UI_TEST_CHAT_DRAFT"
+                                ]
+                            {
+                                environment.chatViewModel.draft = seededDraft
+                            }
+#endif
+                        }
                 }
             }
             .tabItem {
-                Label("서재", systemImage: "books.vertical")
+                Label("채팅", image: "TabChats")
             }
-            .tag(Tab.library)
+            .tag(Tab.chats)
 
             NavigationStack {
-                ChatView(viewModel: environment.chatViewModel)
-                    .navigationTitle("채팅")
-                    .navigationBarTitleDisplayMode(.inline)
+                IOSCreateView()
+                    .navigationTitle("생성")
             }
             .tabItem {
-                Label("채팅", systemImage: "bubble.left.and.bubble.right")
+                Label("생성", image: "TabCreate")
             }
-            .tag(Tab.chat)
+            .tag(Tab.create)
 
-            NavigationStack {
-                VStack(spacing: 0) {
-                    SettingsView(viewModel: environment.settingsViewModel)
-                    if environment.settingsViewModel.showTechnicalDetails {
-                        CoreStatusPanel(
-                            viewModel: environment.coreStatusViewModel
-                        )
-                        .padding(LorepiaSpacing.standard)
-                    }
-                }
-                .navigationTitle("설정")
+            NavigationStack(path: $settingsNavigationPath) {
+                // No large title and no core-status button: the page opens on
+                // connection settings, and diagnostics live one page in.
+                SettingsView(
+                    viewModel: settingsViewModel,
+                    coreStatus: environment.coreStatusViewModel
+                )
             }
             .tabItem {
-                Label("설정", systemImage: "gearshape")
+                Label("설정", image: "TabSettings")
             }
             .tag(Tab.settings)
         }
-        .fileImporter(
-            isPresented: $showsFileImporter,
-            allowedContentTypes: [.data],
-            allowsMultipleSelection: false
-        ) { result in
-            guard case let .success(urls) = result, let url = urls.first else {
-                return
-            }
-            showsImportReview = true
-            Task {
-                await environment.prepareImport(from: url)
-            }
-        }
-        .sheet(isPresented: $showsImportReview) {
-            NavigationStack {
-                ImportReviewView(
-                    viewModel: importReviewViewModel,
-                    onPickFile: {
-                        showsFileImporter = true
-                    },
-                    onFinished: {
-                        showsImportReview = false
-                        selectedTab = .library
-                    }
-                )
-                .navigationTitle("가져오기 검토")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("완료") {
-                            showsImportReview = false
-                        }
-                        .disabled(importReviewViewModel.isBusy)
-                    }
-                }
-            }
-            .interactiveDismissDisabled(
-                importReviewViewModel.isBusy
-            )
-        }
+        .lorepiaTabBarBehavior()
         .task {
             await environment.start()
             if ProcessInfo.processInfo.arguments.contains("--lorepia-ci-smoke") {
@@ -136,5 +123,64 @@ struct IOSRootView: View {
             }
         }
         .accessibilityIdentifier("lorepia-root")
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func lorepiaTabBarBehavior() -> some View {
+#if compiler(>=6.2)
+        if #available(iOS 26.0, *) {
+            tabBarMinimizeBehavior(.onScrollDown)
+        } else {
+            self
+        }
+#else
+        self
+#endif
+    }
+}
+
+private struct IOSHomeView: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let onAdd: () -> Void
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                LorepiaColor.paper
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+
+                Button(action: onAdd) {
+                    Text("추가하기")
+                        .frame(minWidth: 180)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(
+                    colorScheme == .light
+                        ? Color.black
+                        : Color.accentColor
+                )
+                .controlSize(.large)
+                .frame(minHeight: 44)
+                .position(
+                    x: geometry.size.width / 2,
+                    y: geometry.size.height * 0.68
+                )
+                .accessibilityIdentifier("home-add-button")
+            }
+        }
+    }
+}
+
+private struct IOSCreateView: View {
+    var body: some View {
+        LorepiaColor.paper
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }

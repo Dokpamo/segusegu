@@ -17,7 +17,7 @@ bytes.
 
 `bindings/c-api/include/lorepia.h` is the ABI contract. It uses:
 
-- ABI version 2;
+- ABI version 3, including event-schema version 2 routing metadata;
 - an opaque core handle;
 - status codes and out parameters;
 - UTF-8 JSON for larger response DTOs;

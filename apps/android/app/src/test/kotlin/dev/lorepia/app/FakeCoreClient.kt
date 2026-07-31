@@ -62,9 +62,9 @@ class FakeCoreClient(
 
     override suspend fun versionInfo(): CoreVersionInfo = CoreVersionInfo(
         coreVersion = version,
-        coreApiVersion = 2u,
-        bindingApiVersion = 2u,
-        chatEventVersion = 1u,
+        coreApiVersion = 4u,
+        bindingApiVersion = 4u,
+        chatEventVersion = 2u,
     )
 
     override suspend fun healthCheck(): CoreHealthStatus {

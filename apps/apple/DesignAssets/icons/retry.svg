@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Traced from the reference menu: two arcs 180° apart, each
+       continuing into a solid head that points the way it turns. -->
+  <g fill="none" stroke="currentColor" stroke-width="2"
+     stroke-linecap="round">
+    <path d="M6.65 6.05 A8.0 8.0 0 0 1 19.76 13.94"/>
+    <path d="M17.35 17.95 A8.0 8.0 0 0 1 4.24 10.06"/>
+  </g>
+  <g fill="currentColor">
+    <path d="M17.63 13.40 L18.75 18.01 L21.90 14.47 Z"/>
+    <path d="M6.37 10.60 L5.25 5.99 L2.10 9.53 Z"/>
+  </g>
+</svg>

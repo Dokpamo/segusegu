@@ -3,6 +3,29 @@ namespace Lorepia.Native.Tests;
 public sealed class CoreClientTests
 {
     [Fact]
+    public void PublicContract_DeclaresAbiVersionThree()
+    {
+        Assert.Equal(3u, CoreClient.SupportedAbiVersion);
+    }
+
+    [Fact]
+    public void FrozenAbiTwoClient_RejectsAbiThreeBeforeCreatingCore()
+    {
+        var api = new FakeNativeApi
+        {
+            AbiVersion = CoreClient.SupportedAbiVersion,
+        };
+
+        var exception = Assert.Throws<CoreInteropException>(
+            () => FrozenAbiTwoClient.Open(api));
+
+        Assert.Contains("version 3", exception.Message);
+        Assert.Contains("expected 2", exception.Message);
+        Assert.Equal(0, api.CreateCount);
+        Assert.Equal(0, api.DestroyCount);
+    }
+
+    [Fact]
     public void MapsVersionAndHealthAndOwnsAllNativeLifetimes()
     {
         var api = new FakeNativeApi();
@@ -41,18 +64,21 @@ public sealed class CoreClientTests
         Assert.Equal(1, api.DestroyCount);
     }
 
-    [Fact]
-    public void Create_RejectsAbiMismatchBeforeCreatingCore()
+    [Theory]
+    [InlineData(2u)]
+    [InlineData(4u)]
+    public void Create_RejectsAbiMismatchBeforeCreatingCore(uint abiVersion)
     {
         var api = new FakeNativeApi
         {
-            AbiVersion = CoreClient.SupportedAbiVersion + 1,
+            AbiVersion = abiVersion,
         };
 
         var exception = Assert.Throws<CoreInteropException>(
             () => CoreClient.Open(api, CreateAbsoluteDataRoot()));
 
         Assert.Contains("Unsupported", exception.Message);
+        Assert.Contains("expected 3", exception.Message);
         Assert.Equal(0, api.CreateCount);
         Assert.Equal(0, api.DestroyCount);
     }
@@ -176,5 +202,22 @@ public sealed class CoreClientTests
             Path.GetTempPath(),
             "lorepia-native-tests",
             suffix ?? Guid.NewGuid().ToString("N"));
+    }
+
+    private static class FrozenAbiTwoClient
+    {
+        private const uint SupportedAbiVersion = 2;
+
+        internal static void Open(FakeNativeApi nativeApi)
+        {
+            var abiVersion = nativeApi.GetAbiVersion();
+            if (abiVersion != SupportedAbiVersion)
+            {
+                throw new CoreInteropException(
+                    $"Unsupported LorePia C ABI version {abiVersion}; expected {SupportedAbiVersion}.");
+            }
+
+            using var core = nativeApi.CreateCore(Array.Empty<byte>());
+        }
     }
 }

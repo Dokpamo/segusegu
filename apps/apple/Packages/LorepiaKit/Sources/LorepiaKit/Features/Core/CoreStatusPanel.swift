@@ -23,7 +23,8 @@ public struct CoreStatusPanel: View {
                         await viewModel.refresh()
                     }
                 } label: {
-                    Image(systemName: "arrow.clockwise")
+                    LorepiaGlyphView(.retry, size: 18)
+                        .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("코어 상태 새로 고침")
@@ -54,13 +55,16 @@ public struct CoreStatusPanel: View {
                 .font(.callout)
         case let .ready(version, health):
             VStack(alignment: .leading, spacing: LorepiaSpacing.compact) {
-                Label(
-                    health.isHealthy ? "정상" : "확인 필요",
-                    systemImage: health.isHealthy
-                        ? "checkmark.circle.fill"
-                        : "exclamationmark.circle.fill"
-                )
-                .foregroundStyle(health.isHealthy ? .green : .orange)
+                if health.isHealthy {
+                    LorepiaGlyphLabel("정상", glyph: .check)
+                        .foregroundStyle(.green)
+                } else {
+                    Label(
+                        "확인 필요",
+                        systemImage: "exclamationmark.circle.fill"
+                    )
+                    .foregroundStyle(.orange)
+                }
 
                 Divider()
 

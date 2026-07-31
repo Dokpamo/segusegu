@@ -6,9 +6,11 @@ public final class AppEnvironment {
     public let sharedState: SharedAppState
     public let coreStatusViewModel: CoreStatusViewModel
     public let libraryViewModel: LibraryViewModel
+    public let conversationListViewModel: ConversationListViewModel
     public let chatViewModel: ChatViewModel
     public let importReviewViewModel: ImportReviewViewModel
     public let settingsViewModel: SettingsViewModel
+    public let providerConfigurationStore: ProviderConfigurationStore
     private let coreClient: any CoreClient
     private var hasStarted = false
 
@@ -22,6 +24,8 @@ public final class AppEnvironment {
     ) {
         self.coreClient = coreClient
         self.runtimeMode = runtimeMode
+        let providerConfiguration = ProviderConfigurationStore()
+        providerConfigurationStore = providerConfiguration
         sharedState = SharedAppState()
         coreStatusViewModel = CoreStatusViewModel(
             client: coreClient,
@@ -32,10 +36,12 @@ public final class AppEnvironment {
             characters: characters
         )
         libraryViewModel = library
+        conversationListViewModel = ConversationListViewModel(client: coreClient)
         chatViewModel = ChatViewModel(
             client: coreClient,
             credentialStore: credentialStore,
-            runtimeMode: runtimeMode
+            runtimeMode: runtimeMode,
+            providerConfigurationStore: providerConfiguration
         )
         importReviewViewModel = ImportReviewViewModel(
             client: coreClient,
@@ -45,7 +51,8 @@ public final class AppEnvironment {
         settingsViewModel = SettingsViewModel(
             client: coreClient,
             credentialStore: credentialStore,
-            runtimeMode: runtimeMode
+            runtimeMode: runtimeMode,
+            providerConfigurationStore: providerConfiguration
         )
     }
 
@@ -72,6 +79,7 @@ public final class AppEnvironment {
         hasStarted = true
         await coreStatusViewModel.refresh()
         await libraryViewModel.refresh()
+        await conversationListViewModel.refresh()
         await settingsViewModel.refresh()
     }
 
@@ -104,6 +112,17 @@ public final class AppEnvironment {
     public func selectCharacter(_ character: LibraryCharacter) async {
         sharedState.selectCharacter(character)
         await chatViewModel.setCharacter(character)
+    }
+
+    public func selectConversation(_ item: ConversationListItem) async {
+        guard let character = item.character else {
+            return
+        }
+        sharedState.selectCharacter(character)
+        await chatViewModel.setConversation(
+            item.conversation,
+            character: character
+        )
     }
 
     public func prepareImport(from url: URL) async {

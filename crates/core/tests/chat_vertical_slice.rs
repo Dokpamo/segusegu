@@ -65,6 +65,7 @@ fn spawn_completed_provider() -> (String, mpsc::Receiver<Vec<u8>>) {
         request_sender.send(request).expect("capture request");
         let body = concat!(
             "data: {\"choices\":[{\"delta\":{\"content\":\"안녕\"}}]}\n\n",
+            "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
             "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":7,\"completion_tokens\":2}}\n\n",
             "data: [DONE]\n\n"
         );

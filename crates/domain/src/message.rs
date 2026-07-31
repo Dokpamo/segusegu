@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::ConversationId;
+use crate::{ConversationBranchId, ConversationId, ConversationMode};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct MessageId(pub String);
@@ -51,6 +51,32 @@ pub enum MessageStatus {
     Failed,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum GenerationStatus {
+    Running,
+    Complete,
+    Cancelled,
+    Failed,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GenerationRecord {
+    pub id: GenerationId,
+    pub conversation_id: ConversationId,
+    pub branch_id: ConversationBranchId,
+    pub user_message_id: MessageId,
+    pub assistant_message_id: Option<MessageId>,
+    pub mode: ConversationMode,
+    pub model: String,
+    pub status: GenerationStatus,
+    pub input_tokens: Option<u64>,
+    pub output_tokens: Option<u64>,
+    pub error_code: Option<String>,
+    pub started_at: DateTime<Utc>,
+    pub finished_at: Option<DateTime<Utc>>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Message {
     pub id: MessageId,
@@ -65,10 +91,18 @@ pub struct Message {
 
 impl Message {
     pub fn user(conversation_id: ConversationId, content: impl Into<String>) -> Self {
+        Self::user_after(conversation_id, None, content)
+    }
+
+    pub fn user_after(
+        conversation_id: ConversationId,
+        parent_id: Option<MessageId>,
+        content: impl Into<String>,
+    ) -> Self {
         Self {
             id: MessageId::new(),
             conversation_id,
-            parent_id: None,
+            parent_id,
             role: MessageRole::User,
             content: content.into(),
             status: MessageStatus::Complete,

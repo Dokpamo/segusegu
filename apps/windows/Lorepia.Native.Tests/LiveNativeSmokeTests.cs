@@ -511,6 +511,7 @@ public sealed class LiveNativeSmokeTests
                 responseText);
             var body =
                 $"data: {{\"choices\":[{{\"delta\":{{\"content\":{escaped}}}}}],\"usage\":null}}\n\n"
+                + "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":null}\n\n"
                 + "data: [DONE]\n\n";
             var bodyBytes = Encoding.UTF8.GetBytes(body);
             var header = Encoding.ASCII.GetBytes(

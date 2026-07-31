@@ -37,16 +37,18 @@ private extension MacRootNavigationModel.Destination {
         }
     }
 
-    var symbol: String {
+    @MainActor
+    @ViewBuilder
+    var sidebarLabel: some View {
         switch self {
         case .library:
-            "books.vertical"
+            Label(title, systemImage: "books.vertical")
         case .chat:
-            "bubble.left.and.bubble.right"
+            Label(title, systemImage: "bubble.left.and.bubble.right")
         case .importReview:
-            "doc.badge.plus"
+            Label(title, systemImage: "doc.badge.plus")
         case .settings:
-            "gearshape"
+            LorepiaGlyphLabel(title, glyph: .settings, size: 16)
         }
     }
 }
@@ -57,6 +59,7 @@ struct MacRootView: View {
     @ObservedObject private var navigationModel: MacRootNavigationModel
     @ObservedObject private var settingsViewModel: SettingsViewModel
     @State private var showsFileImporter = false
+    @State private var settingsNavigationPath: [SettingsDestination] = []
 
     init(
         environment: AppEnvironment,
@@ -80,26 +83,18 @@ struct MacRootView: View {
                     }
                 )
             ) { item in
-                Label(item.title, systemImage: item.symbol)
+                item.sidebarLabel
                     .tag(item)
             }
             .navigationTitle("LorePia")
             .navigationSplitViewColumnWidth(min: 180, ideal: 220)
         } detail: {
-            HSplitView {
-                detail
-                    .frame(minWidth: 460, maxWidth: .infinity, maxHeight: .infinity)
-
-                if settingsViewModel.showTechnicalDetails {
-                    ScrollView {
-                        CoreStatusPanel(
-                            viewModel: environment.coreStatusViewModel
-                        )
-                        .padding(LorepiaSpacing.standard)
-                    }
-                    .frame(minWidth: 250, idealWidth: 280, maxWidth: 320)
-                }
-            }
+            detail
+                .frame(
+                    minWidth: 460,
+                    maxWidth: .infinity,
+                    maxHeight: .infinity
+                )
             .navigationTitle(navigationModel.destination.title)
         }
         .fileImporter(
@@ -146,7 +141,17 @@ struct MacRootView: View {
                 navigationModel.acknowledgeRendered(.library)
             }
         case .chat:
-            ChatView(viewModel: environment.chatViewModel)
+            ChatView(
+                viewModel: environment.chatViewModel,
+                onOpenProviderSettings: {
+                    settingsNavigationPath = [.providerProfile]
+                    navigationModel.navigate(to: .settings)
+                    Task {
+                        await settingsViewModel
+                            .refreshPreservingUnsavedEditor()
+                    }
+                }
+            )
                 .onAppear {
                     navigationModel.acknowledgeRendered(.chat)
                 }
@@ -164,7 +169,12 @@ struct MacRootView: View {
                 navigationModel.acknowledgeRendered(.importReview)
             }
         case .settings:
-            SettingsView(viewModel: settingsViewModel)
+            NavigationStack(path: $settingsNavigationPath) {
+                SettingsView(
+                    viewModel: settingsViewModel,
+                    coreStatus: environment.coreStatusViewModel
+                )
+            }
                 .onAppear {
                     navigationModel.acknowledgeRendered(.settings)
                 }

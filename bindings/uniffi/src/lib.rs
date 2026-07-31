@@ -3,14 +3,15 @@
 use std::sync::{Arc, Mutex};
 
 use lorepia_core::{
-    AppSettings, Character, ChatEvent, ChatEventKind, ContentKind, Conversation, ConversationId,
+    AppSettings, Character, ChatEvent, ChatEventKind, ContentKind, Conversation,
+    ConversationBranch, ConversationBranchId, ConversationId, ConversationMode, ConversationState,
     Core, CoreConfig, CoreError, DatabaseStats, GenerationId, ImportInspection, InspectionId,
-    Message, MessageRole, MessageStatus, ProviderProfile,
+    Message, MessageActionGeneration, MessageId, MessageRole, MessageStatus, ProviderProfile,
 };
 use tokio::sync::broadcast;
 
-const BINDING_API_VERSION: u32 = 2;
-const CHAT_EVENT_VERSION: u32 = 1;
+const BINDING_API_VERSION: u32 = 4;
+const CHAT_EVENT_VERSION: u32 = 2;
 const MAX_EVENT_BATCH_SIZE: u32 = 256;
 
 uniffi::setup_scaffolding!();
@@ -90,6 +91,31 @@ pub struct FfiConversation {
 }
 
 #[derive(Debug, Clone, uniffi::Record)]
+pub struct FfiConversationBranch {
+    pub id: String,
+    pub conversation_id: String,
+    pub title: Option<String>,
+    pub fork_message_id: Option<String>,
+    pub head_message_id: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct FfiConversationState {
+    pub conversation_id: String,
+    pub active_branch_id: String,
+    pub selected_mode: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, uniffi::Record)]
+pub struct FfiMessageActionGeneration {
+    pub branch: FfiConversationBranch,
+    pub generation_id: String,
+}
+
+#[derive(Debug, Clone, uniffi::Record)]
 pub struct FfiMessage {
     pub id: String,
     pub conversation_id: String,
@@ -131,6 +157,8 @@ pub struct FfiChatEvent {
     pub event_version: u32,
     pub generation_id: String,
     pub conversation_id: String,
+    pub branch_id: Option<String>,
+    pub assistant_message_id: Option<String>,
     pub sequence: u64,
     pub emitted_at: String,
     pub kind: String,
@@ -262,10 +290,110 @@ impl LorepiaCore {
             .map_err(Into::into)
     }
 
+    pub fn create_conversation(
+        &self,
+        character_id: String,
+        title: String,
+        mode: String,
+    ) -> Result<FfiConversation, FfiError> {
+        let mode = parse_conversation_mode(&mode)?;
+        self.core
+            .create_conversation(&character_id, title, mode)
+            .map(map_conversation)
+            .map_err(Into::into)
+    }
+
     pub fn list_conversations(&self) -> Result<Vec<FfiConversation>, FfiError> {
         self.core
             .list_conversations()
             .map(|conversations| conversations.into_iter().map(map_conversation).collect())
+            .map_err(Into::into)
+    }
+
+    pub fn list_conversations_for_character(
+        &self,
+        character_id: String,
+    ) -> Result<Vec<FfiConversation>, FfiError> {
+        self.core
+            .list_conversations_for_character(&character_id)
+            .map(|conversations| conversations.into_iter().map(map_conversation).collect())
+            .map_err(Into::into)
+    }
+
+    pub fn get_conversation(&self, conversation_id: String) -> Result<FfiConversation, FfiError> {
+        self.core
+            .get_conversation(&ConversationId(conversation_id))
+            .map(map_conversation)
+            .map_err(Into::into)
+    }
+
+    pub fn get_conversation_state(
+        &self,
+        conversation_id: String,
+    ) -> Result<FfiConversationState, FfiError> {
+        self.core
+            .get_conversation_state(&ConversationId(conversation_id))
+            .map(map_conversation_state)
+            .map_err(Into::into)
+    }
+
+    pub fn list_conversation_branches(
+        &self,
+        conversation_id: String,
+    ) -> Result<Vec<FfiConversationBranch>, FfiError> {
+        self.core
+            .list_conversation_branches(&ConversationId(conversation_id))
+            .map(|branches| branches.into_iter().map(map_conversation_branch).collect())
+            .map_err(Into::into)
+    }
+
+    pub fn create_conversation_branch(
+        &self,
+        conversation_id: String,
+        from_message_id: Option<String>,
+        title: Option<String>,
+    ) -> Result<FfiConversationBranch, FfiError> {
+        let from_message_id = from_message_id.map(MessageId);
+        self.core
+            .create_conversation_branch(
+                &ConversationId(conversation_id),
+                from_message_id.as_ref(),
+                title,
+            )
+            .map(map_conversation_branch)
+            .map_err(Into::into)
+    }
+
+    pub fn select_conversation_branch(
+        &self,
+        conversation_id: String,
+        branch_id: String,
+    ) -> Result<FfiConversationState, FfiError> {
+        self.core
+            .select_conversation_branch(
+                &ConversationId(conversation_id),
+                &ConversationBranchId(branch_id),
+            )
+            .map(map_conversation_state)
+            .map_err(Into::into)
+    }
+
+    pub fn set_conversation_mode(
+        &self,
+        conversation_id: String,
+        mode: String,
+    ) -> Result<FfiConversationState, FfiError> {
+        let mode = parse_conversation_mode(&mode)?;
+        self.core
+            .set_conversation_mode(&ConversationId(conversation_id), mode)
+            .map(map_conversation_state)
+            .map_err(Into::into)
+    }
+
+    pub fn list_branch_messages(&self, branch_id: String) -> Result<Vec<FfiMessage>, FfiError> {
+        self.core
+            .list_branch_messages(&ConversationBranchId(branch_id))
+            .map(|messages| messages.into_iter().map(map_message).collect())
             .map_err(Into::into)
     }
 
@@ -291,6 +419,102 @@ impl LorepiaCore {
                 credential,
             )
             .map(|generation_id| generation_id.0)
+            .map_err(Into::into)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn send_message_to_branch(
+        &self,
+        conversation_id: String,
+        branch_id: String,
+        expected_head: Option<String>,
+        mode: String,
+        text: String,
+        provider_profile_id: String,
+        credential: Option<String>,
+    ) -> Result<String, FfiError> {
+        let expected_head = expected_head.map(MessageId);
+        let mode = parse_conversation_mode(&mode)?;
+        self.core
+            .send_message_to_branch(
+                &ConversationId(conversation_id),
+                &ConversationBranchId(branch_id),
+                expected_head.as_ref(),
+                mode,
+                &text,
+                &provider_profile_id,
+                credential,
+            )
+            .map(|generation_id| generation_id.0)
+            .map_err(Into::into)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn edit_user_message(
+        &self,
+        conversation_id: String,
+        branch_id: String,
+        expected_head: Option<String>,
+        message_id: String,
+        replacement_text: String,
+        provider_profile_id: String,
+        credential: Option<String>,
+    ) -> Result<FfiMessageActionGeneration, FfiError> {
+        let expected_head = expected_head.map(MessageId);
+        self.core
+            .edit_user_message(
+                &ConversationId(conversation_id),
+                &ConversationBranchId(branch_id),
+                expected_head.as_ref(),
+                &MessageId(message_id),
+                &replacement_text,
+                &provider_profile_id,
+                credential,
+            )
+            .map(map_message_action_generation)
+            .map_err(Into::into)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn regenerate_assistant_message(
+        &self,
+        conversation_id: String,
+        branch_id: String,
+        expected_head: Option<String>,
+        message_id: String,
+        provider_profile_id: String,
+        credential: Option<String>,
+    ) -> Result<FfiMessageActionGeneration, FfiError> {
+        let expected_head = expected_head.map(MessageId);
+        self.core
+            .regenerate_assistant_message(
+                &ConversationId(conversation_id),
+                &ConversationBranchId(branch_id),
+                expected_head.as_ref(),
+                &MessageId(message_id),
+                &provider_profile_id,
+                credential,
+            )
+            .map(map_message_action_generation)
+            .map_err(Into::into)
+    }
+
+    pub fn remove_message_from_branch(
+        &self,
+        conversation_id: String,
+        branch_id: String,
+        expected_head: Option<String>,
+        message_id: String,
+    ) -> Result<FfiConversationBranch, FfiError> {
+        let expected_head = expected_head.map(MessageId);
+        self.core
+            .remove_message_from_branch(
+                &ConversationId(conversation_id),
+                &ConversationBranchId(branch_id),
+                expected_head.as_ref(),
+                &MessageId(message_id),
+            )
+            .map(map_conversation_branch)
             .map_err(Into::into)
     }
 
@@ -440,6 +664,49 @@ fn map_conversation(conversation: Conversation) -> FfiConversation {
     }
 }
 
+fn map_conversation_branch(branch: ConversationBranch) -> FfiConversationBranch {
+    FfiConversationBranch {
+        id: branch.id.0,
+        conversation_id: branch.conversation_id.0,
+        title: branch.title,
+        fork_message_id: branch.fork_message_id.map(|id| id.0),
+        head_message_id: branch.head_message_id.map(|id| id.0),
+        created_at: branch.created_at.to_rfc3339(),
+        updated_at: branch.updated_at.to_rfc3339(),
+    }
+}
+
+fn map_message_action_generation(action: MessageActionGeneration) -> FfiMessageActionGeneration {
+    FfiMessageActionGeneration {
+        branch: map_conversation_branch(action.branch),
+        generation_id: action.generation_id.0,
+    }
+}
+
+fn map_conversation_state(state: ConversationState) -> FfiConversationState {
+    FfiConversationState {
+        conversation_id: state.conversation_id.0,
+        active_branch_id: state.active_branch_id.0,
+        selected_mode: map_conversation_mode(state.selected_mode).to_owned(),
+        updated_at: state.updated_at.to_rfc3339(),
+    }
+}
+
+const fn map_conversation_mode(mode: ConversationMode) -> &'static str {
+    match mode {
+        ConversationMode::Chat => "chat",
+        ConversationMode::Story => "story",
+    }
+}
+
+fn parse_conversation_mode(mode: &str) -> Result<ConversationMode, FfiError> {
+    match mode {
+        "chat" => Ok(ConversationMode::Chat),
+        "story" => Ok(ConversationMode::Story),
+        _ => Err(CoreError::invalid("conversation mode must be `chat` or `story`").into()),
+    }
+}
+
 fn map_message(message: Message) -> FfiMessage {
     FfiMessage {
         id: message.id.0,
@@ -556,6 +823,8 @@ fn map_chat_event(event: ChatEvent) -> FfiChatEvent {
         event_version: event.event_version,
         generation_id: event.generation_id.0,
         conversation_id: event.conversation_id.0,
+        branch_id: event.branch_id.map(|id| id.0),
+        assistant_message_id: event.assistant_message_id.map(|id| id.0),
         sequence: event.sequence,
         emitted_at: event.emitted_at.to_rfc3339(),
         kind: kind.to_owned(),
@@ -624,6 +893,7 @@ mod tests {
             read_request(&mut stream);
             let body = concat!(
                 "data: {\"choices\":[{\"delta\":{\"content\":\"응답😀\"}}]}\n\n",
+                "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
                 "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":9,\"completion_tokens\":2}}\n\n",
                 "data: [DONE]\n\n"
             );
@@ -717,10 +987,11 @@ mod tests {
         let versions = version_info();
         assert_eq!(versions.core_version, core_version());
         assert_eq!(versions.core_api_version, lorepia_core::CORE_API_VERSION);
-        assert_eq!(versions.core_api_version, 2);
+        assert_eq!(versions.core_api_version, 4);
         assert_eq!(versions.binding_api_version, BINDING_API_VERSION);
-        assert_eq!(versions.binding_api_version, 2);
+        assert_eq!(versions.binding_api_version, 4);
         assert_eq!(versions.chat_event_version, CHAT_EVENT_VERSION);
+        assert_eq!(versions.chat_event_version, 2);
         assert!(core.poll_events(16).expect("poll").events.is_empty());
         let stats = core.database_stats().expect("database stats");
         assert_eq!(stats.characters, 0);
@@ -781,6 +1052,91 @@ mod tests {
                 .expect("staging")
                 .next()
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn exposes_multiple_rooms_persisted_modes_and_branch_selection() {
+        let root = tempdir().expect("temp root");
+        let core = LorepiaCore::open(FfiCoreConfig {
+            data_root: root.path().to_string_lossy().into_owned(),
+        })
+        .expect("open");
+        let character = import_character(&core, root.path(), "분기 캐릭터", "합성 테스트");
+
+        let chat = core
+            .create_conversation(character.id.clone(), "대화방".to_owned(), "chat".to_owned())
+            .expect("create chat room");
+        let story = core
+            .create_conversation(
+                character.id.clone(),
+                "스토리방".to_owned(),
+                "story".to_owned(),
+            )
+            .expect("create story room");
+
+        assert_ne!(chat.id, story.id);
+        assert_eq!(
+            core.list_conversations_for_character(character.id)
+                .expect("character rooms")
+                .len(),
+            2
+        );
+        assert_eq!(
+            core.get_conversation(story.id.clone())
+                .expect("get story room")
+                .title,
+            "스토리방"
+        );
+
+        let initial_state = core
+            .get_conversation_state(story.id.clone())
+            .expect("initial state");
+        assert_eq!(initial_state.selected_mode, "story");
+        let initial_branches = core
+            .list_conversation_branches(story.id.clone())
+            .expect("initial branches");
+        assert_eq!(initial_branches.len(), 1);
+        assert_eq!(
+            initial_branches[0].id, initial_state.active_branch_id,
+            "new rooms select their root branch"
+        );
+
+        let fork = core
+            .create_conversation_branch(story.id.clone(), None, Some("다른 시작".to_owned()))
+            .expect("create branch");
+        assert_eq!(fork.conversation_id, story.id);
+        assert_eq!(fork.title.as_deref(), Some("다른 시작"));
+        assert!(fork.fork_message_id.is_none());
+        assert!(fork.head_message_id.is_none());
+        assert!(
+            core.list_branch_messages(fork.id.clone())
+                .expect("empty branch")
+                .is_empty()
+        );
+
+        let selected = core
+            .select_conversation_branch(story.id.clone(), fork.id.clone())
+            .expect("select branch");
+        assert_eq!(selected.active_branch_id, fork.id);
+        assert_eq!(selected.selected_mode, "story");
+        let chat_mode = core
+            .set_conversation_mode(story.id.clone(), "chat".to_owned())
+            .expect("set chat mode");
+        assert_eq!(chat_mode.selected_mode, "chat");
+
+        for invalid in ["Story", " story", "", "unknown"] {
+            let error = core
+                .set_conversation_mode(story.id.clone(), invalid.to_owned())
+                .expect_err("reject unsupported mode");
+            let FfiError::Core { code, .. } = error;
+            assert_eq!(code, "invalid_input");
+        }
+        assert_eq!(
+            core.get_conversation_state(story.id)
+                .expect("unchanged mode")
+                .selected_mode,
+            "chat"
         );
     }
 
@@ -952,6 +1308,8 @@ mod tests {
     fn maps_every_structured_event_variant_and_errors() {
         let generation_id = GenerationId("generation".to_owned());
         let conversation_id = ConversationId("conversation".to_owned());
+        let branch_id = ConversationBranchId("branch".to_owned());
+        let assistant_message_id = MessageId("assistant".to_owned());
         let kinds = vec![
             ChatEventKind::GenerationStarted,
             ChatEventKind::ReasoningDelta("생각".to_owned()),
@@ -975,12 +1333,15 @@ mod tests {
             .into_iter()
             .enumerate()
             .map(|(index, kind)| {
-                map_chat_event(ChatEvent::new(
-                    generation_id.clone(),
-                    conversation_id.clone(),
-                    index as u64 + 1,
-                    kind,
-                ))
+                map_chat_event(
+                    ChatEvent::new(
+                        generation_id.clone(),
+                        conversation_id.clone(),
+                        index as u64 + 1,
+                        kind,
+                    )
+                    .with_route(branch_id.clone(), assistant_message_id.clone()),
+                )
             })
             .collect::<Vec<_>>();
         assert_eq!(
@@ -1007,6 +1368,21 @@ mod tests {
         assert_eq!(mapped[4].message_status.as_deref(), Some("complete"));
         assert_eq!(mapped[6].error_code.as_deref(), Some("network_unavailable"));
         assert_eq!(mapped[6].error_message.as_deref(), Some("offline"));
+        assert!(
+            mapped
+                .iter()
+                .all(|event| event.event_version == CHAT_EVENT_VERSION)
+        );
+        assert!(
+            mapped
+                .iter()
+                .all(|event| event.branch_id.as_deref() == Some("branch"))
+        );
+        assert!(
+            mapped
+                .iter()
+                .all(|event| event.assistant_message_id.as_deref() == Some("assistant"))
+        );
         assert!(mapped[7].text.is_none());
         assert!(mapped[7].message_id.is_none());
         assert!(mapped[7].error_code.is_none());
@@ -1026,6 +1402,204 @@ mod tests {
         assert_eq!(detail, "offline");
         assert!(recoverable);
         assert!(!operation_id.is_empty());
+    }
+
+    #[test]
+    fn branch_send_routes_events_and_persists_only_on_the_selected_branch() {
+        let root = tempdir().expect("temp root");
+        let core = LorepiaCore::open(FfiCoreConfig {
+            data_root: root.path().to_string_lossy().into_owned(),
+        })
+        .expect("open");
+        let character = import_character(&core, root.path(), "분기 전송", "합성 테스트");
+        let conversation = core
+            .create_conversation(character.id, "스토리 분기".to_owned(), "story".to_owned())
+            .expect("create conversation");
+        let state = core
+            .get_conversation_state(conversation.id.clone())
+            .expect("conversation state");
+        let profile = core
+            .upsert_provider_profile(FfiProviderProfile {
+                id: "branch-send".to_owned(),
+                display_name: "분기 제공자".to_owned(),
+                base_url: spawn_completed_provider(),
+                model: "synthetic".to_owned(),
+                timeout_seconds: 5,
+            })
+            .expect("save provider");
+
+        let generation_id = core
+            .send_message_to_branch(
+                conversation.id.clone(),
+                state.active_branch_id.clone(),
+                None,
+                "story".to_owned(),
+                "분기 질문".to_owned(),
+                profile.id,
+                None,
+            )
+            .expect("send to branch");
+        let events = poll_until(&core, &generation_id, "generation_finished");
+        assert!(!events.is_empty());
+        assert!(events.iter().all(|event| {
+            event.event_version == CHAT_EVENT_VERSION
+                && event.branch_id.as_deref() == Some(state.active_branch_id.as_str())
+        }));
+        let assistant_message_id = events
+            .first()
+            .and_then(|event| event.assistant_message_id.as_deref())
+            .expect("assistant route id");
+        assert!(
+            events.iter().all(|event| {
+                event.assistant_message_id.as_deref() == Some(assistant_message_id)
+            })
+        );
+
+        let messages = core
+            .list_branch_messages(state.active_branch_id)
+            .expect("branch messages");
+        assert_eq!(
+            messages
+                .iter()
+                .map(|message| message.content.as_str())
+                .collect::<Vec<_>>(),
+            ["분기 질문", "응답😀"]
+        );
+        assert_eq!(
+            messages.last().map(|message| message.id.as_str()),
+            Some(assistant_message_id)
+        );
+    }
+
+    #[test]
+    #[allow(clippy::too_many_lines)]
+    fn binding_message_actions_fork_refresh_and_logically_remove() {
+        let root = tempdir().expect("temp root");
+        let core = LorepiaCore::open(FfiCoreConfig {
+            data_root: root.path().to_string_lossy().into_owned(),
+        })
+        .expect("open");
+        let character = import_character(&core, root.path(), "메시지 액션", "합성 테스트");
+        let conversation = core
+            .create_conversation(character.id, "대화방".to_owned(), "story".to_owned())
+            .expect("conversation");
+        let state = core
+            .get_conversation_state(conversation.id.clone())
+            .expect("initial state");
+        let profile_id = "message-actions".to_owned();
+        core.upsert_provider_profile(FfiProviderProfile {
+            id: profile_id.clone(),
+            display_name: "합성 제공자".to_owned(),
+            base_url: spawn_completed_provider(),
+            model: "synthetic".to_owned(),
+            timeout_seconds: 5,
+        })
+        .expect("provider");
+        let initial_generation = core
+            .send_message_to_branch(
+                conversation.id.clone(),
+                state.active_branch_id.clone(),
+                None,
+                "story".to_owned(),
+                "원본 질문".to_owned(),
+                profile_id.clone(),
+                None,
+            )
+            .expect("initial generation");
+        poll_until(&core, &initial_generation, "generation_finished");
+        let original = core
+            .list_branch_messages(state.active_branch_id.clone())
+            .expect("original messages");
+
+        core.upsert_provider_profile(FfiProviderProfile {
+            id: profile_id.clone(),
+            display_name: "합성 제공자".to_owned(),
+            base_url: spawn_completed_provider(),
+            model: "synthetic".to_owned(),
+            timeout_seconds: 5,
+        })
+        .expect("edit provider");
+        let edited = core
+            .edit_user_message(
+                conversation.id.clone(),
+                state.active_branch_id.clone(),
+                Some(original[1].id.clone()),
+                original[0].id.clone(),
+                "수정 질문".to_owned(),
+                profile_id.clone(),
+                None,
+            )
+            .expect("edit");
+        assert_eq!(edited.branch.conversation_id, conversation.id);
+        assert_ne!(edited.branch.id, state.active_branch_id);
+        assert!(edited.branch.fork_message_id.is_none());
+        poll_until(&core, &edited.generation_id, "generation_finished");
+        let edited_messages = core
+            .list_branch_messages(edited.branch.id.clone())
+            .expect("edited messages");
+        assert_eq!(edited_messages[0].content, "수정 질문");
+        assert_eq!(edited_messages[1].content, "응답😀");
+
+        let rows_before_remove = core.database_stats().expect("stats").messages;
+        let rewound = core
+            .remove_message_from_branch(
+                conversation.id.clone(),
+                edited.branch.id.clone(),
+                Some(edited_messages[1].id.clone()),
+                edited_messages[1].id.clone(),
+            )
+            .expect("logical remove");
+        assert_eq!(rewound.head_message_id, Some(edited_messages[0].id.clone()));
+        assert_eq!(
+            core.database_stats().expect("preserved stats").messages,
+            rows_before_remove
+        );
+        assert_eq!(
+            core.list_branch_messages(edited.branch.id)
+                .expect("rewound messages")
+                .len(),
+            1
+        );
+
+        core.select_conversation_branch(conversation.id.clone(), state.active_branch_id.clone())
+            .expect("select original");
+        core.upsert_provider_profile(FfiProviderProfile {
+            id: profile_id.clone(),
+            display_name: "합성 제공자".to_owned(),
+            base_url: spawn_completed_provider(),
+            model: "synthetic".to_owned(),
+            timeout_seconds: 5,
+        })
+        .expect("regeneration provider");
+        let regenerated = core
+            .regenerate_assistant_message(
+                conversation.id.clone(),
+                state.active_branch_id.clone(),
+                Some(original[1].id.clone()),
+                original[1].id.clone(),
+                profile_id,
+                None,
+            )
+            .expect("regenerate");
+        poll_until(&core, &regenerated.generation_id, "generation_finished");
+        let regenerated_messages = core
+            .list_branch_messages(regenerated.branch.id)
+            .expect("regenerated messages");
+        assert_eq!(regenerated_messages[0].content, "원본 질문");
+        assert_ne!(regenerated_messages[0].id, original[0].id);
+        let preserved_original = core
+            .list_branch_messages(state.active_branch_id)
+            .expect("preserved original");
+        assert_eq!(
+            preserved_original
+                .iter()
+                .map(|message| (&message.id, &message.content))
+                .collect::<Vec<_>>(),
+            original
+                .iter()
+                .map(|message| (&message.id, &message.content))
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]

@@ -8,12 +8,24 @@ import SwiftUI
 struct LorepiaMacApp: App {
     private let environment: AppEnvironment
     private let navigationModel: MacRootNavigationModel
+    private let isLaunchSmoke: Bool
 
     init() {
+        isLaunchSmoke = ProcessInfo.processInfo.arguments
+            .contains("--lorepia-ci-smoke")
+        if isLaunchSmoke {
+            Self.traceLaunchSmoke("app init started")
+        }
         environment = AppEnvironment.makeDefault(
             dataRoot: MacAppDirectories.dataRoot()
         )
+        if isLaunchSmoke {
+            Self.traceLaunchSmoke("environment initialized")
+        }
         navigationModel = MacRootNavigationModel()
+        if isLaunchSmoke {
+            Self.traceLaunchSmoke("navigation initialized")
+        }
     }
 
     var body: some Scene {
@@ -24,14 +36,27 @@ struct LorepiaMacApp: App {
             )
                 .frame(minWidth: 880, minHeight: 560)
                 .task {
+                    if isLaunchSmoke {
+                        Self.traceLaunchSmoke("root task started")
+                    }
                     await environment.start()
-                    let isLaunchSmoke = ProcessInfo.processInfo.arguments
-                        .contains("--lorepia-ci-smoke")
+                    if isLaunchSmoke {
+                        Self.traceLaunchSmoke("environment started")
+                    }
                     if isLaunchSmoke {
                         do {
+                            Self.traceLaunchSmoke("navigation smoke started")
                             let routes = try await navigationModel
-                                .runLaunchSmoke()
+                                .runLaunchSmoke(
+                                    settleDelay: .milliseconds(200)
+                                ) { destination in
+                                    Self.traceLaunchSmoke(
+                                        "rendered \(destination.rawValue)"
+                                    )
+                                }
+                            Self.traceLaunchSmoke("navigation smoke completed")
                             try await environment.validateForLaunchSmoke()
+                            Self.traceLaunchSmoke("core validation completed")
                             let routeLog = routes
                                 .map(\.rawValue)
                                 .joined(separator: " -> ")
@@ -55,5 +80,10 @@ struct LorepiaMacApp: App {
         .commands {
             LorepiaMacCommands()
         }
+    }
+
+    private static func traceLaunchSmoke(_ message: String) {
+        fputs("LorePia macOS smoke: \(message)\n", stderr)
+        fflush(stderr)
     }
 }

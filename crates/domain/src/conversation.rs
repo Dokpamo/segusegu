@@ -2,6 +2,8 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use crate::{GenerationId, MessageId};
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ConversationId(pub String);
 
@@ -17,6 +19,28 @@ impl Default for ConversationId {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct ConversationBranchId(pub String);
+
+impl ConversationBranchId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4().to_string())
+    }
+}
+
+impl Default for ConversationBranchId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ConversationMode {
+    Chat,
+    Story,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Conversation {
     pub id: ConversationId,
@@ -24,6 +48,50 @@ pub struct Conversation {
     pub title: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConversationBranch {
+    pub id: ConversationBranchId,
+    pub conversation_id: ConversationId,
+    pub title: Option<String>,
+    pub fork_message_id: Option<MessageId>,
+    pub head_message_id: Option<MessageId>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl ConversationBranch {
+    pub fn root(conversation_id: ConversationId) -> Self {
+        let now = Utc::now();
+        Self {
+            id: ConversationBranchId::new(),
+            conversation_id,
+            title: None,
+            fork_message_id: None,
+            head_message_id: None,
+            created_at: now,
+            updated_at: now,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConversationState {
+    pub conversation_id: ConversationId,
+    pub active_branch_id: ConversationBranchId,
+    pub selected_mode: ConversationMode,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// A new immutable conversation branch together with the generation it started.
+///
+/// Editing or regenerating never rewrites an existing message. Instead, the
+/// operation forks a branch and appends a fresh user/assistant generation pair.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MessageActionGeneration {
+    pub branch: ConversationBranch,
+    pub generation_id: GenerationId,
 }
 
 impl Conversation {
