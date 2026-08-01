@@ -9,6 +9,11 @@ public final class ChatViewModel: ObservableObject {
     @Published public private(set) var activeBranchID: String?
     @Published public private(set) var mode: ConversationMode = .chat
     @Published public private(set) var messages: [ChatMessage] = []
+    @Published public private(set) var generationOptions: [
+        ProviderGenerationOption
+    ] = []
+    @Published public private(set) var selectedGenerationTarget:
+        ProviderGenerationTarget?
     @Published public private(set) var providerProfiles: [ProviderProfile] = []
     @Published public private(set) var selectedProviderProfileID: String?
     @Published public private(set) var hasLoadedProviderConfiguration = false
@@ -148,7 +153,7 @@ public final class ChatViewModel: ObservableObject {
             && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && (
                 !hasLoadedProviderConfiguration
-                    || selectedProviderProfile != nil
+                    || selectedGenerationOption != nil
             )
             && coreIsAvailable
     }
@@ -178,8 +183,21 @@ public final class ChatViewModel: ObservableObject {
         return providerProfiles.first { $0.id == selectedProviderProfileID }
     }
 
+    public var selectedGenerationOption: ProviderGenerationOption? {
+        guard let selectedGenerationTarget else {
+            return nil
+        }
+        guard let option = generationOptions.first(where: {
+            $0.target == selectedGenerationTarget
+        }), !providerProfileIsBlocked(option.connection.id)
+        else {
+            return nil
+        }
+        return option
+    }
+
     public var requiresProviderConfiguration: Bool {
-        selectedProviderProfile == nil
+        selectedGenerationOption == nil
             || hasProviderCredentialAccessFailure
     }
 
@@ -192,7 +210,7 @@ public final class ChatViewModel: ObservableObject {
         if hasProviderCredentialAccessFailure {
             return Self.credentialAccessFailureMessage
         }
-        if providerProfiles.isEmpty {
+        if generationOptions.isEmpty {
             return "메시지를 보내려면 프로바이더 프로필을 추가하세요."
         }
         return "메시지를 보내려면 앱 전체 기본 프로바이더를 선택하세요."
@@ -204,7 +222,7 @@ public final class ChatViewModel: ObservableObject {
             && !isGenerating
             && !isSubmitting
             && !isChangingProviderProfile
-            && !providerProfiles.isEmpty
+            && !generationOptions.isEmpty
             && providerConfigurationStore?.mutatingProfileIDs.isEmpty != false
             && (
                 selectedProviderProfileID.map {
@@ -600,13 +618,13 @@ public final class ChatViewModel: ObservableObject {
                 return false
             }
             try validateProviderAccess(provider)
-            let result = try await client.editUserMessage(
+            let result = try await client.editUserMessageWithTarget(
                 conversationID: conversation.id,
                 branchID: activeBranch.id,
                 expectedHeadMessageID: activeBranch.headMessageID,
                 messageID: messageID,
                 replacementText: text,
-                providerProfileID: provider.profile.id,
+                target: provider.option.target,
                 credential: provider.credential
             )
             guard try await restoreAfterMessageAction(
@@ -657,12 +675,13 @@ public final class ChatViewModel: ObservableObject {
                 return
             }
             try validateProviderAccess(provider)
-            let result = try await client.regenerateAssistantMessage(
+            let result = try await client
+                .regenerateAssistantMessageWithTarget(
                 conversationID: conversation.id,
                 branchID: activeBranch.id,
                 expectedHeadMessageID: activeBranch.headMessageID,
                 messageID: messageID,
-                providerProfileID: provider.profile.id,
+                target: provider.option.target,
                 credential: provider.credential
             )
             guard try await restoreAfterMessageAction(
@@ -767,13 +786,14 @@ public final class ChatViewModel: ObservableObject {
             }
             errorMessage = nil
             isGenerating = true
-            let generationID = try await client.sendMessageToBranch(
+            let generationID = try await client
+                .sendMessageToBranchWithTarget(
                 conversationID: conversation.id,
                 branchID: activeBranchID,
                 expectedHeadMessageID: activeBranch.headMessageID,
                 mode: submissionMode,
                 text: text,
-                providerProfileID: provider.profile.id,
+                target: provider.option.target,
                 credential: provider.credential
             )
 #if DEBUG
@@ -945,7 +965,6 @@ public final class ChatViewModel: ObservableObject {
         else {
             return
         }
-        let selectionToken = observationToken.selection
         do {
             let batch = try await client.pollEvents(maxEvents: 128)
 #if DEBUG
@@ -959,7 +978,9 @@ public final class ChatViewModel: ObservableObject {
             var pollContentToken: ConversationContentToken?
             for event in batch.events
             where event.conversationID == conversation.id {
-                guard event.eventVersion == 2 else {
+                guard event.eventVersion
+                    == CoreRuntimeContract.chatEventVersion
+                else {
                     shouldReconcile = true
                     continue
                 }
@@ -1313,9 +1334,11 @@ public final class ChatViewModel: ObservableObject {
         do {
             async let profilesTask = client.listProviderProfiles()
             async let settingsTask = client.getSettings()
-            let (profiles, settings) = try await (
+            async let optionsTask = loadGenerationOptions()
+            let (profiles, settings, configuration) = try await (
                 profilesTask,
-                settingsTask
+                settingsTask,
+                optionsTask
             )
             guard providerRefreshRevision == refreshRevision,
                   providerSelectionRevision == selectionRevision
@@ -1328,45 +1351,56 @@ public final class ChatViewModel: ObservableObject {
                 scheduleProviderSelectionRefresh()
                 return
             }
-            if let selectedProfileID =
-                settings.selectedProviderProfileID
-            {
-                guard profiles.contains(where: {
-                    $0.id == selectedProfileID
-                }) else {
-                    applyProviderConfiguration(
-                        profiles: profiles,
-                        selectedProfileID: nil
-                    )
-                    errorMessage = userFacingProviderError(
-                        ProviderAccessFailure.invalidSelection,
-                        fallback: "프로바이더 설정을 확인하세요."
-                    )
-                    return
-                }
-                guard !providerProfileIsBlocked(selectedProfileID) else {
-                    providerRefreshErrorMessage = nil
-                    errorMessage = Self.blockedProviderMessage
-                    return
-                }
+            let target = resolveGenerationTarget(
+                settings: settings,
+                options: configuration.options
+            )
+            let hasStoredSelection =
+                settings.selectedProviderProfileID != nil
+                || settings.selectedModelRouteID != nil
+                || settings.selectedGenerationPresetID != nil
+            if hasStoredSelection, target == nil {
+                applyGenerationConfiguration(
+                    connections: configuration.connections,
+                    options: configuration.options,
+                    profiles: profiles,
+                    selectedTarget: nil
+                )
+                errorMessage = userFacingProviderError(
+                    ProviderAccessFailure.invalidSelection,
+                    fallback: "프로바이더 설정을 확인하세요."
+                )
+                return
             }
-            applyProviderConfiguration(
+            if let option = target.flatMap({ target in
+                configuration.options.first {
+                    $0.target == target
+                }
+            }), providerProfileIsBlocked(option.connection.id) {
+                providerRefreshErrorMessage = nil
+                errorMessage = Self.blockedProviderMessage
+                return
+            }
+            applyGenerationConfiguration(
+                connections: configuration.connections,
+                options: configuration.options,
                 profiles: profiles,
-                selectedProfileID: settings.selectedProviderProfileID
+                selectedTarget: target
             )
             let credentialRevision = credentialAccessRevision
             let configurationRevision =
                 providerConfigurationStore?.revision
             var credentialFailureMessage: String?
-            if let profileID = selectedProviderProfileID {
-                guard !providerProfileIsBlocked(profileID) else {
+            if let option = selectedGenerationOption {
+                let connectionID = option.connection.id
+                guard !providerProfileIsBlocked(connectionID) else {
                     providerRefreshErrorMessage = nil
                     errorMessage = Self.blockedProviderMessage
                     return
                 }
                 do {
                     _ = try await credentialForProvider(
-                        profileID: profileID
+                        profileID: connectionID
                     )
                     guard providerRefreshRevision == refreshRevision,
                           providerSelectionRevision == selectionRevision
@@ -1374,7 +1408,8 @@ public final class ChatViewModel: ObservableObject {
                         return
                     }
                     guard providerConfigurationIsCurrent(
-                        profileID: profileID,
+                        connectionID: connectionID,
+                        target: option.target,
                         revision: configurationRevision
                     ) else {
                         scheduleProviderSelectionRefresh()
@@ -1403,7 +1438,8 @@ public final class ChatViewModel: ObservableObject {
                         return
                     }
                     guard providerConfigurationIsCurrent(
-                        profileID: profileID,
+                        connectionID: connectionID,
+                        target: option.target,
                         revision: configurationRevision
                     ) else {
                         scheduleProviderSelectionRefresh()
@@ -1413,7 +1449,7 @@ public final class ChatViewModel: ObservableObject {
                         return
                     }
                     credentialAccessRevision &+= 1
-                    credentialFailureProfileID = profileID
+                    credentialFailureProfileID = connectionID
                     hasProviderCredentialAccessFailure = true
                     credentialFailureMessage =
                         userFacingCredentialError(error)
@@ -1452,7 +1488,7 @@ public final class ChatViewModel: ObservableObject {
                 scheduleProviderSelectionRefresh()
                 return
             }
-            guard providerProfiles.isEmpty else {
+            guard generationOptions.isEmpty else {
                 return
             }
             let providerError = userFacingProviderError(
@@ -1464,12 +1500,13 @@ public final class ChatViewModel: ObservableObject {
         }
     }
 
-    public func selectProviderProfile(id: String) async {
-        guard
-            id != selectedProviderProfileID,
-            providerProfiles.contains(where: { $0.id == id }),
-            !providerProfileIsBlocked(id),
-            canChangeProviderProfile
+    public func selectGenerationTarget(id: String) async {
+        guard let option = generationOptions.first(where: {
+            $0.id == id
+        }),
+              option.target != selectedGenerationTarget,
+              !providerProfileIsBlocked(option.connection.id),
+              canChangeProviderProfile
         else {
             return
         }
@@ -1487,33 +1524,39 @@ public final class ChatViewModel: ObservableObject {
 
         do {
             try validateProviderProfileAvailability(
-                profileID: id,
+                profileID: option.connection.id,
                 revision: configurationRevision
             )
-            let updated = try await client.selectProviderProfile(id: id)
+            let updated = try await client
+                .selectProviderGenerationTarget(option.target)
             guard providerSelectionRevision == revision else {
                 return
             }
             try validateProviderProfileAvailability(
-                profileID: id,
+                profileID: option.connection.id,
                 revision: configurationRevision
             )
-            applyProviderConfiguration(
-                profiles: providerProfiles,
-                selectedProfileID: updated.selectedProviderProfileID
-            )
-            guard selectedProviderProfileID == id else {
+            guard updated.selectedGenerationTarget == option.target else {
                 errorMessage =
-                    "기본 프로바이더 변경 결과를 확인할 수 없습니다. 다시 시도하세요."
+                    "기본 모델 변경 결과를 확인할 수 없습니다. 다시 시도하세요."
                 return
             }
+            applyGenerationConfiguration(
+                connections: connectionSnapshot,
+                options: generationOptions,
+                profiles: providerProfiles,
+                selectedTarget: option.target
+            )
             let configurationRevision =
                 providerConfigurationStore?.revision
             do {
-                _ = try await credentialForProvider(profileID: id)
+                _ = try await credentialForProvider(
+                    profileID: option.connection.id
+                )
                 guard providerSelectionRevision == revision,
                       providerConfigurationIsCurrent(
-                          profileID: id,
+                          connectionID: option.connection.id,
+                          target: option.target,
                           revision: configurationRevision
                       )
                 else {
@@ -1527,14 +1570,15 @@ public final class ChatViewModel: ObservableObject {
             } catch {
                 guard providerSelectionRevision == revision,
                       providerConfigurationIsCurrent(
-                          profileID: id,
+                          connectionID: option.connection.id,
+                          target: option.target,
                           revision: configurationRevision
                       )
                 else {
                     return
                 }
                 credentialAccessRevision &+= 1
-                credentialFailureProfileID = id
+                credentialFailureProfileID = option.connection.id
                 hasProviderCredentialAccessFailure = true
                 errorMessage = userFacingCredentialError(error)
                 return
@@ -1546,10 +1590,24 @@ public final class ChatViewModel: ObservableObject {
             if providerSelectionRevision == revision {
                 errorMessage = userFacingProviderError(
                     error,
-                    fallback: "기본 프로바이더를 변경하지 못했습니다. 다시 시도하세요."
+                    fallback: "기본 모델을 변경하지 못했습니다. 다시 시도하세요."
                 )
             }
         }
+    }
+
+    /// Legacy UI/test compatibility. New UI identifies the exact route and
+    /// preset through `selectGenerationTarget(id:)`.
+    public func selectProviderProfile(id: String) async {
+        if generationOptions.isEmpty {
+            await refreshProviderSelection()
+        }
+        guard let option = generationOptions.first(where: {
+            $0.connection.id == id
+        }) else {
+            return
+        }
+        await selectGenerationTarget(id: option.id)
     }
 
     private var activeBranch: CoreConversationBranch? {
@@ -1560,9 +1618,14 @@ public final class ChatViewModel: ObservableObject {
     }
 
     private struct SelectedProviderAccess {
-        let profile: ProviderProfile
+        let option: ProviderGenerationOption
         let credential: String?
         let configurationRevision: UInt64?
+    }
+
+    private struct LoadedGenerationConfiguration {
+        let connections: [ProviderConnectionRecord]
+        let options: [ProviderGenerationOption]
     }
 
     private enum ProviderAccessFailure: Error {
@@ -1584,7 +1647,12 @@ public final class ChatViewModel: ObservableObject {
             providerConfigurationStore?.revision
         async let profilesTask = client.listProviderProfiles()
         async let settingsTask = client.getSettings()
-        let (profiles, settings) = try await (profilesTask, settingsTask)
+        async let optionsTask = loadGenerationOptions()
+        let (profiles, settings, configuration) = try await (
+            profilesTask,
+            settingsTask,
+            optionsTask
+        )
 
         guard providerConfigurationRevisionIsCurrent(
             configurationRevisionBeforeRead
@@ -1593,56 +1661,77 @@ public final class ChatViewModel: ObservableObject {
             throw ProviderAccessFailure.configurationChanged
         }
 
-        guard !profiles.isEmpty else {
-            applyProviderConfiguration(
-                profiles: [],
-                selectedProfileID: nil
+        guard !configuration.options.isEmpty else {
+            applyGenerationConfiguration(
+                connections: configuration.connections,
+                options: [],
+                profiles: profiles,
+                selectedTarget: nil
             )
             throw ProviderAccessFailure.noProfiles
         }
-        guard let profileID = settings.selectedProviderProfileID else {
-            applyProviderConfiguration(
+        guard let target = resolveGenerationTarget(
+            settings: settings,
+            options: configuration.options
+        ) else {
+            applyGenerationConfiguration(
+                connections: configuration.connections,
+                options: configuration.options,
                 profiles: profiles,
-                selectedProfileID: nil
+                selectedTarget: nil
             )
+            if settings.selectedProviderProfileID != nil
+                || settings.selectedModelRouteID != nil
+                || settings.selectedGenerationPresetID != nil
+            {
+                throw ProviderAccessFailure.invalidSelection
+            }
             throw ProviderAccessFailure.selectionRequired
         }
-        guard let profile = profiles.first(where: { $0.id == profileID }) else {
-            applyProviderConfiguration(
+        guard let option = configuration.options.first(where: {
+            $0.target == target
+        }) else {
+            applyGenerationConfiguration(
+                connections: configuration.connections,
+                options: configuration.options,
                 profiles: profiles,
-                selectedProfileID: nil
+                selectedTarget: nil
             )
             throw ProviderAccessFailure.invalidSelection
         }
-        guard !providerProfileIsBlocked(profileID) else {
+        let connectionID = option.connection.id
+        guard !providerProfileIsBlocked(connectionID) else {
             throw ProviderAccessFailure.profileBlocked
         }
-        applyProviderConfiguration(
+        applyGenerationConfiguration(
+            connections: configuration.connections,
+            options: configuration.options,
             profiles: profiles,
-            selectedProfileID: profileID
+            selectedTarget: target
         )
         let configurationRevision = providerConfigurationStore?.revision
 
         let credential: String?
         do {
             credential = try await credentialForProvider(
-                profileID: profileID
+                profileID: connectionID
             )
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            if providerProfileIsBlocked(profileID) {
+            if providerProfileIsBlocked(connectionID) {
                 throw ProviderAccessFailure.profileBlocked
             }
             guard providerConfigurationIsCurrent(
-                profileID: profile.id,
+                connectionID: connectionID,
+                target: target,
                 revision: configurationRevision
             ) else {
                 scheduleProviderSelectionRefresh()
                 throw ProviderAccessFailure.configurationChanged
             }
             credentialAccessRevision &+= 1
-            credentialFailureProfileID = profileID
+            credentialFailureProfileID = connectionID
             hasProviderCredentialAccessFailure = true
             if let credentialError = error as? CredentialStoreError,
                credentialError == .credentialTooLarge
@@ -1651,11 +1740,12 @@ public final class ChatViewModel: ObservableObject {
             }
             throw ProviderAccessFailure.credentialUnavailable
         }
-        guard !providerProfileIsBlocked(profileID) else {
+        guard !providerProfileIsBlocked(connectionID) else {
             throw ProviderAccessFailure.profileBlocked
         }
         guard providerConfigurationIsCurrent(
-            profileID: profile.id,
+            connectionID: connectionID,
+            target: target,
             revision: configurationRevision
         )
         else {
@@ -1666,7 +1756,7 @@ public final class ChatViewModel: ObservableObject {
         credentialFailureProfileID = nil
         hasProviderCredentialAccessFailure = false
         return SelectedProviderAccess(
-            profile: profile,
+            option: option,
             credential: credential,
             configurationRevision: configurationRevision
         )
@@ -1691,7 +1781,8 @@ public final class ChatViewModel: ObservableObject {
         _ access: SelectedProviderAccess
     ) -> Bool {
         providerConfigurationIsCurrent(
-            profileID: access.profile.id,
+            connectionID: access.option.connection.id,
+            target: access.option.target,
             revision: access.configurationRevision
         )
     }
@@ -1699,7 +1790,7 @@ public final class ChatViewModel: ObservableObject {
     private func validateProviderAccess(
         _ access: SelectedProviderAccess
     ) throws {
-        guard !providerProfileIsBlocked(access.profile.id) else {
+        guard !providerProfileIsBlocked(access.option.connection.id) else {
             throw ProviderAccessFailure.profileBlocked
         }
         guard providerAccessIsCurrent(access) else {
@@ -1762,20 +1853,177 @@ public final class ChatViewModel: ObservableObject {
     }
 
     private func providerConfigurationIsCurrent(
-        profileID: String,
+        connectionID: String,
+        target: ProviderGenerationTarget,
         revision: UInt64?
     ) -> Bool {
         guard let providerConfigurationStore else {
-            return selectedProviderProfileID == profileID
+            return selectedProviderProfileID == connectionID
+                && selectedGenerationTarget == target
         }
         guard let revision else {
             return false
         }
         return providerConfigurationStore.revision == revision
-            && providerConfigurationStore.selectedProfileID == profileID
+            && providerConfigurationStore.selectedConnectionID
+                == connectionID
+            && providerConfigurationStore.selectedGenerationTarget
+                == target
             && !providerConfigurationStore.isBlocked(
-                profileID: profileID
+                profileID: connectionID
             )
+    }
+
+    private var connectionSnapshot: [ProviderConnectionRecord] {
+        var connectionsByID: [String: ProviderConnectionRecord] = [:]
+        for option in generationOptions {
+            connectionsByID[option.connection.id] = option.connection
+        }
+        return Array(connectionsByID.values)
+    }
+
+    private func loadGenerationOptions() async throws
+        -> LoadedGenerationConfiguration
+    {
+        let connections = try await client.listProviderConnections()
+        var options: [ProviderGenerationOption] = []
+        for connection in connections {
+            let routes = try await client.listProviderModelRoutes(
+                connectionID: connection.id
+            )
+            for route in routes {
+                guard route.connectionID == connection.id else {
+                    throw CoreClientFailure.invalidResponse(
+                        "모델 경로의 연결 식별자가 일치하지 않습니다."
+                    )
+                }
+                let presets =
+                    try await client.listProviderGenerationPresets(
+                        modelRouteID: route.id
+                    )
+                for preset in presets {
+                    guard preset.modelRouteID == route.id else {
+                        throw CoreClientFailure.invalidResponse(
+                            "생성 프리셋의 모델 경로가 일치하지 않습니다."
+                        )
+                    }
+                    options.append(
+                        ProviderGenerationOption(
+                            connection: connection,
+                            route: route,
+                            preset: preset
+                        )
+                    )
+                }
+            }
+        }
+        return LoadedGenerationConfiguration(
+            connections: connections,
+            options: options
+        )
+    }
+
+    private func resolveGenerationTarget(
+        settings: CoreAppSettings,
+        options: [ProviderGenerationOption]
+    ) -> ProviderGenerationTarget? {
+        if settings.selectedModelRouteID != nil
+            || settings.selectedGenerationPresetID != nil
+        {
+            guard let target = settings.selectedGenerationTarget,
+                  options.contains(where: { $0.target == target })
+            else {
+                return nil
+            }
+            return target
+        }
+        guard let legacyID = settings.selectedProviderProfileID else {
+            return nil
+        }
+        // Rust's legacy migration preserves the profile identifier for the
+        // connection, its sole route, and its default preset.
+        return options.first {
+            $0.connection.id == legacyID
+                && $0.route.id == legacyID
+                && $0.preset.id == legacyID
+        }?.target
+    }
+
+    private func applyGenerationConfiguration(
+        connections: [ProviderConnectionRecord],
+        options: [ProviderGenerationOption],
+        profiles: [ProviderProfile],
+        selectedTarget: ProviderGenerationTarget?
+    ) {
+        let sortedOptions = options.sorted {
+            if $0.connection.displayName != $1.connection.displayName {
+                return $0.connection.displayName.localizedStandardCompare(
+                    $1.connection.displayName
+                ) == .orderedAscending
+            }
+            if $0.route.title != $1.route.title {
+                return $0.route.title.localizedStandardCompare(
+                    $1.route.title
+                ) == .orderedAscending
+            }
+            if $0.preset.displayName != $1.preset.displayName {
+                return $0.preset.displayName.localizedStandardCompare(
+                    $1.preset.displayName
+                ) == .orderedAscending
+            }
+            return $0.id.localizedStandardCompare($1.id)
+                == .orderedAscending
+        }
+        let validTarget = sortedOptions.contains {
+            $0.target == selectedTarget
+        } ? selectedTarget : nil
+        let selectedConnectionID = sortedOptions.first {
+            $0.target == validTarget
+        }?.connection.id
+        let sortedProfiles = profiles.sorted {
+            if $0.displayName == $1.displayName {
+                if $0.model == $1.model {
+                    return $0.id.localizedStandardCompare($1.id)
+                        == .orderedAscending
+                }
+                return $0.model.localizedStandardCompare($1.model)
+                    == .orderedAscending
+            }
+            return $0.displayName.localizedStandardCompare($1.displayName)
+                == .orderedAscending
+        }
+
+        generationOptions = sortedOptions
+        selectedGenerationTarget = validTarget
+        providerProfiles = sortedProfiles
+        selectedProviderProfileID = selectedConnectionID
+        if credentialFailureProfileID != nil,
+           credentialFailureProfileID != selectedConnectionID
+        {
+            credentialAccessRevision &+= 1
+            credentialFailureProfileID = nil
+            hasProviderCredentialAccessFailure = false
+            if errorMessage == Self.credentialAccessFailureMessage
+                || errorMessage == Self.credentialTooLargeMessage
+            {
+                errorMessage = nil
+            }
+        }
+        hasLoadedProviderConfiguration = true
+        providerConfigurationStore?.replace(
+            connections: connections,
+            selectedConnectionID: selectedConnectionID,
+            selectedGenerationTarget: validTarget,
+            profiles: sortedProfiles,
+            selectedProfileID: selectedConnectionID
+        )
+        if errorMessage == Self.blockedProviderMessage,
+           selectedConnectionID.map({
+               !providerProfileIsBlocked($0)
+           }) ?? true
+        {
+            errorMessage = nil
+        }
     }
 
     private func applyProviderConfiguration(
@@ -1797,8 +2045,16 @@ public final class ChatViewModel: ObservableObject {
         let validSelection = sortedProfiles.contains {
             $0.id == selectedProfileID
         } ? selectedProfileID : nil
+        let compatibleTarget = validSelection.flatMap { legacyID in
+            generationOptions.first {
+                $0.connection.id == legacyID
+                    && $0.route.id == legacyID
+                    && $0.preset.id == legacyID
+            }?.target
+        }
         providerProfiles = sortedProfiles
         selectedProviderProfileID = validSelection
+        selectedGenerationTarget = compatibleTarget
         if credentialFailureProfileID != nil,
            credentialFailureProfileID != validSelection
         {
@@ -1813,6 +2069,11 @@ public final class ChatViewModel: ObservableObject {
         }
         hasLoadedProviderConfiguration = true
         providerConfigurationStore?.replace(
+            connections: connectionSnapshot,
+            selectedConnectionID: compatibleTarget == nil
+                ? nil
+                : validSelection,
+            selectedGenerationTarget: compatibleTarget,
             profiles: sortedProfiles,
             selectedProfileID: validSelection
         )

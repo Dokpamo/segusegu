@@ -13,8 +13,12 @@ lorepia-domain = { path = "../domain" }
 lorepia-providers = { path = "../providers" }
 lorepia-storage = { path = "../storage" }
 serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
 tokio.workspace = true
+url.workspace = true
 uuid.workspace = true
+zeroize.workspace = true
 
 [dev-dependencies]
 async-trait.workspace = true

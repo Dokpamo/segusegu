@@ -48,7 +48,16 @@ See [the architecture overview](docs/architecture/overview.md).
 - persist immutable sources, CHARX assets, characters, conversations, messages,
   provider profiles, and settings;
 - restore local state after process restart;
-- connect directly to HTTPS or loopback OpenAI-compatible endpoints;
+- add built-in providers with an API key, discover unknown HTTPS/loopback
+  services from a site or redacted cURL, and review the resulting manifest
+  before activation;
+- merge the bundled and signed provider catalogs, synchronize model routes
+  through a durable hash-bound review, and preserve temporarily missing
+  routes and their presets;
+- render provider-specific generation, reasoning, and prompt-cache controls
+  from Core-owned capability and parameter contracts;
+- run the optional setup assistant only through an explicitly selected local
+  model route and a user-reviewed document-egress grant;
 - stream versioned, ordered generation events and propagate cancellation;
 - expose the same core through UniFFI and an opaque-handle C ABI.
 

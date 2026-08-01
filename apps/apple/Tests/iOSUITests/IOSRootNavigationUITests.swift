@@ -37,14 +37,14 @@ final class IOSRootNavigationUITests: XCTestCase {
         )
     }
 
-    /// Settings lists what is connected; the profile form lives one page down.
+    /// Settings lists what is connected; the provider center lives one page down.
     @MainActor
     private func openProviderProfileDetail(in app: XCUIApplication) {
         let row = app.buttons["settings-provider-profile-row"]
         XCTAssertTrue(row.waitForExistence(timeout: 5))
         row.tap()
         XCTAssertTrue(
-            app.navigationBars["프로필 편집"].waitForExistence(timeout: 5)
+            app.navigationBars["AI 연결"].waitForExistence(timeout: 5)
         )
     }
 
@@ -73,6 +73,85 @@ final class IOSRootNavigationUITests: XCTestCase {
                     && frame.height > 0
                     && frame.intersects(contentBounds)
             }
+    }
+
+    @MainActor
+    private func waitForOnscreenIntersection(
+        of element: XCUIElement,
+        in app: XCUIApplication,
+        timeout: TimeInterval
+    ) -> Bool {
+        let onscreen = XCTNSPredicateExpectation(
+            predicate: NSPredicate { object, _ in
+                guard let element = object as? XCUIElement,
+                      element.exists
+                else {
+                    return false
+                }
+                let frame = element.frame
+                let window = app.windows.firstMatch
+                return window.exists
+                    && frame.width > 0
+                    && frame.height > 0
+                    && frame.intersects(window.frame)
+            },
+            object: element
+        )
+        return XCTWaiter.wait(
+            for: [onscreen],
+            timeout: timeout
+        ) == .completed
+    }
+
+    @MainActor
+    private func waitForNoninteractiveDismissal(
+        of element: XCUIElement,
+        in app: XCUIApplication,
+        timeout: TimeInterval
+    ) -> Bool {
+        let dismissed = XCTNSPredicateExpectation(
+            predicate: NSPredicate { object, _ in
+                guard let element = object as? XCUIElement else {
+                    return false
+                }
+                guard element.exists else {
+                    return true
+                }
+                let window = app.windows.firstMatch
+                return window.exists
+                    && (
+                        !element.isHittable
+                            || !element.frame.intersects(window.frame)
+                    )
+            },
+            object: element
+        )
+        return XCTWaiter.wait(
+            for: [dismissed],
+            timeout: timeout
+        ) == .completed
+    }
+
+    @MainActor
+    private func firstHittableElement(
+        in query: XCUIElementQuery,
+        timeout: TimeInterval
+    ) -> XCUIElement? {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if let element = query.allElementsBoundByIndex.first(
+                where: \.isHittable
+            ) {
+                return element
+            }
+            RunLoop.current.run(
+                until: min(
+                    deadline,
+                    Date().addingTimeInterval(0.05)
+                )
+            )
+        }
+        return query.allElementsBoundByIndex.first(where: \.isHittable)
     }
 
     @MainActor
@@ -529,10 +608,13 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(guestIdentity.label, "게스트")
         XCTAssertFalse(app.buttons["settings-add-account"].exists)
         XCTAssertFalse(app.buttons["settings-account-avatar"].exists)
-        // Editing a profile now lives one page down, behind the connection row.
+        // Provider discovery and existing connections live one page down.
         openProviderProfileDetail(in: app)
-        XCTAssertTrue(app.textFields["표시 이름"].isHittable)
-        app.navigationBars["프로필 편집"].buttons.firstMatch.tap()
+        XCTAssertTrue(
+            app.buttons["provider-add-knownProvider"]
+                .waitForExistence(timeout: 5)
+        )
+        app.navigationBars["AI 연결"].buttons.firstMatch.tap()
 
         // Diagnostics, including the core status panel, live one page in.
         let diagnostics = app.buttons["settings-diagnostics-row"]
@@ -593,6 +675,191 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertFalse(
             app.staticTexts["Preview Core"].exists,
             "A mistyped fixture argument silently selected preview data."
+        )
+    }
+
+    @MainActor
+    func testLiveCoreExposesSelectableKnownProviderTemplateWithoutFallback() {
+        let app = XCUIApplication()
+        app.launchArguments = ["--lorepia-live-core"]
+        app.launch()
+
+        let settings = app.tabBars.buttons["설정"]
+        XCTAssertTrue(
+            settings.waitForExistence(timeout: 15),
+            "The explicit live-Core launch did not reach the native root UI."
+        )
+        settings.tap()
+
+        // Prove that this process did not silently use preview data or the
+        // unavailable-client fallback before checking provider templates.
+        let diagnostics = app.buttons["settings-diagnostics-row"]
+        XCTAssertTrue(diagnostics.waitForExistence(timeout: 10))
+        let diagnosticsReady = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "isEnabled == true AND isHittable == true"
+            ),
+            object: diagnostics
+        )
+        wait(for: [diagnosticsReady], timeout: 10)
+        diagnostics.tap()
+        XCTAssertTrue(
+            app.staticTexts["Rust Core"].waitForExistence(timeout: 10),
+            "The provider regression must execute against the live Rust Core."
+        )
+        XCTAssertTrue(
+            app.staticTexts["정상"].waitForExistence(timeout: 10),
+            "The live Rust Core did not become healthy."
+        )
+        XCTAssertFalse(app.staticTexts["Preview Core"].exists)
+        XCTAssertFalse(app.staticTexts["Core Unavailable"].exists)
+        app.navigationBars["진단"].buttons.firstMatch.tap()
+
+        let providerRow = app.buttons["settings-provider-profile-row"]
+        XCTAssertTrue(providerRow.waitForExistence(timeout: 10))
+        let providerRowReady = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "isEnabled == true AND isHittable == true"
+            ),
+            object: providerRow
+        )
+        wait(for: [providerRowReady], timeout: 10)
+        providerRow.tap()
+        XCTAssertTrue(
+            app.navigationBars["AI 연결"].waitForExistence(timeout: 10)
+        )
+
+        let mainLoading = app.descendants(matching: .any)[
+            "provider-connections-loading"
+        ]
+        let loadedConnectionContent = app.descendants(matching: .any)
+            .matching(
+                NSPredicate(
+                    format: "identifier == %@ OR identifier BEGINSWITH %@",
+                    "provider-connections-empty",
+                    "provider-connection-"
+                )
+            )
+        let providerRefreshSettled = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                !mainLoading.exists && loadedConnectionContent.count > 0
+            },
+            object: app
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(
+                for: [providerRefreshSettled],
+                timeout: 15
+            ),
+            .completed,
+            "The live provider refresh never reached loaded content."
+        )
+
+        let knownProvider = app.buttons["provider-add-knownProvider"]
+        XCTAssertTrue(
+            knownProvider.waitForExistence(timeout: 10),
+            "The live provider center did not expose known-provider setup."
+        )
+        for _ in 0 ..< 4 where !knownProvider.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(
+            knownProvider.isHittable,
+            "The known-provider CTA never became tappable onscreen."
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["provider-error-message"].exists,
+            "The loaded provider center reported a live-Core error."
+        )
+        knownProvider.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["새 AI 연결"].waitForExistence(timeout: 10)
+        )
+        let discoverySheetError = app.descendants(matching: .any)[
+            "provider-discovery-error-message"
+        ]
+        XCTAssertFalse(
+            discoverySheetError.exists,
+            "The known-provider wizard opened with a discovery error."
+        )
+        let templatePicker = app.descendants(matching: .any)[
+            "provider-discovery-template"
+        ]
+        XCTAssertTrue(
+            templatePicker.waitForExistence(timeout: 10),
+            "The live Core returned no selectable provider template."
+        )
+        let pickerReady = XCTNSPredicateExpectation(
+            predicate: NSPredicate(
+                format: "isEnabled == true AND isHittable == true"
+            ),
+            object: templatePicker
+        )
+        wait(for: [pickerReady], timeout: 10)
+
+        let targetTemplate = "OpenRouter"
+        XCTAssertFalse(
+            [
+                templatePicker.value as? String ?? "",
+                templatePicker.label,
+            ]
+            .joined(separator: " ")
+            .contains(targetTemplate),
+            "The target template must differ from the initial selection."
+        )
+
+        templatePicker.tap()
+        let targetOptions = app.buttons.matching(
+            NSPredicate(format: "label == %@", targetTemplate)
+        )
+        guard let targetOption = firstHittableElement(
+            in: targetOptions,
+            timeout: 5
+        ) else {
+            XCTFail("No interactive OpenRouter picker option appeared.")
+            return
+        }
+        targetOption.tap()
+
+        let targetSelected = XCTNSPredicateExpectation(
+            predicate: NSPredicate { object, _ in
+                guard let picker = object as? XCUIElement else {
+                    return false
+                }
+                return [
+                    picker.value as? String ?? "",
+                    picker.label,
+                ]
+                .joined(separator: " ")
+                .contains(targetTemplate)
+            },
+            object: templatePicker
+        )
+        wait(for: [targetSelected], timeout: 5)
+        XCTAssertTrue(
+            waitForNoninteractiveDismissal(
+                of: targetOption,
+                in: app,
+                timeout: 5
+            ),
+            "The selected OpenRouter option remained interactive."
+        )
+
+        let discoveryName = app.textFields["provider-discovery-name"]
+        XCTAssertTrue(discoveryName.waitForExistence(timeout: 5))
+        XCTAssertEqual(
+            discoveryName.value as? String,
+            targetTemplate,
+            "The live Core selection did not update wizard state."
+        )
+        XCTAssertFalse(
+            app.buttons["provider-discovery-start"].isEnabled,
+            "A credential-requiring template was startable without an API key."
+        )
+        XCTAssertFalse(
+            discoverySheetError.exists,
+            "A discovery error appeared after selecting OpenRouter."
         )
     }
 
@@ -1586,12 +1853,12 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(model.label, "앱 전체 기본 모델")
         XCTAssertEqual(
             model.value as? String,
-            "Preview Provider · preview-model"
+            "Preview Provider · preview-model · 기본"
         )
 
         model.tap()
         let selectedProvider = app.buttons[
-            "chat-composer-model-option-preview-provider"
+            "chat-composer-model-option-preview-provider--preview-provider--preview-provider"
         ]
         let providerSettings = app.buttons[
             "chat-composer-provider-settings"
@@ -1599,7 +1866,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(selectedProvider.waitForExistence(timeout: 2))
         XCTAssertEqual(
             selectedProvider.label,
-            "Preview Provider · preview-model"
+            "Preview Provider · preview-model · 기본"
         )
         XCTAssertTrue(providerSettings.waitForExistence(timeout: 2))
         XCTAssertEqual(providerSettings.label, "프로바이더 설정")
@@ -1617,100 +1884,43 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(settingsTab.isSelected)
         openProviderProfileDetail(in: app)
 
-        let profilePicker = app.buttons[
-            "settings-provider-profile-picker"
+        let connection = app.buttons[
+            "provider-connection-preview-provider"
         ]
-        let profileName = app.textFields["표시 이름"]
-        let newProfileButtons = app.buttons.matching(
-            identifier: "settings-new-provider-profile"
+        XCTAssertTrue(connection.waitForExistence(timeout: 5))
+        connection.tap()
+        XCTAssertTrue(
+            app.navigationBars["Preview Provider"]
+                .waitForExistence(timeout: 5)
         )
-        let deleteProfileButtons = app.buttons.matching(
-            identifier: "settings-delete-provider-profile"
-        )
-        let saveProfileButtons = app.buttons.matching(
-            identifier: "settings-save-provider-profile"
-        )
-        XCTAssertTrue(profilePicker.waitForExistence(timeout: 5))
-        XCTAssertEqual(profilePicker.value as? String, "Preview Provider")
-        XCTAssertTrue(profileName.waitForExistence(timeout: 5))
-        XCTAssertEqual(newProfileButtons.count, 1)
-        XCTAssertEqual(deleteProfileButtons.count, 1)
-        XCTAssertEqual(saveProfileButtons.count, 1)
-        let deleteProfile = deleteProfileButtons.firstMatch
-        XCTAssertTrue(deleteProfile.waitForExistence(timeout: 5))
-        if !deleteProfile.isHittable {
+
+        let deleteConnection = app.buttons[
+            "provider-delete-connection"
+        ]
+        if !deleteConnection.waitForExistence(timeout: 2) {
             app.swipeUp()
         }
-        XCTAssertEqual(deleteProfileButtons.count, 1)
-        let visibleDeleteProfile = deleteProfileButtons.firstMatch
-        XCTAssertTrue(visibleDeleteProfile.waitForExistence(timeout: 5))
-        let deleteEnabled = XCTNSPredicateExpectation(
-            predicate: NSPredicate(
-                format: "isEnabled == true AND isHittable == true"
-            ),
-            object: visibleDeleteProfile
+        XCTAssertTrue(deleteConnection.waitForExistence(timeout: 5))
+        deleteConnection.tap()
+        let confirmDeleteCandidates = app.buttons.matching(
+            identifier: "provider-confirm-delete-connection"
         )
-        wait(for: [deleteEnabled], timeout: 5)
-        XCTAssertEqual(profileName.value as? String, "Preview Provider")
-        XCTAssertEqual(visibleDeleteProfile.label, "프로필 삭제")
-        visibleDeleteProfile.tap()
-
-        let deletionStarted = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "isEnabled == false"),
-            object: visibleDeleteProfile
-        )
-        wait(for: [deletionStarted], timeout: 5)
-
-        let clearedProfileName = XCTNSPredicateExpectation(
-            predicate: NSPredicate(
-                format: "value == nil OR value == '' OR value == %@",
-                "표시 이름"
-            ),
-            object: app.textFields["표시 이름"]
-        )
-        let clearedModel = XCTNSPredicateExpectation(
-            predicate: NSPredicate(
-                format: "value == nil OR value == '' OR value == %@",
-                "모델"
-            ),
-            object: app.textFields["모델"]
-        )
-        wait(for: [clearedProfileName, clearedModel], timeout: 5)
-
-        app.swipeDown()
-        app.swipeDown()
-        let noSelectedProfile = app.buttons[
-            "settings-provider-profile-picker"
-        ]
-        XCTAssertTrue(noSelectedProfile.waitForExistence(timeout: 5))
-        let noSelectedProfileValue = XCTNSPredicateExpectation(
-            predicate: NSPredicate(
-                format: "value == %@",
-                "선택 안 함"
-            ),
-            object: noSelectedProfile
-        )
-        let noSelectedProfileResult = XCTWaiter().wait(
-            for: [noSelectedProfileValue],
+        guard let confirmDelete = firstHittableElement(
+            in: confirmDeleteCandidates,
             timeout: 5
-        )
-        if noSelectedProfileResult == .completed {
-            let selectionMustRemainEmpty = XCTNSPredicateExpectation(
-                predicate: NSPredicate(
-                    format: "value != %@",
-                    "선택 안 함"
-                ),
-                object: noSelectedProfile
-            )
-            selectionMustRemainEmpty.isInverted = true
-            wait(for: [selectionMustRemainEmpty], timeout: 1)
+        ) else {
+            XCTFail("No interactive connection-delete confirmation appeared.")
+            return
         }
-        let observedPickerValue = noSelectedProfile.value as? String
-        XCTAssertFalse(
-            app.buttons["settings-delete-provider-profile"].isEnabled
-        )
+        confirmDelete.tap()
 
-        app.navigationBars["프로필 편집"].buttons.firstMatch.tap()
+        let emptyConnections = app.descendants(matching: .any)[
+            "provider-connections-empty"
+        ]
+        XCTAssertTrue(emptyConnections.waitForExistence(timeout: 5))
+        XCTAssertFalse(connection.exists)
+
+        app.navigationBars["AI 연결"].buttons.firstMatch.tap()
         let diagnostics = app.buttons["settings-diagnostics-row"]
         XCTAssertTrue(diagnostics.waitForExistence(timeout: 5))
         diagnostics.tap()
@@ -1730,10 +1940,6 @@ final class IOSRootNavigationUITests: XCTestCase {
         let observedModelValue = model.value as? String
 
         XCTAssertTrue(
-            noSelectedProfileResult == .completed,
-            "Deleted profile remained selected: \(observedPickerValue ?? "nil")"
-        )
-        XCTAssertTrue(
             providerCTAExists,
             "Missing-provider CTA absent; model value: \(observedModelValue ?? "nil")"
         )
@@ -1749,11 +1955,13 @@ final class IOSRootNavigationUITests: XCTestCase {
             // The CTA targets provider configuration directly and replaces
             // any settings detail path that the tab previously preserved.
             XCTAssertTrue(
-                app.navigationBars["프로필 편집"]
+                app.navigationBars["AI 연결"]
                     .waitForExistence(timeout: 5)
             )
             XCTAssertTrue(
-                app.buttons["settings-provider-profile-picker"]
+                app.descendants(matching: .any)[
+                    "provider-connections-empty"
+                ]
                     .waitForExistence(timeout: 5)
             )
         }
@@ -2043,8 +2251,18 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         for cycle in 0 ..< 2 {
             composer.tap()
-            XCTAssertTrue(keyboard.waitForExistence(timeout: 5))
-            XCTAssertLessThan(keyboard.frame.minY, windowBounds.maxY)
+            XCTAssertTrue(
+                waitForOnscreenIntersection(
+                    of: keyboard,
+                    in: app,
+                    timeout: 5
+                ),
+                "The software keyboard never intersected the live app window."
+            )
+            XCTAssertTrue(
+                keyboard.frame.intersects(window.frame),
+                "The cached keyboard accessibility node remained offscreen."
+            )
             if cycle == 0 {
                 composer.typeText("항상 열린 입력바")
             }
@@ -2545,7 +2763,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         }
         XCTAssertEqual(
             model.value as? String,
-            "Preview Provider · preview-model"
+            "Preview Provider · preview-model · 기본"
         )
         XCTAssertEqual(mode.value as? String, "채팅 모드")
 
@@ -2663,7 +2881,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(composerSurface.value as? String, openComposerState)
         XCTAssertEqual(
             model.value as? String,
-            "Preview Provider · preview-model"
+            "Preview Provider · preview-model · 기본"
         )
         XCTAssertEqual(mode.value as? String, "채팅 모드")
         let focusedSurfaceBounds = composerSurface.frame
@@ -2793,7 +3011,19 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertTrue(currentModeOption.waitForExistence(timeout: 2))
         XCTAssertTrue(storyModeOption.waitForExistence(timeout: 2))
         storyModeOption.tap()
-        XCTAssertTrue(storyModeOption.waitForNonExistence(timeout: 5))
+        let storyModeSelected = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "스토리 모드"),
+            object: mode
+        )
+        wait(for: [storyModeSelected], timeout: 5)
+        XCTAssertTrue(
+            waitForNoninteractiveDismissal(
+                of: storyModeOption,
+                in: app,
+                timeout: 5
+            ),
+            "The selected story option remained interactive after dismissal."
+        )
         XCTAssertEqual(composerSurface.value as? String, openComposerState)
         XCTAssertEqual(
             String(describing: composer.value),
@@ -2803,7 +3033,19 @@ final class IOSRootNavigationUITests: XCTestCase {
         mode.tap()
         XCTAssertTrue(currentModeOption.waitForExistence(timeout: 2))
         currentModeOption.tap()
-        XCTAssertTrue(currentModeOption.waitForNonExistence(timeout: 5))
+        let chatModeSelected = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "채팅 모드"),
+            object: mode
+        )
+        wait(for: [chatModeSelected], timeout: 5)
+        XCTAssertTrue(
+            waitForNoninteractiveDismissal(
+                of: currentModeOption,
+                in: app,
+                timeout: 5
+            ),
+            "The selected chat option remained interactive after dismissal."
+        )
         XCTAssertEqual(
             String(describing: composer.value),
             draftBeforeNativeMenus
@@ -2811,13 +3053,19 @@ final class IOSRootNavigationUITests: XCTestCase {
 
         model.tap()
         let currentModelOption = app.buttons[
-            "chat-composer-model-option-preview-provider"
+            "chat-composer-model-option-preview-provider--preview-provider--preview-provider"
         ]
         XCTAssertTrue(currentModelOption.waitForExistence(timeout: 2))
         app.windows.firstMatch.coordinate(
             withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)
         ).tap()
-        XCTAssertTrue(currentModelOption.waitForNonExistence(timeout: 2))
+        XCTAssertTrue(
+            waitForNoninteractiveDismissal(
+                of: currentModelOption,
+                in: app,
+                timeout: 2
+            )
+        )
         XCTAssertEqual(
             String(describing: composer.value),
             draftBeforeNativeMenus
@@ -2829,7 +3077,13 @@ final class IOSRootNavigationUITests: XCTestCase {
         app.windows.firstMatch.coordinate(
             withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2)
         ).tap()
-        XCTAssertTrue(settingsTool.waitForNonExistence(timeout: 2))
+        XCTAssertTrue(
+            waitForNoninteractiveDismissal(
+                of: settingsTool,
+                in: app,
+                timeout: 2
+            )
+        )
         XCTAssertEqual(
             String(describing: composer.value),
             draftBeforeNativeMenus
@@ -2898,7 +3152,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         XCTAssertEqual(composerSurface.value as? String, openComposerState)
         XCTAssertEqual(
             model.value as? String,
-            "Preview Provider · preview-model"
+            "Preview Provider · preview-model · 기본"
         )
         XCTAssertEqual(mode.value as? String, "채팅 모드")
         XCTAssertTrue(
@@ -3136,7 +3390,7 @@ final class IOSRootNavigationUITests: XCTestCase {
         )
         XCTAssertEqual(
             model.value as? String,
-            "Preview Provider · preview-model"
+            "Preview Provider · preview-model · 기본"
         )
         XCTAssertEqual(mode.value as? String, "채팅 모드")
         XCTAssertEqual(

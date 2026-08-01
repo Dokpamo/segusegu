@@ -7,13 +7,19 @@ rust-version.workspace = true
 
 [dependencies]
 async-trait.workspace = true
+base64.workspace = true
+chrono.workspace = true
 futures-util.workspace = true
 lorepia-domain = { path = "../domain" }
+psl.workspace = true
 reqwest.workspace = true
+ring.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 tokio.workspace = true
 url.workspace = true
+zeroize.workspace = true
 
 [lints]
 workspace = true

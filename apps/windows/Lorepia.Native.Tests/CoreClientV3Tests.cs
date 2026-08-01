@@ -153,7 +153,7 @@ public sealed class CoreClientV3Tests
                 {
                   "events": [
                     {
-                      "event_version": 1,
+                      "event_version": 4,
                       "generation_id": "generation-1",
                       "conversation_id": "conversation-1",
                       "sequence": 41,
@@ -161,7 +161,7 @@ public sealed class CoreClientV3Tests
                       "kind": {"type":"text_delta","payload":"부분😀"}
                     },
                     {
-                      "event_version": 1,
+                      "event_version": 4,
                       "generation_id": "generation-1",
                       "conversation_id": "conversation-1",
                       "sequence": 42,
@@ -172,7 +172,7 @@ public sealed class CoreClientV3Tests
                       }
                     },
                     {
-                      "event_version": 1,
+                      "event_version": 4,
                       "generation_id": "generation-1",
                       "conversation_id": "conversation-1",
                       "sequence": 43,
@@ -345,20 +345,20 @@ public sealed class CoreClientV3Tests
     }
 
     [Fact]
-    public void MapsV2RoutingMetadataAndKeepsV1EventsCompatible()
+    public void MapsV4RoutingMetadataAndRejectsPriorEventVersions()
     {
-        var versionTwo = new FakeNativeApi
+        var versionFour = new FakeNativeApi
         {
             EventsJson =
                 """
                 {
                   "events": [
                     {
-                      "event_version": 2,
-                      "generation_id": "generation-2",
-                      "conversation_id": "conversation-2",
-                      "branch_id": "branch-2",
-                      "assistant_message_id": "assistant-2",
+                      "event_version": 4,
+                      "generation_id": "generation-4",
+                      "conversation_id": "conversation-4",
+                      "branch_id": "branch-4",
+                      "assistant_message_id": "assistant-4",
                       "sequence": 1,
                       "emitted_at": "2026-07-26T00:00:00Z",
                       "kind": {"type":"generation_started"}
@@ -368,24 +368,26 @@ public sealed class CoreClientV3Tests
                 }
                 """,
         };
-        using (var client = CoreClient.Open(versionTwo, CreateDataRoot()))
+        using (var client = CoreClient.Open(versionFour, CreateDataRoot()))
         {
             var chatEvent = Assert.Single(client.PollEvents().Events);
-            Assert.Equal(2u, chatEvent.EventVersion);
-            Assert.Equal("branch-2", chatEvent.BranchId);
-            Assert.Equal("assistant-2", chatEvent.AssistantMessageId);
+            Assert.Equal(
+                CoreClient.SupportedChatEventVersion,
+                chatEvent.EventVersion);
+            Assert.Equal("branch-4", chatEvent.BranchId);
+            Assert.Equal("assistant-4", chatEvent.AssistantMessageId);
         }
 
-        var versionOne = new FakeNativeApi
+        foreach (var priorVersion in new uint[] { 1, 2, 3 })
         {
-            EventsJson = EventBatch("""{"type":"generation_started"}"""),
-        };
-        using (var client = CoreClient.Open(versionOne, CreateDataRoot()))
-        {
-            var chatEvent = Assert.Single(client.PollEvents().Events);
-            Assert.Equal(1u, chatEvent.EventVersion);
-            Assert.Null(chatEvent.BranchId);
-            Assert.Null(chatEvent.AssistantMessageId);
+            var prior = new FakeNativeApi
+            {
+                EventsJson = EventBatch(
+                    """{"type":"generation_started"}""",
+                    priorVersion),
+            };
+            using var client = CoreClient.Open(prior, CreateDataRoot());
+            Assert.Throws<CoreInteropException>(() => client.PollEvents());
         }
     }
 
@@ -396,7 +398,7 @@ public sealed class CoreClientV3Tests
         {
             EventsJson = EventBatch(
                 """{"type":"generation_started"}""",
-                eventVersion: 3),
+                eventVersion: 5),
         };
         using (var client = CoreClient.Open(wrongVersion, CreateDataRoot()))
         {
@@ -439,7 +441,7 @@ public sealed class CoreClientV3Tests
 
     private static string EventBatch(
         string kind,
-        uint eventVersion = 1) =>
+        uint eventVersion = CoreClient.SupportedChatEventVersion) =>
         $$"""
         {
           "events": [

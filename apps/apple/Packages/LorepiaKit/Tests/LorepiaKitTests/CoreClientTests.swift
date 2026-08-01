@@ -8,7 +8,7 @@ import Darwin
 
 @MainActor
 final class CoreClientTests: XCTestCase {
-    func testFakeClientReportsVersionHealthAndV4Defaults() async throws {
+    func testFakeClientReportsVersionHealthAndV8ChatV4Defaults() async throws {
         let client = FakeCoreClient(version: "test-core/1")
 
         let version = try await client.version()
@@ -20,9 +20,9 @@ final class CoreClientTests: XCTestCase {
         let settings = try await client.getSettings()
 
         XCTAssertEqual(version, "test-core/1")
-        XCTAssertEqual(versions.coreAPIVersion, 4)
-        XCTAssertEqual(versions.bindingAPIVersion, 4)
-        XCTAssertEqual(versions.chatEventVersion, 2)
+        XCTAssertEqual(versions.coreAPIVersion, 8)
+        XCTAssertEqual(versions.bindingAPIVersion, 8)
+        XCTAssertEqual(versions.chatEventVersion, 4)
         XCTAssertEqual(character.id, characters[0].id)
         XCTAssertEqual(health.coreVersion, "test-core/1")
         XCTAssertTrue(health.isHealthy)
@@ -155,6 +155,39 @@ final class CoreClientTests: XCTestCase {
         XCTAssertFalse(health.isHealthy)
     }
 
+    func testProviderContractRejectsOldAndFutureWireVersions() {
+        XCTAssertThrowsError(
+            try CoreRuntimeContract
+                .validateProviderDiscoverySnapshotVersion(2)
+        )
+        XCTAssertThrowsError(
+            try CoreRuntimeContract
+                .validateProviderDiscoverySnapshotVersion(4)
+        )
+        XCTAssertThrowsError(
+            try CoreRuntimeContract
+                .validateProviderDiscoveryEventVersion(1)
+        )
+        XCTAssertThrowsError(
+            try CoreRuntimeContract
+                .validateProviderDiscoveryEventVersion(3)
+        )
+        XCTAssertThrowsError(
+            try CoreRuntimeContract
+                .validateProviderModelSyncEventVersions(
+                    version: 0,
+                    redactionVersion: 1
+                )
+        )
+        XCTAssertThrowsError(
+            try CoreRuntimeContract
+                .validateProviderModelSyncEventVersions(
+                    version: 1,
+                    redactionVersion: 2
+                )
+        )
+    }
+
     func testStatusViewModelMapsClientReport() async {
         let client = FakeCoreClient(version: "test-core/2")
         let viewModel = CoreStatusViewModel(
@@ -223,9 +256,9 @@ final class CoreClientTests: XCTestCase {
         let stats = try await selection.client.databaseStats()
 
         XCTAssertFalse(version.isEmpty)
-        XCTAssertEqual(versions.coreAPIVersion, 4)
-        XCTAssertEqual(versions.bindingAPIVersion, 4)
-        XCTAssertEqual(versions.chatEventVersion, 2)
+        XCTAssertEqual(versions.coreAPIVersion, 8)
+        XCTAssertEqual(versions.bindingAPIVersion, 8)
+        XCTAssertEqual(versions.chatEventVersion, 4)
         XCTAssertEqual(health.coreVersion, version)
         XCTAssertTrue(health.databaseOpen)
         XCTAssertTrue(health.dataRootWritable)
@@ -266,7 +299,7 @@ final class CoreClientTests: XCTestCase {
         let profile = ProviderProfile(
             id: "apple-restart-profile",
             displayName: "Apple Restart",
-            baseURL: "https://example.invalid/v1",
+            baseURL: "https://api.openai.com/v1",
             model: "synthetic",
             timeoutSeconds: 15
         )
@@ -364,9 +397,9 @@ final class CoreClientTests: XCTestCase {
         let settings = try await selection.client.getSettings()
         let events = try await selection.client.pollEvents(maxEvents: 8)
         XCTAssertEqual(version, versions.coreVersion)
-        XCTAssertEqual(versions.coreAPIVersion, 4)
-        XCTAssertEqual(versions.bindingAPIVersion, 4)
-        XCTAssertEqual(versions.chatEventVersion, 2)
+        XCTAssertEqual(versions.coreAPIVersion, 8)
+        XCTAssertEqual(versions.bindingAPIVersion, 8)
+        XCTAssertEqual(versions.chatEventVersion, 4)
         XCTAssertTrue(characters.isEmpty)
         XCTAssertTrue(conversations.isEmpty)
         XCTAssertTrue(profiles.isEmpty)
@@ -443,20 +476,106 @@ final class CoreClientTests: XCTestCase {
         let conversation = try await selection.client.openConversation(
             characterID: character.id
         )
-        let profile = try await selection.client.upsertProviderProfile(
-            ProviderProfile(
-                id: "swift-cancellation",
-                displayName: "Swift cancellation",
-                baseURL: server.baseURL,
-                model: "synthetic",
-                timeoutSeconds: 5
+        let inspectedCurl = try await selection.client.inspectProviderCurl(
+            """
+            curl -X POST '\(server.baseURL)/chat/completions' \
+              -H 'Content-Type: application/json' \
+              -d '{"model":"synthetic","messages":[],"stream":true}'
+            """,
+            networkPolicy: ProviderNetworkPolicy(
+                mode: .localLoopback
             )
         )
-        let generationID = try await selection.client.sendMessage(
+        var discovery = try await selection.client.beginProviderDiscovery(
+            input: ProviderDiscoveryInput(
+                connectionID: "swift-cancellation",
+                displayName: "Swift cancellation",
+                credentialSlotReady: true,
+                connectionOptions: ProviderDiscoveryConnectionOptions(
+                    apiBasePath: "/v1",
+                    timeoutSeconds: 5,
+                    networkMode: .localLoopback
+                )
+            ),
+            source: .curl,
+            rawCurl: inspectedCurl.redactedCurl
+        )
+        for _ in 0..<8 {
+            if discovery.state == .committing {
+                break
+            }
+            let action: ProviderDiscoveryAction
+            let targetCredential: String?
+            switch discovery.actionRequired {
+            case .selectTemplate:
+                action = .selectTemplate(
+                    candidateID: try XCTUnwrap(
+                        discovery.candidates.first?.id
+                    )
+                )
+                targetCredential = nil
+            case let .credentialOrigin(approval):
+                action = .approveCredentialOrigin(
+                    approvalID: approval.approvalID
+                )
+                targetCredential = "synthetic-live-key"
+            case .capabilityProbe:
+                action = .skipProbes
+                targetCredential = nil
+            case .review:
+                let proposal = try XCTUnwrap(
+                    discovery.reviewProposal
+                )
+                action = .approveReview(
+                    approvalID: proposal.approvalID,
+                    commitAttemptID: proposal.commitAttemptID,
+                    commitPlanSHA256: proposal.commitPlanSHA256,
+                    graphSHA256: proposal.review.graphSHA256
+                )
+                targetCredential = nil
+            default:
+                XCTFail(
+                    "Unexpected discovery state: \(discovery.state.rawValue)"
+                )
+                return
+            }
+            let envelope =
+                try await selection.client.prepareProviderDiscoveryAction(
+                    actionID: UUID().uuidString.lowercased(),
+                    expectedRevision: discovery.revision,
+                    action: action
+                )
+            discovery =
+                try await selection.client.continueProviderDiscovery(
+                    sessionID: discovery.id,
+                    envelope: envelope,
+                    targetCredential: targetCredential
+                )
+        }
+        XCTAssertEqual(discovery.state, .committing)
+        let connection =
+            try await selection.client.commitProviderDiscovery(
+                sessionID: discovery.id,
+                credentialSlotConfirmed: true
+            )
+        let routes =
+            try await selection.client.listProviderModelRoutes(
+                connectionID: connection.id
+            )
+        let route = try XCTUnwrap(routes.first)
+        let presets =
+            try await selection.client.listProviderGenerationPresets(
+                modelRouteID: route.id
+            )
+        let preset = try XCTUnwrap(presets.first)
+        let generationID = try await selection.client.sendMessageWithTarget(
             conversationID: conversation.id,
             text: "중지해",
-            providerProfileID: profile.id,
-            credential: nil
+            target: ProviderGenerationTarget(
+                modelRouteID: route.id,
+                generationPresetID: preset.id
+            ),
+            credential: "synthetic-live-key"
         )
         XCTAssertTrue(server.waitUntilStreaming())
 
@@ -554,7 +673,7 @@ private final class StallingSSEServer: @unchecked Sendable {
                 )
             }
         }
-        guard bindResult == 0, Darwin.listen(descriptor, 1) == 0 else {
+        guard bindResult == 0, Darwin.listen(descriptor, 4) == 0 else {
             Darwin.close(descriptor)
             throw SSEServerFailure.operation("bind/listen")
         }
@@ -600,15 +719,26 @@ private final class StallingSSEServer: @unchecked Sendable {
     }
 
     private func serve() {
-        let client = Darwin.accept(listener, nil, nil)
-        guard client >= 0 else {
-            streaming.signal()
+        while true {
+            let client = Darwin.accept(listener, nil, nil)
+            guard client >= 0 else {
+                return
+            }
+            let request = readRequest(from: client)
+            if request.contains(" /v1/models ") {
+                writeJSONModelList(to: client)
+                Darwin.close(client)
+                continue
+            }
+            serveStreamingResponse(to: client)
+            Darwin.close(client)
             return
         }
-        defer { Darwin.close(client) }
-        readRequest(from: client)
+    }
 
-        let event = "data: {\"choices\":[{\"delta\":{\"content\":\"부분😀\"}}]}\n\n"
+    private func serveStreamingResponse(to client: Int32) {
+        let event =
+            "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"부분😀\"}}]}\n\n"
         let eventBytes = Array(event.utf8)
         let headers = "HTTP/1.1 200 OK\r\n"
             + "Content-Type: text/event-stream\r\n"
@@ -623,14 +753,25 @@ private final class StallingSSEServer: @unchecked Sendable {
         writeAll(Array("0\r\n\r\n".utf8), to: client)
     }
 
-    private func readRequest(from descriptor: Int32) {
+    private func writeJSONModelList(to descriptor: Int32) {
+        let body =
+            #"{"object":"list","data":[{"id":"synthetic","object":"model"}]}"#
+        let response = "HTTP/1.1 200 OK\r\n"
+            + "Content-Type: application/json\r\n"
+            + "Content-Length: \(body.utf8.count)\r\n"
+            + "Connection: close\r\n\r\n"
+            + body
+        writeAll(Array(response.utf8), to: descriptor)
+    }
+
+    private func readRequest(from descriptor: Int32) -> String {
         var request: [UInt8] = []
         var expectedSize: Int?
         var buffer = [UInt8](repeating: 0, count: 4_096)
         while expectedSize == nil || request.count < (expectedSize ?? 0) {
             let count = Darwin.read(descriptor, &buffer, buffer.count)
             guard count > 0 else {
-                return
+                break
             }
             request.append(contentsOf: buffer.prefix(count))
             guard expectedSize == nil else {
@@ -652,6 +793,7 @@ private final class StallingSSEServer: @unchecked Sendable {
                 } ?? 0
             expectedSize = headers.utf8.count + 4 + contentLength
         }
+        return String(decoding: request, as: UTF8.self)
     }
 
     private func writeAll(_ bytes: [UInt8], to descriptor: Int32) {

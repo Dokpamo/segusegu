@@ -136,6 +136,12 @@ public sealed record AppSettings
 
     [JsonPropertyName("selected_provider_profile_id")]
     public string? SelectedProviderProfileId { get; init; }
+
+    [JsonPropertyName("selected_model_route_id")]
+    public string? SelectedModelRouteId { get; init; }
+
+    [JsonPropertyName("selected_generation_preset_id")]
+    public string? SelectedGenerationPresetId { get; init; }
 }
 
 public enum ChatEventType
@@ -143,6 +149,9 @@ public enum ChatEventType
     GenerationStarted,
     ReasoningDelta,
     TextDelta,
+    ToolCallStarted,
+    ToolCallArgumentsDelta,
+    ToolCallCompleted,
     UsageUpdated,
     MessageCommitted,
     GenerationCancelled,
@@ -170,6 +179,12 @@ public sealed record ChatEvent
 
     public string? Text { get; init; }
 
+    public string? ToolCallId { get; init; }
+
+    public string? ToolName { get; init; }
+
+    public string? ToolArgumentsDelta { get; init; }
+
     public string? MessageId { get; init; }
 
     public string? MessageStatus { get; init; }
@@ -180,7 +195,17 @@ public sealed record ChatEvent
 
     public ulong? InputTokens { get; init; }
 
+    public ulong? CachedReadTokens { get; init; }
+
+    public ulong? CachedWriteTokens { get; init; }
+
     public ulong? OutputTokens { get; init; }
+
+    public ulong? ReasoningTokens { get; init; }
+
+    public ulong? ToolTokens { get; init; }
+
+    public string? ProviderRawSummary { get; init; }
 }
 
 public sealed record ChatEventBatch(

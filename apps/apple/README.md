@@ -50,13 +50,16 @@ identifier, media type, byte count, and unsupported optional CCv3 field names
 returned by Rust. Swift does not receive a Rust staging path or raw preview
 bytes.
 
-The `CoreClient` adapter maps the complete UniFFI v4 surface: version metadata,
+The `CoreClient` adapter maps the complete UniFFI v8 surface: version metadata,
 health, characters, import inspection, commit and discard, conversations,
 messages, branch-safe edit/regeneration/removal, send, cancel, event batches,
-provider profiles, settings, and database statistics. A production build
-without the UniFFI binary shows an explicit unavailable-core state.
-`FakeCoreClient` is selected explicitly by tests and previews; it is not a
-production fallback.
+provider discovery and setup-assistant state, reviewed model synchronization,
+catalog diff/activation/rollback, typed preset controls, provider profiles,
+settings, and database statistics. The default package graph always links the
+generated UniFFI binary and fails package resolution when the ignored
+XCFramework is missing. `FakeCoreClient` is selected explicitly by tests and
+previews; the binary-free package frame is available only with
+`LOREPIA_SKIP_GENERATED=1` and is never a production fallback.
 
 This repository intentionally has no open-source license. Its source and
 generated bindings do not grant permission to copy, redistribute, or
@@ -131,17 +134,30 @@ source control.
 Run the shared package tests:
 
 ```bash
-swift test --package-path apps/apple/Packages/LorepiaKit
+swift test \
+  --package-path apps/apple/Packages/LorepiaKit \
+  --manifest-cache none \
+  --disable-build-manifest-caching
 ```
 
-When the ignored XCFramework exists, the package enables the generated UniFFI
-adapter and the live binding contract tests. To exercise the frame without
-generated bindings, force the explicit fake-core configuration:
+The default package graph always enables the generated UniFFI adapter and live
+binding contract tests. It fails fast when the ignored XCFramework is absent,
+so run `./scripts/build-apple.sh` first. To exercise the source-only frame
+without generated bindings, force the explicit fake-core configuration:
 
 ```bash
 LOREPIA_SKIP_GENERATED=1 \
-  swift test --package-path apps/apple/Packages/LorepiaKit
+  swift test \
+    --package-path apps/apple/Packages/LorepiaKit \
+    --manifest-cache none \
+    --disable-build-manifest-caching
 ```
+
+Both commands disable SwiftPM build-manifest caching while switching package
+graphs. SwiftPM tracks `PackageDescription.Context.environment` values when
+caching the manifest, and `LOREPIA_SKIP_GENERATED` is the only supported graph
+selector. Production scripts explicitly set it to `0`; ordinary Xcode builds
+leave it unset. Neither selects the source-only graph.
 
 After `./scripts/build-apple.sh`, run the complete live launch and native
 navigation gate:
@@ -157,6 +173,11 @@ macOS app with `--lorepia-ci-smoke`. The macOS smoke waits with a bounded
 timeout for each real SwiftUI detail to acknowledge the route sequence
 Library, Chat, Settings, Import Review, and Library. Both apps validate the
 live Rust core; the macOS smoke does not require Accessibility permission.
+The gate temporarily disconnects the Simulator hardware keyboard so keyboard
+visibility assertions exercise the software keyboard, then restores the
+previous host preference during cleanup, including restoring an absent key.
+This preference is global to the Simulator process, so run the launch gate
+serially with other Simulator automation.
 
 ## Build iOS simulator target
 
@@ -266,16 +287,18 @@ project.yml                    XcodeGen source of truth
 
 ## Troubleshooting
 
-### The production app says the core is unavailable
+### Package resolution says the XCFramework is missing
 
-Run `./scripts/build-apple.sh` from the repository root. Production does not
-fall back to `FakeCoreClient` when the generated binding or XCFramework is
-missing.
+Run `./scripts/build-apple.sh` from the repository root. The default live graph
+requires the generated binding and XCFramework and does not fall back to
+`FakeCoreClient`.
 
 ### Swift package tests unexpectedly use generated bindings
 
-An ignored XCFramework already exists. Remove that local build product or run
-the test with `LOREPIA_SKIP_GENERATED=1`.
+Generated bindings are the default. Run the source-only test command above
+with `LOREPIA_SKIP_GENERATED=1` and both cache-disabling options. Removing the
+XCFramework does not select the source-only graph; it makes the default live
+graph fail fast.
 
 ### The macOS link fails on an Intel Mac
 

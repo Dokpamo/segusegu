@@ -7,6 +7,7 @@
 
 # Android / Gradle
 **/.gradle/
+**/.kotlin/
 **/build/
 /apps/android/local.properties
 *.apk

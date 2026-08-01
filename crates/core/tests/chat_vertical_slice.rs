@@ -1,13 +1,21 @@
 use std::{
+    fs,
     io::{Read, Write},
     net::{TcpListener, TcpStream},
+    path::Path,
     sync::mpsc,
     thread,
     time::{Duration, Instant},
 };
 
-use lorepia_core::{AppSettings, ChatEventKind, Core, CoreConfig, MessageStatus, ProviderProfile};
+use lorepia_core::{
+    AppSettings, ChatEventKind, Core, CoreConfig, CoreErrorCode, GenerationStatus, MessageStatus,
+    ProviderProfile,
+};
+use lorepia_storage::Storage;
 use tempfile::{NamedTempFile, tempdir};
+
+const REFLECTED_CREDENTIAL: &str = "sk-core-reflection-canary-7a91";
 
 fn imported_core() -> (tempfile::TempDir, Core, String) {
     let root = tempdir().expect("temporary data root");
@@ -64,8 +72,8 @@ fn spawn_completed_provider() -> (String, mpsc::Receiver<Vec<u8>>) {
         let request = read_request(&mut stream);
         request_sender.send(request).expect("capture request");
         let body = concat!(
-            "data: {\"choices\":[{\"delta\":{\"content\":\"안녕\"}}]}\n\n",
-            "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
+            "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"안녕\"}}]}\n\n",
+            "data: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
             "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":7,\"completion_tokens\":2}}\n\n",
             "data: [DONE]\n\n"
         );
@@ -88,7 +96,7 @@ fn spawn_stalling_provider() -> (String, mpsc::Receiver<()>, mpsc::Sender<()>) {
     thread::spawn(move || {
         let (mut stream, _) = listener.accept().expect("accept provider request");
         let _request = read_request(&mut stream);
-        let event = "data: {\"choices\":[{\"delta\":{\"content\":\"부분\"}}]}\n\n";
+        let event = "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"부분\"}}]}\n\n";
         write!(
             stream,
             "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n{:X}\r\n{}\r\n",
@@ -104,6 +112,59 @@ fn spawn_stalling_provider() -> (String, mpsc::Receiver<()>, mpsc::Sender<()>) {
     (format!("http://{address}/v1"), ready_receiver, stop_sender)
 }
 
+fn spawn_reflecting_provider() -> (String, mpsc::Receiver<Vec<u8>>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind reflecting provider");
+    let address = listener.local_addr().expect("reflecting provider address");
+    let (request_sender, request_receiver) = mpsc::channel();
+    thread::spawn(move || {
+        let (mut stream, _) = listener
+            .accept()
+            .expect("accept reflecting provider request");
+        let request = read_request(&mut stream);
+        request_sender
+            .send(request)
+            .expect("capture reflecting request");
+        let body = concat!(
+            "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"safe prefix \"}}]}\n\n",
+            "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"sk-core-reflection-\"}}]}\n\n",
+            "data: {\"choices\":[{\"index\":0,\"delta\":{\"content\":\"canary-7a91\"}}]}\n\n",
+            "data: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
+            "data: [DONE]\n\n"
+        );
+        write!(
+            stream,
+            "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+            body.len(),
+            body
+        )
+        .expect("write reflecting provider response");
+    });
+    (format!("http://{address}/v1"), request_receiver)
+}
+
+fn assert_tree_does_not_contain(root: &Path, needle: &[u8]) {
+    let mut pending = vec![root.to_path_buf()];
+    while let Some(path) = pending.pop() {
+        let metadata = fs::symlink_metadata(&path).expect("inspect data-root entry");
+        if metadata.is_dir() {
+            pending.extend(
+                fs::read_dir(&path)
+                    .expect("read data-root directory")
+                    .map(|entry| entry.expect("read data-root entry").path()),
+            );
+            continue;
+        }
+        if metadata.is_file() {
+            let bytes = fs::read(&path).expect("read data-root file");
+            assert!(
+                !bytes.windows(needle.len()).any(|window| window == needle),
+                "protected credential was persisted in {}",
+                path.display()
+            );
+        }
+    }
+}
+
 fn wait_for_terminal_message(core: &Core, conversation_id: &lorepia_core::ConversationId) {
     let deadline = Instant::now() + Duration::from_secs(3);
     loop {
@@ -111,8 +172,46 @@ fn wait_for_terminal_message(core: &Core, conversation_id: &lorepia_core::Conver
         if messages.len() == 2 && messages[1].status != MessageStatus::Pending {
             return;
         }
-        assert!(Instant::now() < deadline, "generation did not finish");
+        assert!(
+            Instant::now() < deadline,
+            "generation did not finish; stored messages: {messages:?}"
+        );
         thread::sleep(Duration::from_millis(10));
+    }
+}
+
+fn collect_generation_events_until_terminal(
+    event_receiver: &mut tokio::sync::broadcast::Receiver<lorepia_core::ChatEvent>,
+    generation_id: &lorepia_core::GenerationId,
+) -> Vec<lorepia_core::ChatEvent> {
+    let deadline = Instant::now() + Duration::from_secs(3);
+    let mut received = Vec::new();
+    loop {
+        let event = match event_receiver.try_recv() {
+            Ok(event) => event,
+            Err(tokio::sync::broadcast::error::TryRecvError::Empty) => {
+                assert!(
+                    Instant::now() < deadline,
+                    "terminal chat event did not arrive"
+                );
+                thread::sleep(Duration::from_millis(5));
+                continue;
+            }
+            Err(error) => panic!("chat event stream failed before terminal event: {error}"),
+        };
+        if event.generation_id != *generation_id {
+            continue;
+        }
+        let terminal = matches!(
+            &event.kind,
+            ChatEventKind::GenerationCancelled
+                | ChatEventKind::GenerationFailed { .. }
+                | ChatEventKind::GenerationFinished
+        );
+        received.push(event);
+        if terminal {
+            return received;
+        }
     }
 }
 
@@ -132,6 +231,8 @@ fn streams_commits_and_restores_messages_without_persisting_the_credential() {
     core.update_settings(&AppSettings {
         preserve_partial_generations: true,
         selected_provider_profile_id: Some(profile.id.clone()),
+        selected_model_route_id: None,
+        selected_generation_preset_id: None,
     })
     .expect("save settings");
 
@@ -147,6 +248,14 @@ fn streams_commits_and_restores_messages_without_persisting_the_credential() {
             Some("short-lived-secret".to_owned()),
         )
         .expect("send message");
+    let received = collect_generation_events_until_terminal(&mut events, &generation);
+    assert!(
+        matches!(
+            received.last().map(|event| &event.kind),
+            Some(ChatEventKind::GenerationFinished)
+        ),
+        "expected successful generation events, got {received:?}"
+    );
     wait_for_terminal_message(&core, &conversation.id);
 
     let request = String::from_utf8_lossy(
@@ -164,18 +273,11 @@ fn streams_commits_and_restores_messages_without_persisting_the_credential() {
         request.contains("\"max_tokens\":4096"),
         "core must apply its finite provider output-token limit"
     );
-    let received = std::iter::from_fn(|| events.try_recv().ok())
-        .filter(|event| event.generation_id == generation)
-        .collect::<Vec<_>>();
     assert!(
         received
             .windows(2)
             .all(|pair| pair[0].sequence < pair[1].sequence)
     );
-    assert!(matches!(
-        received.last().map(|event| &event.kind),
-        Some(ChatEventKind::GenerationFinished)
-    ));
 
     let messages = core.list_messages(&conversation.id).expect("messages");
     assert_eq!(messages[1].content, "안녕");
@@ -243,4 +345,114 @@ fn cancellation_preserves_partial_text_and_emits_a_terminal_event() {
         event.generation_id == generation
             && matches!(event.kind, ChatEventKind::GenerationCancelled)
     }));
+}
+
+#[test]
+fn split_credential_reflection_never_reaches_events_partial_state_or_sqlite() {
+    let (root, core, character_id) = imported_core();
+    let (base_url, captured_request) = spawn_reflecting_provider();
+    let profile = core
+        .upsert_provider_profile(ProviderProfile {
+            id: "credential-reflection-test".to_owned(),
+            display_name: "Credential reflection test".to_owned(),
+            base_url,
+            model: "fixture".to_owned(),
+            timeout_seconds: 5,
+        })
+        .expect("save reflecting provider profile");
+    core.update_settings(&AppSettings {
+        preserve_partial_generations: true,
+        selected_provider_profile_id: Some(profile.id.clone()),
+        selected_model_route_id: None,
+        selected_generation_preset_id: None,
+    })
+    .expect("enable partial preservation");
+
+    let conversation = core
+        .open_conversation(&character_id)
+        .expect("open reflection conversation");
+    let mut events = core.subscribe_events();
+    let generation = core
+        .send_message(
+            &conversation.id,
+            "Do not reflect credentials",
+            &profile.id,
+            Some(REFLECTED_CREDENTIAL.to_owned()),
+        )
+        .expect("start reflecting generation");
+    wait_for_terminal_message(&core, &conversation.id);
+
+    let request = captured_request
+        .recv_timeout(Duration::from_secs(2))
+        .expect("captured reflecting request");
+    assert!(
+        request
+            .windows(REFLECTED_CREDENTIAL.len())
+            .any(|window| window == REFLECTED_CREDENTIAL.as_bytes()),
+        "the fixture must prove the credential reached only the approved provider request"
+    );
+
+    let received = collect_generation_events_until_terminal(&mut events, &generation);
+    let encoded_events = serde_json::to_vec(&received).expect("serialize chat events");
+    assert!(
+        !encoded_events
+            .windows(REFLECTED_CREDENTIAL.len())
+            .any(|window| window == REFLECTED_CREDENTIAL.as_bytes()),
+        "the reflected credential must not reach ChatEvent"
+    );
+    assert!(received.iter().any(|event| {
+        matches!(
+            &event.kind,
+            ChatEventKind::GenerationFailed { code, message }
+                if code == CoreErrorCode::ProviderUnavailable.as_str()
+                    && !message.contains(REFLECTED_CREDENTIAL)
+        )
+    }));
+
+    let messages = core
+        .list_messages(&conversation.id)
+        .expect("load failed reflection messages");
+    assert_eq!(messages.len(), 2);
+    assert_eq!(messages[1].status, MessageStatus::Failed);
+    assert_eq!(messages[1].content, "safe prefix ");
+    assert!(
+        messages
+            .iter()
+            .all(|message| !message.content.contains(REFLECTED_CREDENTIAL))
+    );
+    drop(core);
+
+    let reopened = Core::open(CoreConfig::new(root.path())).expect("reopen core after reflection");
+    let restored = reopened
+        .list_messages(&conversation.id)
+        .expect("restore failed reflection messages");
+    assert_eq!(restored, messages);
+    assert!(
+        restored
+            .iter()
+            .all(|message| !message.content.contains(REFLECTED_CREDENTIAL))
+    );
+    drop(reopened);
+
+    let storage = Storage::open(root.path()).expect("open storage after reflection");
+    let stored_generation = storage
+        .get_generation(&generation)
+        .expect("load reflected generation");
+    assert_eq!(stored_generation.status, GenerationStatus::Failed);
+    assert_eq!(
+        stored_generation.error_code.as_deref(),
+        Some(CoreErrorCode::ProviderUnavailable.as_str())
+    );
+    assert!(stored_generation.provider_raw_summary.is_none());
+    assert!(stored_generation.opaque_reasoning_state.is_empty());
+    assert!(
+        storage
+            .list_messages(&conversation.id)
+            .expect("load stored reflection messages")
+            .iter()
+            .all(|message| !message.content.contains(REFLECTED_CREDENTIAL))
+    );
+    drop(storage);
+
+    assert_tree_does_not_contain(root.path(), REFLECTED_CREDENTIAL.as_bytes());
 }

@@ -261,7 +261,10 @@ fn has_forbidden_tracked_extension(path: &Path) -> bool {
         "p8",
         "pdb",
         "pem",
+        "pfx",
         "so",
+        "sqlite",
+        "sqlite3",
         "xcframework",
     ]
     .contains(&normalized.as_str())
@@ -527,6 +530,9 @@ mod tests {
             "apple/AuthKey.P8",
             "build/diagnostic.LOG",
             "output/LorePia.EXE",
+            "signing/windows.PFX",
+            "fixtures/private.SQLITE",
+            "fixtures/private.SQLITE3",
         ] {
             assert!(
                 has_forbidden_tracked_extension(Path::new(path)),

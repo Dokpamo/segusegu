@@ -118,8 +118,11 @@ fn synthetic_generation_request() -> GenerationRequest {
         conversation_id: ConversationId::new(),
         model: "synthetic-performance-provider".to_owned(),
         messages: Vec::new(),
-        temperature: 0.0,
+        temperature: Some(0.0),
         max_output_tokens: Some(4_096),
+        provider_provenance: None,
+        preserve_opaque_reasoning_state: false,
+        opaque_reasoning_context: Vec::new(),
     }
 }
 

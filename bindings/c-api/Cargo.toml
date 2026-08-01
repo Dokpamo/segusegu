@@ -9,6 +9,7 @@ rust-version.workspace = true
 name = "lorepia_core"
 crate-type = ["cdylib", "staticlib", "rlib"]
 doc = false
+doctest = false
 
 [dependencies]
 lorepia-engine = { package = "lorepia-core", path = "../../crates/core" }

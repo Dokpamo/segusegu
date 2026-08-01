@@ -30,7 +30,8 @@ class AppViewModelTest {
 
         assertEquals(AppUiState.Ready("0.1.0", health), viewModel.uiState.value)
         assertSame(core, viewModel.coreClient)
-        assertEquals(1, core.coreVersionCalls)
+        assertEquals(1, core.versionInfoCalls)
+        assertEquals(0, core.coreVersionCalls)
         assertEquals(1, core.healthCheckCalls)
     }
 
@@ -56,5 +57,26 @@ class AppViewModelTest {
 
         assertTrue(viewModel.uiState.value is AppUiState.Ready)
         assertSame(healthyCore, viewModel.coreClient)
+    }
+
+    @Test
+    fun `startup fails closed when core binding or event contracts drift`() = runTest {
+        val mismatches = listOf(
+            FakeCoreClient(coreApiVersion = 9u),
+            FakeCoreClient(bindingApiVersion = 9u),
+            FakeCoreClient(chatEventVersion = 5u),
+        )
+
+        mismatches.forEach { core ->
+            val viewModel = AppViewModel(
+                coreClientFactory = { core },
+                ioDispatcher = mainDispatcherRule.testDispatcher,
+            )
+            advanceUntilIdle()
+
+            assertTrue(viewModel.uiState.value is AppUiState.Error)
+            assertTrue(core.closed)
+            assertEquals(0, core.healthCheckCalls)
+        }
     }
 }

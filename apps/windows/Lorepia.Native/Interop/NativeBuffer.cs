@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 
@@ -23,7 +24,13 @@ internal sealed class NativeBuffer : IDisposable
         this.release = release;
     }
 
-    internal string ReadUtf8()
+    internal string ReadUtf8() =>
+        ReadUtf8(clearManagedCopy: false);
+
+    internal string ReadSecretUtf8() =>
+        ReadUtf8(clearManagedCopy: true);
+
+    private string ReadUtf8(bool clearManagedCopy)
     {
         ObjectDisposedException.ThrowIf(
             Volatile.Read(ref disposed) != 0,
@@ -52,6 +59,13 @@ internal sealed class NativeBuffer : IDisposable
             throw new CoreInteropException(
                 "The native core returned a buffer that is not valid UTF-8.",
                 exception);
+        }
+        finally
+        {
+            if (clearManagedCopy)
+            {
+                CryptographicOperations.ZeroMemory(bytes);
+            }
         }
     }
 

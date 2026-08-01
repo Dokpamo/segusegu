@@ -8,7 +8,10 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import dev.lorepia.app.bridge.ChatEvent
 import dev.lorepia.app.bridge.ConversationSummary
 import dev.lorepia.app.bridge.CoreClient
+import dev.lorepia.app.bridge.GenerationTarget
 import dev.lorepia.app.platform.credentials.CredentialStore
+import dev.lorepia.app.platform.credentials.CredentialRecordStatus
+import dev.lorepia.app.platform.credentials.validatedCredentialRefForRead
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -31,7 +34,9 @@ class ChatViewModel(
     private var loadJob: Job? = null
     private var pollingJob: Job? = null
     private var routeReconciliationJob: Job? = null
-    private var supportedEventVersion: UInt = 2u
+    private var configurationJob: Job? = null
+    private var configurationRevision = 0L
+    private var supportedEventVersion: UInt = 4u
     private var lastSequence = 0uL
     private var routeActive = true
 
@@ -48,24 +53,27 @@ class ChatViewModel(
 
     fun refreshConfiguration() {
         val state = _uiState.value as? ChatUiState.Ready ?: return
-        viewModelScope.launch {
+        val expectedConversationId = state.conversation.id
+        val revision = ++configurationRevision
+        configurationJob?.cancel()
+        configurationJob = viewModelScope.launch {
             try {
-                val settings = coreClient.getSettings()
-                val profiles = coreClient.listProviderProfiles()
+                val selectedGeneration = loadStableSelectedGeneration()
+                if (revision != configurationRevision || !routeActive) return@launch
                 val latest = _uiState.value as? ChatUiState.Ready ?: return@launch
-                if (latest.conversation.id == state.conversation.id) {
+                if (latest.conversation.id == expectedConversationId) {
                     _uiState.value = latest.copy(
-                        providerProfiles = profiles,
-                        selectedProvider = profiles.firstOrNull {
-                            it.id == settings.selectedProviderProfileId
-                        },
+                        selectedGeneration = selectedGeneration,
                     )
                 }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Throwable) {
+                if (revision != configurationRevision || !routeActive) return@launch
                 val latest = _uiState.value as? ChatUiState.Ready ?: return@launch
-                _uiState.value = latest.copy(notice = error.userFacingMessage())
+                if (latest.conversation.id == expectedConversationId) {
+                    _uiState.value = latest.copy(notice = error.userFacingMessage())
+                }
             }
         }
     }
@@ -96,6 +104,9 @@ class ChatViewModel(
                 }
             }
         } else {
+            configurationRevision += 1
+            configurationJob?.cancel()
+            configurationJob = null
             pollingJob?.cancel()
             pollingJob = null
         }
@@ -119,23 +130,43 @@ class ChatViewModel(
 
     fun send(text: String) {
         val state = _uiState.value as? ChatUiState.Ready ?: return
-        val provider = state.selectedProvider ?: return
         val trimmed = text.trim()
         if (trimmed.isEmpty() || state.activeGenerationId != null || state.isSubmitting) return
 
         _uiState.value = state.copy(isSubmitting = true, notice = null)
         viewModelScope.launch {
             try {
-                val credential = credentialStore.read(provider.id)
-                val generationId = coreClient.sendMessage(
+                val selected = loadStableSelectedGeneration()
+                    ?: error("사용할 모델과 preset을 설정에서 선택해 주세요.")
+                val credential = selected.connection.validatedCredentialRefForRead()?.let {
+                    check(
+                        credentialStore.inspect(it) == CredentialRecordStatus.Available,
+                    ) {
+                        "저장된 자격증명을 사용할 수 없습니다. 설정에서 다시 입력해 주세요."
+                    }
+                    checkNotNull(credentialStore.read(it)) {
+                        "저장된 자격증명을 사용할 수 없습니다. 설정에서 다시 입력해 주세요."
+                    }
+                }
+                val submitting = _uiState.value as? ChatUiState.Ready ?: return@launch
+                check(submitting.conversation.id == state.conversation.id) {
+                    "The active conversation changed before generation started."
+                }
+                _uiState.value = submitting.copy(selectedGeneration = selected)
+                val generationId = coreClient.sendMessageWithTarget(
                     conversationId = state.conversation.id,
                     text = trimmed,
-                    providerProfileId = provider.id,
+                    target = GenerationTarget(
+                        modelRouteId = selected.modelRoute.id,
+                        generationPresetId = selected.preset.id,
+                    ),
                     credential = credential,
                 )
                 lastSequence = 0uL
                 val messages = coreClient.listMessages(state.conversation.id)
-                _uiState.value = state.copy(
+                val latest = _uiState.value as? ChatUiState.Ready ?: return@launch
+                if (latest.conversation.id != state.conversation.id) return@launch
+                _uiState.value = latest.copy(
                     messages = messages,
                     activeGenerationId = generationId,
                     streamedText = "",
@@ -176,6 +207,9 @@ class ChatViewModel(
     }
 
     private fun load() {
+        configurationRevision += 1
+        configurationJob?.cancel()
+        configurationJob = null
         loadJob?.cancel()
         pollingJob?.cancel()
         routeReconciliationJob?.cancel()
@@ -229,17 +263,57 @@ class ChatViewModel(
     private suspend fun openReady(conversation: ConversationSummary) {
         val character = coreClient.getCharacter(conversation.characterId)
         val messages = coreClient.listMessages(conversation.id)
-        val settings = coreClient.getSettings()
-        val profiles = coreClient.listProviderProfiles()
         _uiState.value = ChatUiState.Ready(
             character = character,
             conversation = conversation,
             messages = messages,
-            providerProfiles = profiles,
-            selectedProvider = profiles.firstOrNull {
-                it.id == settings.selectedProviderProfileId
-            },
+            selectedGeneration = loadStableSelectedGeneration(),
         )
+    }
+
+    private suspend fun loadStableSelectedGeneration(): SelectedGenerationConfiguration? {
+        var settings = coreClient.getSettings()
+        repeat(MAX_CONFIGURATION_RECONCILIATION_ATTEMPTS) {
+            val expectedSelection = settings.generationSelectionToken()
+            val selected = loadSelectedGeneration(settings)
+            val latestSettings = coreClient.getSettings()
+            if (latestSettings.generationSelectionToken() == expectedSelection) {
+                return selected
+            }
+            settings = latestSettings
+        }
+        error("사용할 모델과 preset이 계속 변경되어 최신 구성을 확인하지 못했습니다.")
+    }
+
+    private suspend fun loadSelectedGeneration(
+        settings: dev.lorepia.app.bridge.AppSettings,
+    ): SelectedGenerationConfiguration? {
+        val routeId = settings.selectedModelRouteId ?: return null
+        val presetId = settings.selectedGenerationPresetId ?: return null
+        for (connection in coreClient.listProviderConnections()) {
+            val route = coreClient.listModelRoutes(connection.id)
+                .firstOrNull { it.id == routeId }
+                ?: continue
+            val preset = coreClient.listGenerationPresets(route.id)
+                .firstOrNull { it.id == presetId }
+                ?: return null
+            return SelectedGenerationConfiguration(
+                connection = connection,
+                modelRoute = route,
+                preset = preset,
+                credentialRecordStatus = if (connection.credentialSlotReady) {
+                    runCatching {
+                        val reference = checkNotNull(
+                            connection.validatedCredentialRefForRead(),
+                        )
+                        credentialStore.inspect(reference)
+                    }.getOrDefault(CredentialRecordStatus.Unreadable)
+                } else {
+                    null
+                },
+            )
+        }
+        return null
     }
 
     private fun startPolling() {
@@ -355,6 +429,7 @@ class ChatViewModel(
         private const val DEFAULT_POLL_INTERVAL_MILLIS = 100L
         private const val DEFAULT_EMPTY_BATCHES_BEFORE_RECONCILE = 10
         private const val EVENT_BATCH_SIZE = 64u
+        private const val MAX_CONFIGURATION_RECONCILIATION_ATTEMPTS = 3
 
         fun factory(
             coreClient: CoreClient,
@@ -373,6 +448,17 @@ class ChatViewModel(
         }
     }
 }
+
+private data class GenerationSelectionToken(
+    val modelRouteId: String?,
+    val generationPresetId: String?,
+)
+
+private fun dev.lorepia.app.bridge.AppSettings.generationSelectionToken() =
+    GenerationSelectionToken(
+        modelRouteId = selectedModelRouteId,
+        generationPresetId = selectedGenerationPresetId,
+    )
 
 private fun Throwable.userFacingMessage(): String =
     message?.takeIf(String::isNotBlank) ?: "요청을 완료하지 못했습니다."

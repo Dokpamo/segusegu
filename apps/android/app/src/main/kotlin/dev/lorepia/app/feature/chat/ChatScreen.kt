@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import dev.lorepia.app.R
 import dev.lorepia.app.bridge.ChatMessage
 import dev.lorepia.app.bridge.ConversationSummary
+import dev.lorepia.app.platform.credentials.CredentialRecordStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -267,7 +268,7 @@ private fun ActiveChat(
             .fillMaxSize()
             .padding(contentPadding),
     ) {
-        if (state.selectedProvider == null) {
+        if (state.selectedGeneration == null) {
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -283,12 +284,34 @@ private fun ActiveChat(
                 }
             }
             Spacer(Modifier.height(8.dp))
+        } else if (state.selectedGeneration.unavailableReason() != null) {
+            Card(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = checkNotNull(
+                            state.selectedGeneration.unavailableReason(),
+                        ),
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.semantics {
+                            liveRegion = LiveRegionMode.Assertive
+                        },
+                    )
+                    TextButton(onClick = onOpenSettings) {
+                        Text(stringResource(R.string.open_settings))
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
         } else {
             Text(
                 text = stringResource(
                     R.string.using_provider,
-                    state.selectedProvider.displayName,
-                    state.selectedProvider.model,
+                    state.selectedGeneration.connection.displayName,
+                    state.selectedGeneration.modelRoute.displayName
+                        ?: state.selectedGeneration.modelRoute.modelId,
                 ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -368,6 +391,21 @@ private fun ActiveChat(
                 Text(stringResource(R.string.send_message))
             }
         }
+    }
+}
+
+private fun SelectedGenerationConfiguration.unavailableReason(): String? {
+    if (connection.credentialSlotReady &&
+        credentialRecordStatus != CredentialRecordStatus.Available
+    ) {
+        return "저장된 자격증명을 사용할 수 없습니다. 설정에서 다시 입력해 주세요."
+    }
+    return when (modelRoute.availability) {
+        "deprecated" -> "선택한 모델은 deprecated 상태여서 새 메시지를 보낼 수 없습니다."
+        "retired" -> "선택한 모델은 retired 상태여서 새 메시지를 보낼 수 없습니다."
+        "access_denied" -> "선택한 모델에 현재 계정으로 접근할 수 없습니다."
+        "missing_temporarily" -> "선택한 모델이 최근 provider 목록에서 확인되지 않았습니다."
+        else -> null
     }
 }
 

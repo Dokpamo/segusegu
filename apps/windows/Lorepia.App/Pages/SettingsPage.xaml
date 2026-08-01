@@ -2,26 +2,84 @@
     x:Class="Lorepia.App.Pages.SettingsPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Loaded="Page_Loaded">
+    xmlns:native="using:Lorepia.Native"
+    xmlns:viewModels="using:Lorepia.App.ViewModels"
+    Loaded="Page_Loaded"
+    Unloaded="Page_Unloaded">
     <ScrollViewer>
         <StackPanel
-            MaxWidth="760"
+            MaxWidth="920"
             Padding="32"
-            Spacing="20">
-            <TextBlock
-                FontSize="28"
-                FontWeight="SemiBold"
-                Text="Settings" />
+            Spacing="24">
+            <Grid ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Spacing="4">
+                    <TextBlock
+                        FontSize="28"
+                        FontWeight="SemiBold"
+                        Text="Settings" />
+                    <TextBlock
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="Provider templates, connections, model routes, and generation presets"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+                <ProgressRing
+                    Grid.Column="1"
+                    AutomationProperties.AutomationId="ProviderSettingsBusy"
+                    IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}"
+                    VerticalAlignment="Center" />
+            </Grid>
+
+            <InfoBar
+                AutomationProperties.AutomationId="ProviderSettingsStatus"
+                IsClosable="False"
+                IsOpen="True"
+                Message="{x:Bind ViewModel.ProviderStatus, Mode=OneWay}"
+                Severity="Informational"
+                Title="Local provider configuration" />
 
             <TextBlock
                 FontSize="20"
                 FontWeight="SemiBold"
-                Text="Provider profiles" />
+                Text="Add or edit a connection" />
             <ComboBox
-                DisplayMemberPath="DisplayName"
-                Header="Edit profile"
-                ItemsSource="{x:Bind ViewModel.Profiles}"
-                SelectedItem="{x:Bind ViewModel.SelectedProfile, Mode=TwoWay}" />
+                AutomationProperties.AutomationId="ProviderSetupMode"
+                DisplayMemberPath="Label"
+                Header="Setup method"
+                IsEnabled="{x:Bind ViewModel.CanChangeProviderSelection, Mode=OneWay}"
+                ItemsSource="{x:Bind ViewModel.SetupModes}"
+                SelectedItem="{x:Bind ViewModel.SelectedSetupMode, Mode=TwoWay}" />
+            <TextBlock
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="{x:Bind ViewModel.SelectedSetupDescription, Mode=OneWay}"
+                TextWrapping="Wrap" />
+
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ComboBox
+                    AutomationProperties.AutomationId="ProviderTemplate"
+                    DisplayMemberPath="DisplayName"
+                    Header="Provider template"
+                    IsEnabled="{x:Bind ViewModel.CanChooseProviderTemplate, Mode=OneWay}"
+                    ItemsSource="{x:Bind ViewModel.ProviderTemplates}"
+                    SelectedItem="{x:Bind ViewModel.SelectedTemplate, Mode=TwoWay}" />
+                <ComboBox
+                    Grid.Column="1"
+                    AutomationProperties.AutomationId="ProviderConnection"
+                    DisplayMemberPath="DisplayName"
+                    Header="Existing connection"
+                    IsEnabled="{x:Bind ViewModel.CanChangeProviderSelection, Mode=OneWay}"
+                    ItemsSource="{x:Bind ViewModel.ProviderConnections}"
+                    SelectionChanged="ProviderConnection_SelectionChanged"
+                    SelectedItem="{x:Bind ViewModel.SelectedConnection, Mode=OneWay}" />
+            </Grid>
+
             <Grid ColumnSpacing="12" RowSpacing="12">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
@@ -30,73 +88,806 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
-                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBox
-                    Header="Profile ID"
-                    PlaceholderText="openai"
-                    Text="{x:Bind ViewModel.ProfileId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    AutomationProperties.AutomationId="ProviderConnectionId"
+                    Header="Connection ID (generated)"
+                    IsReadOnly="True"
+                    Text="{x:Bind ViewModel.ConnectionId, Mode=OneWay}" />
                 <TextBox
                     Grid.Column="1"
-                    Header="Display name"
-                    PlaceholderText="OpenAI"
-                    Text="{x:Bind ViewModel.ProfileDisplayName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    AutomationProperties.AutomationId="ProviderConnectionName"
+                    Header="Connection name"
+                    PlaceholderText="My OpenAI"
+                    Text="{x:Bind ViewModel.ConnectionDisplayName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBox
                     Grid.Row="1"
-                    Grid.ColumnSpan="2"
-                    Header="Base URL"
-                    PlaceholderText="https://api.openai.com/v1"
-                    Text="{x:Bind ViewModel.ProfileBaseUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    AutomationProperties.AutomationId="ProviderSiteUrl"
+                    Header="Official site or API-key page (discovery only)"
+                    IsEnabled="{x:Bind ViewModel.IsWebsiteDiscoveryMode, Mode=OneWay}"
+                    PlaceholderText="https://console.example.ai/api-keys"
+                    Text="{x:Bind ViewModel.SiteUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                 <TextBox
-                    Grid.Row="2"
-                    Header="Model"
-                    PlaceholderText="model name"
-                    Text="{x:Bind ViewModel.ProfileModel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                <TextBox
-                    Grid.Row="2"
+                    x:Name="CurlExampleBox"
+                    Grid.Row="1"
                     Grid.Column="1"
-                    Header="Timeout seconds"
-                    InputScope="Number"
-                    Text="{x:Bind ViewModel.ProfileTimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    AcceptsReturn="True"
+                    AutomationProperties.AutomationId="ProviderCurlExample"
+                    Header="Official cURL example (fallback)"
+                    IsEnabled="{x:Bind ViewModel.IsCurlInputEnabled, Mode=OneWay}"
+                    PlaceholderText="Paste only when using cURL discovery"
+                    TextWrapping="Wrap" />
             </Grid>
+
+            <ItemsControl
+                AutomationProperties.AutomationId="ProviderConnectionFields"
+                ItemsSource="{x:Bind ViewModel.ConnectionFields}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:ConnectionFieldEditor">
+                        <TextBox
+                            Margin="0,0,0,12"
+                            AutomationProperties.Name="{x:Bind Label}"
+                            Description="{x:Bind Description}"
+                            Header="{x:Bind Label}"
+                            PlaceholderText="{x:Bind TypeLabel}"
+                            Text="{x:Bind Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
             <PasswordBox
                 x:Name="CredentialBox"
+                AutomationProperties.AutomationId="ProviderCredential"
                 Header="API credential"
+                PasswordChanged="CredentialBox_PasswordChanged"
                 PasswordChar="●"
-                PlaceholderText="Leave blank to keep the saved credential" />
+                PlaceholderText="Leave blank to keep the saved PasswordVault credential" />
+
+            <Expander
+                AutomationProperties.AutomationId="ProviderAdvancedConnection"
+                Header="Advanced connection details"
+                IsEnabled="{x:Bind ViewModel.IsDirectConnectionMode, Mode=OneWay}">
+                <Grid
+                    Padding="0,12,0,0"
+                    ColumnSpacing="12"
+                    RowSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBox
+                        AutomationProperties.AutomationId="ProviderApiOrigin"
+                        Header="API origin"
+                        PlaceholderText="https://api.example.ai"
+                        Text="{x:Bind ViewModel.ApiOrigin, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBox
+                        Grid.Column="1"
+                        AutomationProperties.AutomationId="ProviderApiBasePath"
+                        Header="API base path"
+                        PlaceholderText="/v1"
+                        Text="{x:Bind ViewModel.ApiBasePath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBox
+                        Grid.Row="1"
+                        AutomationProperties.AutomationId="ProviderTimeout"
+                        Header="Timeout seconds"
+                        InputScope="Number"
+                        Text="{x:Bind ViewModel.TimeoutSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <ComboBox
+                        Grid.Row="2"
+                        AutomationProperties.AutomationId="ProviderNetworkMode"
+                        DisplayMemberPath="Label"
+                        Header="Network boundary"
+                        IsEnabled="{x:Bind ViewModel.IsConnectionNetworkEditable, Mode=OneWay}"
+                        ItemsSource="{x:Bind ViewModel.NetworkModes}"
+                        SelectedItem="{x:Bind ViewModel.SelectedNetworkMode, Mode=TwoWay}" />
+                    <TextBlock
+                        Grid.Row="2"
+                        Grid.Column="1"
+                        VerticalAlignment="Center"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{x:Bind ViewModel.SelectedNetworkDescription, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                    <TextBox
+                        Grid.Row="3"
+                        AutomationProperties.AutomationId="ProviderLocalNetworkOrigin"
+                        Header="Exact approved LAN origin"
+                        IsEnabled="{x:Bind ViewModel.CanEditLocalNetworkApproval, Mode=OneWay}"
+                        PlaceholderText="http://models.lan:11434"
+                        Text="{x:Bind ViewModel.LocalNetworkOrigin, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBox
+                        Grid.Row="3"
+                        Grid.Column="1"
+                        AcceptsReturn="True"
+                        AutomationProperties.AutomationId="ProviderLocalNetworkAddresses"
+                        Header="Pinned private IP addresses (1–16)"
+                        IsEnabled="{x:Bind ViewModel.CanEditLocalNetworkApproval, Mode=OneWay}"
+                        PlaceholderText="192.168.10.24"
+                        Text="{x:Bind ViewModel.LocalNetworkAddresses, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                        TextWrapping="Wrap" />
+                    <CheckBox
+                        Grid.Row="4"
+                        Grid.ColumnSpan="2"
+                        AutomationProperties.AutomationId="ApproveProviderLocalNetwork"
+                        Content="Approve only this exact LAN origin and these exact RFC1918/ULA addresses"
+                        IsChecked="{x:Bind ViewModel.LocalNetworkAccessApproved, Mode=TwoWay}"
+                        IsEnabled="{x:Bind ViewModel.CanEditLocalNetworkApproval, Mode=OneWay}" />
+                </Grid>
+            </Expander>
+
+            <Border
+                Padding="16"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                CornerRadius="8">
+                <StackPanel Spacing="8">
+                    <TextBlock
+                        FontWeight="SemiBold"
+                        Text="API credential destination approval" />
+                    <TextBlock
+                        Text="The credential may be sent only to this exact origin:"
+                        TextWrapping="Wrap" />
+                    <TextBlock
+                        AutomationProperties.AutomationId="ProviderCredentialOrigin"
+                        FontFamily="Consolas"
+                        Text="{x:Bind ViewModel.ApiOrigin, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                    <CheckBox
+                        AutomationProperties.AutomationId="ApproveCredentialOrigin"
+                        Content="Allow this exact origin only; do not forward the credential on redirects"
+                        IsChecked="{x:Bind ViewModel.CredentialOriginApproved, Mode=TwoWay}" />
+                </StackPanel>
+            </Border>
+
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Click="NewProfile_Click" Content="New" />
                 <Button
-                    Click="SaveProfile_Click"
-                    Content="Save profile"
+                    AutomationProperties.AutomationId="NewProviderConnection"
+                    Click="NewConnection_Click"
+                    Content="New connection"
+                    IsEnabled="{x:Bind ViewModel.CanChangeProviderSelection, Mode=OneWay}" />
+                <Button
+                    AutomationProperties.AutomationId="SaveProviderConnection"
+                    Click="SaveConnection_Click"
+                    Content="Save connection"
+                    IsEnabled="{x:Bind ViewModel.CanSaveConnection, Mode=OneWay}"
                     Style="{StaticResource AccentButtonStyle}" />
-                <Button Click="DeleteProfile_Click" Content="Delete profile" />
-                <Button Click="RemoveCredential_Click" Content="Remove credential" />
+                <Button
+                    AutomationProperties.AutomationId="StartProviderDiscovery"
+                    Click="StartDiscovery_Click"
+                    Content="Start discovery"
+                    IsEnabled="{x:Bind ViewModel.CanStartDiscovery, Mode=OneWay}" />
+                <Button
+                    AutomationProperties.AutomationId="CancelProviderDiscovery"
+                    Click="CancelDiscovery_Click"
+                    Content="Cancel discovery"
+                    IsEnabled="{x:Bind ViewModel.CanCancelProviderOperation, Mode=OneWay}" />
+                <Button
+                    AutomationProperties.AutomationId="DeleteProviderConnection"
+                    Click="DeleteConnection_Click"
+                    Content="Delete connection" />
+                <Button
+                    AutomationProperties.AutomationId="RemoveProviderCredential"
+                    Click="RemoveCredential_Click"
+                    Content="Remove credential"
+                    IsEnabled="{x:Bind ViewModel.CanRemoveSelectedCredential, Mode=OneWay}" />
             </StackPanel>
+
+            <Expander
+                AutomationProperties.AutomationId="ProviderDiscoveryConsent"
+                Header="Discovery consent and progress">
+                <StackPanel Padding="0,12,0,0" Spacing="12">
+                    <CheckBox
+                        x:Name="AssistantConsentBox"
+                        AutomationProperties.AutomationId="ProviderAssistantConsent"
+                        Content="Request a bounded setup-assistant grant if deterministic discovery needs help"
+                        IsChecked="{x:Bind ViewModel.AssistantConsentRequested, Mode=TwoWay}"
+                        IsEnabled="{x:Bind ViewModel.CanEnableAssistantRequest, Mode=OneWay}" />
+                    <ComboBox
+                        AutomationProperties.AutomationId="ProviderAssistantModelRoute"
+                        Header="Setup-assistant model route"
+                        IsEnabled="{x:Bind ViewModel.CanEditAssistantModelRoute, Mode=OneWay}"
+                        ItemsSource="{x:Bind ViewModel.AssistantModelRoutes}"
+                        SelectedItem="{x:Bind ViewModel.SelectedAssistantModelRoute, Mode=TwoWay}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:AssistantModelRouteOption">
+                                <StackPanel Spacing="2">
+                                    <TextBlock
+                                        FontWeight="SemiBold"
+                                        Text="{x:Bind Label}" />
+                                    <TextBlock
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{x:Bind Detail}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock
+                        AutomationProperties.AutomationId="ProviderAssistantModelRouteSummary"
+                        Text="{x:Bind ViewModel.AssistantModelRouteSelectionSummary, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                    <CheckBox
+                        x:Name="ProbeConsentBox"
+                        AutomationProperties.AutomationId="ProviderProbeConsent"
+                        Content="Allow optional low-cost capability probes after model review"
+                        IsEnabled="{x:Bind ViewModel.IsDiscoveryMode, Mode=OneWay}" />
+                    <TextBlock
+                        AutomationProperties.AutomationId="ProviderDiscoveryActionSummary"
+                        FontWeight="SemiBold"
+                        Text="{x:Bind ViewModel.DiscoveryActionSummary, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                    <Border
+                        Padding="12"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        CornerRadius="6">
+                        <StackPanel Spacing="8">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="Exact setup-assistant grant review" />
+                            <TextBlock
+                                Text="Core names the exact model, document destinations, evidence, and maximum spend here before any redacted document is sent."
+                                TextWrapping="Wrap" />
+                            <ItemsControl
+                                AutomationProperties.AutomationId="ProviderAssistantGrantReview"
+                                ItemsSource="{x:Bind ViewModel.AssistantGrantReview}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="viewModels:ProviderProgressItem">
+                                        <Grid
+                                            Margin="0,0,0,6"
+                                            ColumnSpacing="10">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="24" />
+                                                <ColumnDefinition Width="180" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{x:Bind Marker}" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                FontWeight="SemiBold"
+                                                Text="{x:Bind Label}" />
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                Text="{x:Bind Detail}"
+                                                TextWrapping="Wrap" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button
+                                    AutomationProperties.AutomationId="DeclineProviderAssistantGrant"
+                                    Click="DeclineAssistantGrant_Click"
+                                    Content="Decline exact grant"
+                                    IsEnabled="{x:Bind ViewModel.CanDeclineAssistantGrant, Mode=OneWay}" />
+                                <Button
+                                    AutomationProperties.AutomationId="ApproveProviderAssistantGrant"
+                                    Click="ApproveAssistantGrant_Click"
+                                    Content="Approve exact grant"
+                                    IsEnabled="{x:Bind ViewModel.CanApproveAssistantGrant, Mode=OneWay}"
+                                    Style="{StaticResource AccentButtonStyle}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <ComboBox
+                        AutomationProperties.AutomationId="ProviderDiscoveryCandidate"
+                        DisplayMemberPath="Label"
+                        Header="Evidence-backed provider candidate"
+                        ItemsSource="{x:Bind ViewModel.DiscoveryCandidates}"
+                        SelectedItem="{x:Bind ViewModel.SelectedDiscoveryCandidate, Mode=TwoWay}" />
+                    <TextBox
+                        AutomationProperties.AutomationId="ProviderDiscoveryEvidenceUrl"
+                        Header="Additional official document URL"
+                        IsEnabled="{x:Bind ViewModel.CanSupplyDiscoveryEvidence, Mode=OneWay}"
+                        PlaceholderText="https://docs.example.ai/api"
+                        Text="{x:Bind ViewModel.AdditionalEvidenceUrl, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <ComboBox
+                        AutomationProperties.AutomationId="ProviderDiscoveryUnknownResolution"
+                        DisplayMemberPath="Label"
+                        Header="Audited unknown-outcome resolution"
+                        ItemsSource="{x:Bind ViewModel.DiscoveryResolutions}"
+                        SelectedItem="{x:Bind ViewModel.SelectedDiscoveryResolution, Mode=TwoWay}" />
+                    <TextBox
+                        AutomationProperties.AutomationId="ProviderDiscoveryReconciledConnectionId"
+                        Header="Verified committed connection ID (only when applicable)"
+                        PlaceholderText="connection-…"
+                        Text="{x:Bind ViewModel.UnknownOutcomeConnectionId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button
+                            AutomationProperties.AutomationId="ContinueProviderDiscovery"
+                            Click="ContinueDiscovery_Click"
+                            Content="Continue required action"
+                            IsEnabled="{x:Bind ViewModel.CanContinueDiscovery, Mode=OneWay}" />
+                        <Button
+                            AutomationProperties.AutomationId="SupplyProviderDiscoveryEvidence"
+                            Click="SupplyDiscoveryEvidence_Click"
+                            Content="Add evidence"
+                            IsEnabled="{x:Bind ViewModel.CanSupplyDiscoveryEvidence, Mode=OneWay}" />
+                        <Button
+                            AutomationProperties.AutomationId="CommitProviderDiscovery"
+                            Click="CommitDiscovery_Click"
+                            Content="Commit reviewed setup"
+                            IsEnabled="{x:Bind ViewModel.CanCommitDiscovery, Mode=OneWay}"
+                            Style="{StaticResource AccentButtonStyle}" />
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button
+                            AutomationProperties.AutomationId="AcceptProviderAssistantDraft"
+                            Click="AcceptAssistantDraft_Click"
+                            Content="Accept assistant draft"
+                            IsEnabled="{x:Bind ViewModel.CanAcceptAssistantDraft, Mode=OneWay}"
+                            Style="{StaticResource AccentButtonStyle}" />
+                        <Button
+                            AutomationProperties.AutomationId="ReviseProviderAssistantDraft"
+                            Click="RequestAssistantRevision_Click"
+                            Content="Request draft revision"
+                            IsEnabled="{x:Bind ViewModel.CanRequestAssistantRevision, Mode=OneWay}" />
+                        <Button
+                            AutomationProperties.AutomationId="RetryProviderAssistant"
+                            Click="RetryAssistant_Click"
+                            Content="Resume/retry approved assistant"
+                            IsEnabled="{x:Bind ViewModel.CanRetryAssistant, Mode=OneWay}" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.DiscoveryProgress}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="viewModels:ProviderProgressItem">
+                                <Grid
+                                    Margin="0,0,0,8"
+                                    ColumnSpacing="10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="24" />
+                                        <ColumnDefinition Width="180" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{x:Bind Marker}" />
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        FontWeight="SemiBold"
+                                        Text="{x:Bind Label}" />
+                                    <TextBlock
+                                        Grid.Column="2"
+                                        Text="{x:Bind Detail}"
+                                        TextWrapping="Wrap" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Expander>
+
+            <TextBlock
+                FontSize="20"
+                FontWeight="SemiBold"
+                Text="Models and capability evidence" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button
+                    AutomationProperties.AutomationId="RefreshProviderModels"
+                    Click="RefreshModels_Click"
+                    Content="Refresh models"
+                    IsEnabled="{x:Bind ViewModel.CanRefreshModels, Mode=OneWay}"
+                    Style="{StaticResource AccentButtonStyle}" />
+                <Button
+                    AutomationProperties.AutomationId="ApproveProviderModelSync"
+                    Click="ApproveModelSync_Click"
+                    Content="Approve reviewed changes"
+                    IsEnabled="{x:Bind ViewModel.CanApproveModelSync, Mode=OneWay}" />
+                <Button
+                    AutomationProperties.AutomationId="CancelProviderModelSync"
+                    Click="CancelModelSync_Click"
+                    Content="Cancel model sync"
+                    IsEnabled="{x:Bind ViewModel.CanCancelModelSync, Mode=OneWay}" />
+                <TextBlock
+                    VerticalAlignment="Center"
+                    Text="A missing model is retained as temporarily missing."
+                    TextWrapping="Wrap" />
+            </StackPanel>
+            <ItemsControl
+                AutomationProperties.AutomationId="ModelSyncReview"
+                ItemsSource="{x:Bind ViewModel.ModelSyncReview}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:ModelSyncReviewItem">
+                        <Grid
+                            Margin="0,0,0,8"
+                            ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="24" />
+                                <ColumnDefinition Width="180" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{x:Bind Marker}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                FontWeight="SemiBold"
+                                Text="{x:Bind Label}" />
+                            <TextBlock
+                                Grid.Column="2"
+                                Text="{x:Bind Detail}"
+                                TextWrapping="Wrap" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <ComboBox
+                AutomationProperties.AutomationId="ProviderModelRoute"
+                Header="Model route"
+                ItemsSource="{x:Bind ViewModel.ModelRoutes}"
+                SelectionChanged="ModelRoute_SelectionChanged"
+                SelectedItem="{x:Bind ViewModel.SelectedModelRoute, Mode=OneWay}">
+                <ComboBox.ItemTemplate>
+                    <DataTemplate x:DataType="native:ModelRoute">
+                        <StackPanel Spacing="2">
+                            <TextBlock
+                                FontWeight="SemiBold"
+                                Text="{x:Bind ModelId}" />
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="{x:Bind MetadataSource}" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="· observed" />
+                                <TextBlock
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="{x:Bind MetadataObservedAt}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ComboBox.ItemTemplate>
+            </ComboBox>
+
+            <ItemsControl
+                AutomationProperties.AutomationId="ProviderCapabilities"
+                ItemsSource="{x:Bind ViewModel.Capabilities}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:CapabilityDisplayItem">
+                        <Border
+                            Margin="0,0,0,8"
+                            Padding="12"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="6">
+                            <Grid ColumnSpacing="12" RowSpacing="4">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="160" />
+                                    <ColumnDefinition Width="130" />
+                                    <ColumnDefinition Width="150" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock
+                                    FontWeight="SemiBold"
+                                    Text="{x:Bind Key}" />
+                                <TextBlock Grid.Column="1" Text="{x:Bind Value}" />
+                                <TextBlock Grid.Column="2" Text="{x:Bind Status}" />
+                                <TextBlock Grid.Column="3" Text="{x:Bind Source}" />
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.ColumnSpan="2"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="{x:Bind Freshness}" />
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="2"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="{x:Bind Conflict}" />
+                                <TextBlock
+                                    Grid.Row="1"
+                                    Grid.Column="3"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                    Text="{x:Bind Evidence}"
+                                    TextWrapping="Wrap" />
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock
+                FontSize="20"
+                FontWeight="SemiBold"
+                Text="Generation preset" />
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ComboBox
+                    AutomationProperties.AutomationId="GenerationPreset"
+                    DisplayMemberPath="DisplayName"
+                    Header="Edit preset"
+                    ItemsSource="{x:Bind ViewModel.GenerationPresets}"
+                    SelectionChanged="GenerationPreset_SelectionChanged"
+                    SelectedItem="{x:Bind ViewModel.SelectedGenerationPreset, Mode=OneWay}" />
+                <ComboBox
+                    Grid.Column="1"
+                    AutomationProperties.AutomationId="DefaultGenerationPreset"
+                    DisplayMemberPath="DisplayName"
+                    Header="Default chat target"
+                    ItemsSource="{x:Bind ViewModel.GenerationPresets}"
+                    SelectedItem="{x:Bind ViewModel.SelectedDefaultPreset, Mode=TwoWay}" />
+            </Grid>
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBox
+                    AutomationProperties.AutomationId="GenerationPresetId"
+                    Header="Preset ID"
+                    Text="{x:Bind ViewModel.PresetId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox
+                    Grid.Column="1"
+                    AutomationProperties.AutomationId="GenerationPresetName"
+                    Header="Preset name"
+                    Text="{x:Bind ViewModel.PresetDisplayName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+
+            <ItemsControl
+                AutomationProperties.AutomationId="ProviderParameterEditors"
+                ItemsSource="{x:Bind ViewModel.ParameterEditors}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:ProviderParameterEditor">
+                        <Border
+                            Margin="0,0,0,8"
+                            Padding="12"
+                            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                            CornerRadius="6">
+                            <Grid ColumnSpacing="12" RowSpacing="6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="220" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Spacing="4">
+                                    <TextBlock
+                                        FontWeight="SemiBold"
+                                        Text="{x:Bind Label}" />
+                                    <TextBlock
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{x:Bind Description}"
+                                        TextWrapping="Wrap" />
+                                    <TextBlock
+                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                        Text="{x:Bind Constraint}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="6">
+                                    <CheckBox
+                                        Content="Use provider default"
+                                        IsEnabled="{x:Bind CanUseProviderDefault, Mode=OneWay}"
+                                        IsChecked="{x:Bind UseProviderDefault, Mode=TwoWay}" />
+                                    <TextBox
+                                        AutomationProperties.Name="{x:Bind Label}"
+                                        Header="{x:Bind TypeLabel}"
+                                        IsEnabled="{x:Bind CanEditValue, Mode=OneWay}"
+                                        Text="{x:Bind Input, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock
+                                        Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                        Text="{x:Bind PolicyMessage, Mode=OneWay}"
+                                        TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Expander
+                AutomationProperties.AutomationId="ReasoningAndCacheSettings"
+                Header="Reasoning and prompt-cache settings">
+                <Grid
+                    Padding="0,12,0,0"
+                    ColumnSpacing="12"
+                    RowSpacing="12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ComboBox
+                        AutomationProperties.AutomationId="ReasoningMode"
+                        Header="Reasoning mode"
+                        IsEnabled="{x:Bind ViewModel.ReasoningControlsEnabled, Mode=OneWay}"
+                        ItemsSource="{x:Bind ViewModel.ReasoningModes}"
+                        SelectedItem="{x:Bind ViewModel.ReasoningMode, Mode=TwoWay}" />
+                    <ComboBox
+                        Grid.Column="1"
+                        AutomationProperties.AutomationId="ReasoningEffort"
+                        Header="Reasoning effort"
+                        IsEnabled="{x:Bind ViewModel.ReasoningEffortEnabled, Mode=OneWay}"
+                        ItemsSource="{x:Bind ViewModel.ReasoningEfforts}"
+                        SelectedItem="{x:Bind ViewModel.ReasoningEffort, Mode=TwoWay}" />
+                    <TextBox
+                        Grid.Row="1"
+                        AutomationProperties.AutomationId="ReasoningBudget"
+                        Header="Reasoning budget tokens"
+                        InputScope="Number"
+                        IsEnabled="{x:Bind ViewModel.ReasoningBudgetEnabled, Mode=OneWay}"
+                        Text="{x:Bind ViewModel.ReasoningBudgetTokens, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <ComboBox
+                        Grid.Row="1"
+                        Grid.Column="1"
+                        AutomationProperties.AutomationId="ReasoningSummary"
+                        Header="Reasoning summary"
+                        IsEnabled="{x:Bind ViewModel.ReasoningSummaryEnabled, Mode=OneWay}"
+                        ItemsSource="{x:Bind ViewModel.ReasoningSummaries}"
+                        SelectedItem="{x:Bind ViewModel.ReasoningSummary, Mode=TwoWay}" />
+                    <CheckBox
+                        Grid.Row="2"
+                        Grid.ColumnSpan="2"
+                        AutomationProperties.AutomationId="PreserveOpaqueReasoning"
+                        Content="Preserve provider-native opaque reasoning continuity only for an exact credential-free target"
+                        IsEnabled="{x:Bind ViewModel.CanPreserveOpaqueReasoningState, Mode=OneWay}"
+                        IsChecked="{x:Bind ViewModel.PreserveOpaqueReasoningState, Mode=TwoWay}" />
+                    <ComboBox
+                        Grid.Row="3"
+                        AutomationProperties.AutomationId="PromptCacheMode"
+                        Header="Prompt-cache mode"
+                        IsEnabled="{x:Bind ViewModel.PromptCacheControlsEnabled, Mode=OneWay}"
+                        ItemsSource="{x:Bind ViewModel.PromptCacheModes}"
+                        SelectedItem="{x:Bind ViewModel.PromptCacheMode, Mode=TwoWay}" />
+                    <ComboBox
+                        Grid.Row="3"
+                        Grid.Column="1"
+                        AutomationProperties.AutomationId="PromptCacheTtl"
+                        Header="Prompt-cache TTL"
+                        IsEnabled="{x:Bind ViewModel.PromptCacheTtlEnabled, Mode=OneWay}"
+                        ItemsSource="{x:Bind ViewModel.PromptCacheTtls}"
+                        SelectedItem="{x:Bind ViewModel.PromptCacheTtl, Mode=TwoWay}" />
+                    <TextBlock
+                        Grid.Row="4"
+                        Grid.ColumnSpan="2"
+                        AutomationProperties.AutomationId="PresetControlStatus"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="{x:Bind ViewModel.PresetControlStatus, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                </Grid>
+            </Expander>
+            <Grid ColumnSpacing="12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBox
+                    AutomationProperties.AutomationId="PromptCacheCustomSeconds"
+                    Header="Custom cache TTL seconds"
+                    InputScope="Number"
+                    IsEnabled="{x:Bind ViewModel.PromptCacheCustomTtlEnabled, Mode=OneWay}"
+                    Text="{x:Bind ViewModel.PromptCacheCustomSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox
+                    Grid.Column="1"
+                    AutomationProperties.AutomationId="PromptCacheContextReference"
+                    Header="Cache context reference"
+                    IsEnabled="{x:Bind ViewModel.PromptCacheContextReferenceEnabled, Mode=OneWay}"
+                    Text="{x:Bind ViewModel.PromptCacheContextReference, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button
+                    AutomationProperties.AutomationId="NewGenerationPreset"
+                    Click="NewPreset_Click"
+                    Content="New preset" />
+                <Button
+                    AutomationProperties.AutomationId="SaveGenerationPreset"
+                    Click="SavePreset_Click"
+                    Content="Save preset"
+                    Style="{StaticResource AccentButtonStyle}" />
+                <Button
+                    AutomationProperties.AutomationId="DeleteGenerationPreset"
+                    Click="DeletePreset_Click"
+                    Content="Delete preset" />
+            </StackPanel>
+
+            <Expander
+                AutomationProperties.AutomationId="RedactedRequestPreview"
+                Header="Redacted request preview">
+                <StackPanel Padding="0,12,0,0" Spacing="8">
+                    <Button
+                        AutomationProperties.AutomationId="RefreshRedactedRequestPreview"
+                        Click="RefreshRequestPreview_Click"
+                        Content="Refresh redacted preview" />
+                    <TextBlock
+                        FontFamily="Consolas"
+                        Text="{x:Bind ViewModel.RequestPreview, Mode=OneWay}"
+                        TextWrapping="Wrap" />
+                </StackPanel>
+            </Expander>
 
             <TextBlock
                 FontSize="20"
                 FontWeight="SemiBold"
                 Text="Chat behavior" />
-            <ComboBox
-                DisplayMemberPath="DisplayName"
-                Header="Default provider"
-                ItemsSource="{x:Bind ViewModel.Profiles}"
-                PlaceholderText="No default provider"
-                SelectedItem="{x:Bind ViewModel.SelectedDefaultProfile, Mode=TwoWay}" />
             <CheckBox
+                AutomationProperties.AutomationId="PreservePartialGeneration"
                 Content="Keep a partial assistant response when generation fails or is cancelled"
                 IsChecked="{x:Bind ViewModel.PreservePartialGenerations, Mode=TwoWay}" />
             <Button
+                AutomationProperties.AutomationId="SaveDefaultGenerationTarget"
                 Click="SaveSettings_Click"
-                Content="Save chat settings"
-                HorizontalAlignment="Left" />
+                Content="Save default route and preset"
+                HorizontalAlignment="Left"
+                IsEnabled="{x:Bind ViewModel.CanSaveAppSettings, Mode=OneWay}" />
+
+            <TextBlock
+                FontSize="20"
+                FontWeight="SemiBold"
+                Text="Signed provider catalog" />
             <InfoBar
+                AutomationProperties.AutomationId="ProviderCatalogStatus"
                 IsClosable="False"
                 IsOpen="True"
-                Message="{x:Bind ViewModel.ProviderStatus, Mode=OneWay}"
+                Message="{x:Bind ViewModel.CatalogStatus, Mode=OneWay}"
                 Severity="Informational"
-                Title="Local provider configuration" />
+                Title="Local catalog history" />
+            <ComboBox
+                AutomationProperties.AutomationId="ProviderCatalogRevision"
+                DisplayMemberPath="Label"
+                Header="Catalog revision"
+                ItemsSource="{x:Bind ViewModel.CatalogRevisions}"
+                SelectedItem="{x:Bind ViewModel.SelectedCatalogRevision, Mode=TwoWay}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button
+                    AutomationProperties.AutomationId="ReviewSignedProviderCatalog"
+                    Click="ImportSignedCatalog_Click"
+                    Content="Review signed catalog…" />
+                <Button
+                    AutomationProperties.AutomationId="ActivateSignedProviderCatalog"
+                    Click="ActivateSignedCatalog_Click"
+                    Content="Activate reviewed catalog"
+                    IsEnabled="{x:Bind ViewModel.HasPendingCatalogImport, Mode=OneWay}"
+                    Style="{StaticResource AccentButtonStyle}" />
+                <Button
+                    AutomationProperties.AutomationId="ReviewProviderCatalogDiff"
+                    Click="ReviewCatalogDiff_Click"
+                    Content="Review diff" />
+                <Button
+                    AutomationProperties.AutomationId="PrepareProviderCatalogRollback"
+                    Click="PrepareCatalogRollback_Click"
+                    Content="Prepare rollback" />
+                <Button
+                    AutomationProperties.AutomationId="ActivateProviderCatalogRollback"
+                    Click="ActivateCatalogRollback_Click"
+                    Content="Activate reviewed rollback"
+                    Style="{StaticResource AccentButtonStyle}" />
+            </StackPanel>
+            <ItemsControl
+                AutomationProperties.AutomationId="ProviderCatalogReview"
+                ItemsSource="{x:Bind ViewModel.CatalogReview}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="viewModels:ModelSyncReviewItem">
+                        <Grid
+                            Margin="0,0,0,8"
+                            ColumnSpacing="10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="24" />
+                                <ColumnDefinition Width="220" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{x:Bind Marker}" />
+                            <TextBlock
+                                Grid.Column="1"
+                                FontWeight="SemiBold"
+                                Text="{x:Bind Label}" />
+                            <TextBlock
+                                Grid.Column="2"
+                                Text="{x:Bind Detail}"
+                                TextWrapping="Wrap" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
 
             <TextBlock
                 FontSize="20"
@@ -116,17 +907,35 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Text="C ABI version" />
-                <TextBlock Grid.Column="1" Text="{x:Bind ViewModel.AbiVersion, Mode=OneWay}" />
+                <TextBlock
+                    Grid.Column="1"
+                    AutomationProperties.AutomationId="CoreAbiVersion"
+                    Text="{x:Bind ViewModel.AbiVersion, Mode=OneWay}" />
                 <TextBlock Grid.Row="1" Text="Core version" />
-                <TextBlock Grid.Row="1" Grid.Column="1" Text="{x:Bind ViewModel.CoreVersion, Mode=OneWay}" />
+                <TextBlock
+                    Grid.Row="1"
+                    Grid.Column="1"
+                    Text="{x:Bind ViewModel.CoreVersion, Mode=OneWay}" />
                 <TextBlock Grid.Row="2" Text="Database" />
-                <TextBlock Grid.Row="2" Grid.Column="1" Text="{x:Bind ViewModel.Database, Mode=OneWay}" />
+                <TextBlock
+                    Grid.Row="2"
+                    Grid.Column="1"
+                    Text="{x:Bind ViewModel.Database, Mode=OneWay}" />
                 <TextBlock Grid.Row="3" Text="Data root" />
-                <TextBlock Grid.Row="3" Grid.Column="1" Text="{x:Bind ViewModel.DataRoot, Mode=OneWay}" />
+                <TextBlock
+                    Grid.Row="3"
+                    Grid.Column="1"
+                    Text="{x:Bind ViewModel.DataRoot, Mode=OneWay}" />
                 <TextBlock Grid.Row="4" Text="Staging" />
-                <TextBlock Grid.Row="4" Grid.Column="1" Text="{x:Bind ViewModel.Staging, Mode=OneWay}" />
+                <TextBlock
+                    Grid.Row="4"
+                    Grid.Column="1"
+                    Text="{x:Bind ViewModel.Staging, Mode=OneWay}" />
                 <TextBlock Grid.Row="5" Text="Recovery" />
-                <TextBlock Grid.Row="5" Grid.Column="1" Text="{x:Bind ViewModel.Recovery, Mode=OneWay}" />
+                <TextBlock
+                    Grid.Row="5"
+                    Grid.Column="1"
+                    Text="{x:Bind ViewModel.Recovery, Mode=OneWay}" />
             </Grid>
             <InfoBar
                 IsClosable="False"
@@ -134,13 +943,11 @@
                 Message="{x:Bind ViewModel.Status, Mode=OneWay}"
                 Severity="Informational"
                 Title="Core health" />
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button
-                    Click="Refresh_Click"
-                    Content="Refresh all settings" />
-                <ProgressRing
-                    IsActive="{x:Bind ViewModel.IsRefreshing, Mode=OneWay}" />
-            </StackPanel>
+            <Button
+                AutomationProperties.AutomationId="RefreshProviderSettings"
+                Click="Refresh_Click"
+                Content="Refresh all settings"
+                HorizontalAlignment="Left" />
         </StackPanel>
     </ScrollViewer>
 </Page>

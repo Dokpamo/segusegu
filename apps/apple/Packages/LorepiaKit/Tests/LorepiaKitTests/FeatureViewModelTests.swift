@@ -352,7 +352,14 @@ final class FeatureViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.selectedProviderProfile?.model, "lore-pro")
         let settings = try await client.getSettings()
-        XCTAssertEqual(settings.selectedProviderProfileID, "pro")
+        XCTAssertNil(settings.selectedProviderProfileID)
+        XCTAssertEqual(
+            settings.selectedGenerationTarget,
+            ProviderGenerationTarget(
+                modelRouteID: "pro",
+                generationPresetID: "pro"
+            )
+        )
         XCTAssertTrue(settings.preservePartialGenerations)
     }
 
@@ -383,7 +390,14 @@ final class FeatureViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.selectedProviderProfileID, "pro")
         let settings = try await client.getSettings()
-        XCTAssertEqual(settings.selectedProviderProfileID, "pro")
+        XCTAssertNil(settings.selectedProviderProfileID)
+        XCTAssertEqual(
+            settings.selectedGenerationTarget,
+            ProviderGenerationTarget(
+                modelRouteID: "pro",
+                generationPresetID: "pro"
+            )
+        )
     }
 
     func testChatDiscardsCapturedProviderRefreshAfterSettingsDeletesProfile() async throws {
@@ -2568,8 +2582,6 @@ final class FeatureViewModelTests: XCTestCase {
     }
 
     func testSettingsRejectsOverlongCredentialsBeforeCoreOrKeychainMutation() async throws {
-        let profile = providerSelectionFixtures()[0]
-        let existingCredential = "synthetic-existing-key"
         let overlongCredentials = [
             String(
                 repeating: "a",
@@ -2587,35 +2599,33 @@ final class FeatureViewModelTests: XCTestCase {
                 overlongCredential.utf8.count,
                 CredentialStorePolicy.maximumCredentialUTF8Bytes
             )
-            let client = FakeCoreClient(profiles: [profile])
-            let credentials = ScriptedCredentialStore(
-                values: [profile.id: existingCredential]
-            )
+            let client = FakeCoreClient(profiles: [])
+            let credentials = ScriptedCredentialStore()
             let viewModel = SettingsViewModel(
                 client: client,
                 credentialStore: credentials,
                 runtimeMode: .preview
             )
-            await viewModel.refresh()
+            viewModel.beginNewProfile()
+            viewModel.profileName = "Overlong"
+            viewModel.baseURL = "https://example.invalid/v1"
+            viewModel.model = "synthetic"
+            viewModel.timeoutSeconds = "15"
             viewModel.credentialDraft = overlongCredential
 
             await viewModel.saveProfile()
 
-            let storedCredential = try await credentials.credential(
-                for: profile.id
-            )
             let upsertCount =
                 await client.providerUpsertInvocationCountForTesting()
             let setCount = await credentials.setCallCount()
-            XCTAssertTrue(storedCredential == existingCredential)
             XCTAssertEqual(upsertCount, 0)
             XCTAssertEqual(setCount, 0)
             XCTAssertEqual(
                 viewModel.errorMessage,
                 "API 키가 너무 깁니다. 더 짧은 키인지 확인하세요."
             )
-            XCTAssertTrue(viewModel.hasStoredCredential)
-            XCTAssertEqual(viewModel.profiles, [profile])
+            XCTAssertFalse(viewModel.hasStoredCredential)
+            XCTAssertTrue(viewModel.profiles.isEmpty)
         }
     }
 
@@ -2688,13 +2698,13 @@ final class FeatureViewModelTests: XCTestCase {
         XCTAssertTrue(viewModel.credentialDraft.isEmpty)
     }
 
-    func testSettingsOverwritesAnUnreadableCredentialAfterDurableDeselect() async throws {
+    func testSettingsRejectsReplacementWhenCredentialStateUnreadable() async throws {
         let profile = providerSelectionFixtures()[0]
         let replacementCredential = "synthetic-readable-replacement"
         let client = FakeCoreClient(profiles: [profile])
         let credentials = ScriptedCredentialStore(
             values: [profile.id: "synthetic-unreadable-existing"],
-            readFailureInvocations: [1, 2]
+            readFailureInvocations: [1]
         )
         let viewModel = SettingsViewModel(
             client: client,
@@ -2709,11 +2719,15 @@ final class FeatureViewModelTests: XCTestCase {
 
         let stored = try await credentials.credential(for: profile.id)
         let persisted = try await client.getSettings()
-        XCTAssertEqual(stored, replacementCredential)
+        XCTAssertEqual(stored, "synthetic-unreadable-existing")
         XCTAssertEqual(persisted.selectedProviderProfileID, profile.id)
-        XCTAssertTrue(viewModel.isCredentialStateKnown)
-        XCTAssertTrue(viewModel.hasStoredCredential)
-        XCTAssertNil(viewModel.errorMessage)
+        XCTAssertFalse(viewModel.isCredentialStateKnown)
+        XCTAssertFalse(viewModel.hasStoredCredential)
+        XCTAssertTrue(viewModel.credentialDraft.isEmpty)
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            "기존 연결의 API 키는 변경할 수 없습니다. 새 AI 연결을 만들어 새 연결 ID, 모델 경로와 프리셋을 사용하세요. 입력을 비워 두면 현재 키를 유지합니다."
+        )
     }
 
     func testSettingsForceClearsAnUnreadableCredential() async throws {
@@ -3205,7 +3219,7 @@ final class FeatureViewModelTests: XCTestCase {
         }
     }
 
-    func testSettingsBaseURLChangeWithStoredKeyRequiresANewCredential() async throws {
+    func testSettingsBaseURLChangeWithStoredKeyRequiresANewConnection() async throws {
         let profile = providerSelectionFixtures()[0]
         let existingCredential = "synthetic-existing-key"
         let client = FakeCoreClient(profiles: [profile])
@@ -3238,17 +3252,45 @@ final class FeatureViewModelTests: XCTestCase {
         XCTAssertEqual(setCount, 0)
         XCTAssertEqual(
             viewModel.errorMessage,
-            "Base URL을 변경하려면 새 API 키를 함께 입력하거나 저장된 키를 먼저 삭제하세요."
+            "기존 연결의 API 주소, 모델과 제한 시간은 변경할 수 없습니다. 새 AI 연결을 만들어 별도의 연결, 모델 경로와 프리셋을 사용하세요."
         )
     }
 
-    func testSettingsTemporarilyDeselectsAProfileWhileReplacingItsKey() async throws {
+    func testSettingsBlankCredentialRetainsExistingVaultSlot() async throws {
+        let profile = providerSelectionFixtures()[0]
+        let existingCredential = "synthetic-existing-key"
+        let client = FakeCoreClient(profiles: [profile])
+        let credentials = ScriptedCredentialStore(
+            values: [profile.id: existingCredential]
+        )
+        let viewModel = SettingsViewModel(
+            client: client,
+            credentialStore: credentials,
+            runtimeMode: .preview
+        )
+        await viewModel.refresh()
+        viewModel.credentialDraft = " \n\t "
+
+        await viewModel.saveProfile()
+
+        let storedCredential = try await credentials.credential(
+            for: profile.id
+        )
+        let setCount = await credentials.setCallCount()
+        let deleteCount = await credentials.deleteCallCount()
+        XCTAssertEqual(storedCredential, existingCredential)
+        XCTAssertEqual(setCount, 0)
+        XCTAssertEqual(deleteCount, 0)
+        XCTAssertTrue(viewModel.credentialDraft.isEmpty)
+        XCTAssertNil(viewModel.errorMessage)
+    }
+
+    func testSettingsRejectsCredentialReplacementWithoutDeselectingProfile() async throws {
         let profile = providerSelectionFixtures()[0]
         let store = ProviderConfigurationStore()
         let client = FakeCoreClient(profiles: [profile])
         let credentials = ScriptedCredentialStore(
-            values: [profile.id: "synthetic-old-key"],
-            setDelay: .milliseconds(80)
+            values: [profile.id: "synthetic-old-key"]
         )
         let settings = SettingsViewModel(
             client: client,
@@ -3270,29 +3312,7 @@ final class FeatureViewModelTests: XCTestCase {
         settings.model = "lore-compact-updated"
         settings.credentialDraft = "synthetic-new-key"
 
-        let save = Task {
-            await settings.saveProfile()
-        }
-        await waitUntil {
-            settings.isLoading
-                && settings.selectedProfileID == nil
-                && store.selectedProfileID == nil
-        }
-        await waitUntil {
-            chat.hasLoadedProviderConfiguration
-                && chat.selectedProviderProfileID == nil
-        }
-
-        XCTAssertFalse(chat.canSubmit)
-        await chat.submitMessage()
-        let requestsDuringReplacement =
-            await client.providerSendRequestsForTesting()
-        XCTAssertTrue(requestsDuringReplacement.isEmpty)
-
-        await save.value
-        await waitUntil {
-            chat.selectedProviderProfileID == profile.id
-        }
+        await settings.saveProfile()
 
         let coreSettings = try await client.getSettings()
         let coreProfiles = try await client.listProviderProfiles()
@@ -3300,13 +3320,19 @@ final class FeatureViewModelTests: XCTestCase {
             for: profile.id
         )
         XCTAssertEqual(coreSettings.selectedProviderProfileID, profile.id)
-        XCTAssertEqual(coreProfiles.first?.model, "lore-compact-updated")
-        XCTAssertTrue(storedCredential == "synthetic-new-key")
+        XCTAssertEqual(coreProfiles, [profile])
+        XCTAssertTrue(storedCredential == "synthetic-old-key")
         XCTAssertEqual(store.selectedProfileID, profile.id)
         XCTAssertEqual(chat.selectedProviderProfileID, profile.id)
+        XCTAssertTrue(chat.canSubmit)
+        XCTAssertTrue(settings.credentialDraft.isEmpty)
+        XCTAssertEqual(
+            settings.errorMessage,
+            "기존 연결의 API 키는 변경할 수 없습니다. 새 AI 연결을 만들어 새 연결 ID, 모델 경로와 프리셋을 사용하세요. 입력을 비워 두면 현재 키를 유지합니다."
+        )
     }
 
-    func testSettingsSelectedProfileCredentialFailureRestoresThePreviousPair() async throws {
+    func testSettingsRejectsSelectedProfileCredentialReplacementBeforeVaultWrite() async throws {
         let profile = providerSelectionFixtures()[0]
         let oldCredential = "synthetic-old-key"
         let replacementCredential = "synthetic-new-key"
@@ -3340,7 +3366,11 @@ final class FeatureViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.selectedProfileID, profile.id)
         XCTAssertEqual(store.selectedProfileID, profile.id)
         XCTAssertTrue(storedCredential == oldCredential)
-        XCTAssertEqual(viewModel.credentialDraft, replacementCredential)
+        XCTAssertTrue(viewModel.credentialDraft.isEmpty)
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            "기존 연결의 API 키는 변경할 수 없습니다. 새 AI 연결을 만들어 새 연결 ID, 모델 경로와 프리셋을 사용하세요. 입력을 비워 두면 현재 키를 유지합니다."
+        )
         XCTAssertFalse(
             viewModel.errorMessage?.contains(replacementCredential)
                 == true
@@ -3351,16 +3381,14 @@ final class FeatureViewModelTests: XCTestCase {
         )
     }
 
-    func testSettingsChangesEndpointOnlyWhileCredentialIsAbsent() async throws {
+    func testSettingsNeverClearsCredentialToChangeExistingEndpoint() async throws {
         let profile = providerSelectionFixtures()[0]
         let oldCredential = "synthetic-old-endpoint-key"
         let newCredential = "synthetic-new-endpoint-key"
         let newBaseURL = "https://replacement.example.invalid/v1"
         let client = FakeCoreClient(profiles: [profile])
         let credentials = ScriptedCredentialStore(
-            values: [profile.id: oldCredential],
-            setDelay: .milliseconds(120),
-            deleteDelay: .milliseconds(120)
+            values: [profile.id: oldCredential]
         )
         let viewModel = SettingsViewModel(
             client: client,
@@ -3371,43 +3399,31 @@ final class FeatureViewModelTests: XCTestCase {
         viewModel.baseURL = newBaseURL
         viewModel.credentialDraft = newCredential
 
-        let save = Task {
-            await viewModel.saveProfile()
-        }
-        await waitUntil {
-            await credentials.deleteCallCount() == 1
-        }
-
-        let profileDuringCredentialDeletion =
-            try await client.listProviderProfiles().first
-        let credentialDuringDeletion =
-            try await credentials.credential(for: profile.id)
-        XCTAssertEqual(profileDuringCredentialDeletion?.baseURL, profile.baseURL)
-        XCTAssertEqual(credentialDuringDeletion, oldCredential)
-
-        await waitUntil {
-            let upsertCount =
-                await client.providerUpsertInvocationCountForTesting()
-            let setCount = await credentials.setCallCount()
-            return upsertCount == 1 && setCount == 1
-        }
-        let profileDuringCredentialWrite =
-            try await client.listProviderProfiles().first
-        let credentialDuringWrite =
-            try await credentials.credential(for: profile.id)
-        XCTAssertEqual(profileDuringCredentialWrite?.baseURL, newBaseURL)
-        XCTAssertNil(credentialDuringWrite)
-
-        await save.value
+        await viewModel.saveProfile()
 
         let savedCredential =
             try await credentials.credential(for: profile.id)
         let savedProfile = try await client.listProviderProfiles().first
-        XCTAssertEqual(savedCredential, newCredential)
-        XCTAssertEqual(savedProfile?.baseURL, newBaseURL)
+        let upsertCount =
+            await client.providerUpsertInvocationCountForTesting()
+        let updateCount =
+            await client.updateSettingsInvocationCountForTesting()
+        let setCount = await credentials.setCallCount()
+        let deleteCount = await credentials.deleteCallCount()
+        XCTAssertEqual(savedCredential, oldCredential)
+        XCTAssertEqual(savedProfile, profile)
+        XCTAssertEqual(upsertCount, 0)
+        XCTAssertEqual(updateCount, 0)
+        XCTAssertEqual(setCount, 0)
+        XCTAssertEqual(deleteCount, 0)
+        XCTAssertTrue(viewModel.credentialDraft.isEmpty)
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            "기존 연결의 API 키는 변경할 수 없습니다. 새 AI 연결을 만들어 새 연결 ID, 모델 경로와 프리셋을 사용하세요. 입력을 비워 두면 현재 키를 유지합니다."
+        )
     }
 
-    func testSettingsPreservesOtherSelectionWhenProfileAndCredentialRollbackFail() async throws {
+    func testRejectedCredentialReplacementPreservesOtherSelection() async throws {
         let profiles = providerSelectionFixtures()
         let rawDetail =
             "synthetic-secret-canary operation_id=rollback-operation-42"
@@ -3446,7 +3462,11 @@ final class FeatureViewModelTests: XCTestCase {
         XCTAssertEqual(store.selectedProfileID, "compact")
         XCTAssertEqual(
             coreProfiles.first(where: { $0.id == "pro" })?.model,
-            "lore-pro-updated"
+            "lore-pro"
+        )
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            "기존 연결의 API 키는 변경할 수 없습니다. 새 AI 연결을 만들어 새 연결 ID, 모델 경로와 프리셋을 사용하세요. 입력을 비워 두면 현재 키를 유지합니다."
         )
         XCTAssertFalse(viewModel.errorMessage?.contains("operation_id") == true)
         XCTAssertFalse(viewModel.statusMessage?.contains("operation_id") == true)
@@ -3582,7 +3602,14 @@ final class FeatureViewModelTests: XCTestCase {
 
         let persisted = try await client.getSettings()
         XCTAssertFalse(persisted.preservePartialGenerations)
-        XCTAssertEqual(persisted.selectedProviderProfileID, "pro")
+        XCTAssertNil(persisted.selectedProviderProfileID)
+        XCTAssertEqual(
+            persisted.selectedGenerationTarget,
+            ProviderGenerationTarget(
+                modelRouteID: "pro",
+                generationPresetID: "pro"
+            )
+        )
     }
 
     func testSettingsPreservesDirtyEditorWhenSharedSelectionChanges() async {
@@ -4187,7 +4214,7 @@ final class FeatureViewModelTests: XCTestCase {
         XCTAssertFalse(store.isQuarantined(profileID: profile.id))
     }
 
-    func testChatCannotSelectAProfileWhileSettingsReplacesItsCredential() async throws {
+    func testRejectedCredentialReplacementDoesNotBlockChatSelection() async throws {
         let profiles = providerSelectionFixtures()
         let store = ProviderConfigurationStore()
         let client = FakeCoreClient(profiles: profiles)
@@ -4195,8 +4222,7 @@ final class FeatureViewModelTests: XCTestCase {
             values: [
                 "compact": "synthetic-compact-key",
                 "pro": "synthetic-pro-key",
-            ],
-            setDelay: .milliseconds(500)
+            ]
         )
         let settings = SettingsViewModel(
             client: client,
@@ -4217,38 +4243,38 @@ final class FeatureViewModelTests: XCTestCase {
         await settings.editProfile(id: "pro")
         settings.credentialDraft = "synthetic-pro-replacement"
 
-        let save = Task {
-            await settings.saveProfile()
-        }
-        await waitUntil(timeout: .seconds(3)) {
-            settings.isLoading
-                && store.isBlocked(profileID: "pro")
-        }
-        await chat.selectProviderProfile(id: "pro")
+        await settings.saveProfile()
 
-        let settingsWhileBlocked = try await client.getSettings()
-        let updateCountWhileBlocked =
-            await client.updateSettingsInvocationCountForTesting()
-        let requestsWhileBlocked =
-            await client.providerSendRequestsForTesting()
+        let settingsAfterRejection = try await client.getSettings()
         XCTAssertEqual(
-            settingsWhileBlocked.selectedProviderProfileID,
+            settingsAfterRejection.selectedProviderProfileID,
             "compact"
         )
         XCTAssertEqual(chat.selectedProviderProfileID, "compact")
-        XCTAssertEqual(updateCountWhileBlocked, 0)
-        XCTAssertTrue(requestsWhileBlocked.isEmpty)
-        XCTAssertTrue(store.isBlocked(profileID: "pro"))
-
-        await save.value
-        await waitUntil {
-            !store.isBlocked(profileID: "pro")
-                && chat.selectedProviderProfileID == "pro"
-        }
-
         XCTAssertFalse(store.isBlocked(profileID: "pro"))
-        let settingsAfterSave = try await client.getSettings()
-        XCTAssertEqual(settingsAfterSave.selectedProviderProfileID, "pro")
+        let setCount = await credentials.setCallCount()
+        XCTAssertEqual(setCount, 0)
+        XCTAssertEqual(
+            settings.errorMessage,
+            "기존 연결의 API 키는 변경할 수 없습니다. 새 AI 연결을 만들어 새 연결 ID, 모델 경로와 프리셋을 사용하세요. 입력을 비워 두면 현재 키를 유지합니다."
+        )
+
+        await chat.selectProviderProfile(id: "pro")
+
+        let settingsAfterSelection = try await client.getSettings()
+        let storedCredential = try await credentials.credential(
+            for: "pro"
+        )
+        XCTAssertNil(settingsAfterSelection.selectedProviderProfileID)
+        XCTAssertEqual(
+            settingsAfterSelection.selectedGenerationTarget,
+            ProviderGenerationTarget(
+                modelRouteID: "pro",
+                generationPresetID: "pro"
+            )
+        )
+        XCTAssertEqual(chat.selectedProviderProfileID, "pro")
+        XCTAssertEqual(storedCredential, "synthetic-pro-key")
     }
 
     func testChatIsBlockedWhenProviderMutationStartedBeforeAccess() async throws {
@@ -4290,7 +4316,7 @@ final class FeatureViewModelTests: XCTestCase {
         store.endMutation(profileID: "pro")
     }
 
-    func testSettingsCredentialReadFailureRecoversByReplacingTheCredential() async throws {
+    func testSettingsRejectsReplacementBeforeReadingExistingVaultSlot() async throws {
         let profile = providerSelectionFixtures()[0]
         let store = ProviderConfigurationStore()
         let credentials = ScriptedCredentialStore(
@@ -4304,11 +4330,12 @@ final class FeatureViewModelTests: XCTestCase {
             providerConfigurationStore: store
         )
         await settings.refresh()
-        await credentials.failNextReads(1)
+        let readsBeforeSave = await credentials.readCallCount()
         settings.credentialDraft = "synthetic-replacement-key"
 
         await settings.saveProfile()
 
+        let readsAfterSave = await credentials.readCallCount()
         let upsertCount =
             await client.providerUpsertInvocationCountForTesting()
         let updateCount =
@@ -4323,14 +4350,16 @@ final class FeatureViewModelTests: XCTestCase {
             store.mutatingProfileIDs.contains(profile.id)
         )
         XCTAssertFalse(store.isQuarantined(profileID: profile.id))
-        XCTAssertEqual(upsertCount, 1)
-        XCTAssertEqual(updateCount, 2)
-        XCTAssertEqual(setCount, 1)
-        XCTAssertEqual(deleteCount, 1)
-        XCTAssertEqual(storedCredential, "synthetic-replacement-key")
-        XCTAssertFalse(
-            settings.errorMessage?.contains("synthetic-secret-canary")
-                == true
+        XCTAssertEqual(readsAfterSave, readsBeforeSave)
+        XCTAssertEqual(upsertCount, 0)
+        XCTAssertEqual(updateCount, 0)
+        XCTAssertEqual(setCount, 0)
+        XCTAssertEqual(deleteCount, 0)
+        XCTAssertEqual(storedCredential, "synthetic-existing-key")
+        XCTAssertTrue(settings.credentialDraft.isEmpty)
+        XCTAssertEqual(
+            settings.errorMessage,
+            "기존 연결의 API 키는 변경할 수 없습니다. 새 AI 연결을 만들어 새 연결 ID, 모델 경로와 프리셋을 사용하세요. 입력을 비워 두면 현재 키를 유지합니다."
         )
 
         let chat = ChatViewModel(

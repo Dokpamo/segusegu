@@ -29,12 +29,11 @@ class AndroidKeystoreCredentialStore(
     private val directory = context.noBackupFilesDir
         .resolve("provider-credentials")
         .absoluteFile
-    private val lock = Any()
 
-    override suspend fun read(providerProfileId: String): String? = withContext(ioDispatcher) {
-        validateProfileId(providerProfileId)
-        synchronized(lock) {
-            val file = credentialFile(providerProfileId)
+    override suspend fun read(credentialRef: String): String? = withContext(ioDispatcher) {
+        validateProfileId(credentialRef)
+        synchronized(PROCESS_LOCK) {
+            val file = credentialFile(credentialRef)
             if (!file.baseFile.isFile) return@synchronized null
             check(file.baseFile.length() <= MAXIMUM_CIPHERTEXT_BYTES + 128L) {
                 "Credential record is too large."
@@ -44,23 +43,59 @@ class AndroidKeystoreCredentialStore(
                 check(encoded.size <= MAXIMUM_CIPHERTEXT_BYTES + 128) {
                     "Credential record is too large."
                 }
-                decode(providerProfileId, encoded)
+                val plaintext = decode(credentialRef, encoded)
+                try {
+                    plaintext.toString(Charsets.UTF_8)
+                } finally {
+                    plaintext.fill(0)
+                }
             } finally {
                 encoded.fill(0)
             }
         }
     }
 
-    override suspend fun write(providerProfileId: String, credential: String) =
+    override suspend fun inspect(
+        credentialRef: String,
+    ): CredentialRecordStatus = withContext(ioDispatcher) {
+        validateProfileId(credentialRef)
+        synchronized(PROCESS_LOCK) {
+            val file = credentialFile(credentialRef)
+            if (!file.baseFile.isFile) {
+                return@synchronized CredentialRecordStatus.Missing
+            }
+            try {
+                check(file.baseFile.length() <= MAXIMUM_CIPHERTEXT_BYTES + 128L)
+                val encoded = file.readFully()
+                try {
+                    check(encoded.size <= MAXIMUM_CIPHERTEXT_BYTES + 128)
+                    val plaintext = decode(credentialRef, encoded)
+                    plaintext.fill(0)
+                } finally {
+                    encoded.fill(0)
+                }
+                CredentialRecordStatus.Available
+            } catch (_: Throwable) {
+                CredentialRecordStatus.Unreadable
+            }
+        }
+    }
+
+    override suspend fun write(credentialRef: String, credential: String) =
         withContext(ioDispatcher) {
-            validateProfileId(providerProfileId)
+            validateProfileId(credentialRef)
             require(credential.isNotBlank()) { "The credential must not be blank." }
-            synchronized(lock) {
+            synchronized(PROCESS_LOCK) {
                 check(directory.mkdirs() || directory.isDirectory) {
                     "Could not create the credential directory."
                 }
-                val encoded = encode(providerProfileId, credential)
-                val file = credentialFile(providerProfileId)
+                val plaintext = credential.toByteArray(Charsets.UTF_8)
+                val encoded = try {
+                    encode(credentialRef, plaintext)
+                } finally {
+                    plaintext.fill(0)
+                }
+                val file = credentialFile(credentialRef)
                 val stream = file.startWrite()
                 try {
                     stream.write(encoded)
@@ -74,40 +109,68 @@ class AndroidKeystoreCredentialStore(
             }
         }
 
-    override suspend fun delete(providerProfileId: String) = withContext(ioDispatcher) {
-        validateProfileId(providerProfileId)
-        synchronized(lock) {
-            credentialFile(providerProfileId).delete()
-        }
-    }
-
-    private fun encode(providerProfileId: String, credential: String): ByteArray {
-        val plaintext = credential.toByteArray(Charsets.UTF_8)
-        return try {
-            require(plaintext.size <= MAXIMUM_PLAINTEXT_BYTES) {
-                "The credential is too large."
+    override suspend fun writeBytes(
+        credentialRef: String,
+        credential: ByteArray,
+    ) = withContext(ioDispatcher) {
+        validateProfileId(credentialRef)
+        require(credential.isNotEmpty()) { "The credential must not be empty." }
+        val plaintext = credential.copyOf()
+        try {
+            require(isValidUtf8(plaintext)) {
+                "The credential handoff must be valid UTF-8."
             }
-            val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
-            cipher.updateAAD(providerProfileId.toByteArray(Charsets.UTF_8))
-            val encrypted = cipher.doFinal(plaintext)
-            ByteArrayOutputStream().use { bytes ->
-                DataOutputStream(bytes).use { output ->
-                    output.writeInt(FILE_VERSION)
-                    output.writeInt(cipher.iv.size)
-                    output.write(cipher.iv)
-                    output.writeInt(encrypted.size)
-                    output.write(encrypted)
+            synchronized(PROCESS_LOCK) {
+                check(directory.mkdirs() || directory.isDirectory) {
+                    "Could not create the credential directory."
                 }
-                bytes.toByteArray()
+                val encoded = encode(credentialRef, plaintext)
+                val file = credentialFile(credentialRef)
+                val stream = file.startWrite()
+                try {
+                    stream.write(encoded)
+                    file.finishWrite(stream)
+                } catch (error: Throwable) {
+                    file.failWrite(stream)
+                    throw error
+                } finally {
+                    encoded.fill(0)
+                }
             }
         } finally {
             plaintext.fill(0)
         }
     }
 
-    private fun decode(providerProfileId: String, encoded: ByteArray): String {
-        val plaintext = DataInputStream(ByteArrayInputStream(encoded)).use { input ->
+    override suspend fun delete(credentialRef: String) = withContext(ioDispatcher) {
+        validateProfileId(credentialRef)
+        synchronized(PROCESS_LOCK) {
+            credentialFile(credentialRef).delete()
+        }
+    }
+
+    private fun encode(providerProfileId: String, plaintext: ByteArray): ByteArray {
+        require(plaintext.size <= MAXIMUM_PLAINTEXT_BYTES) {
+            "The credential is too large."
+        }
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
+        cipher.updateAAD(providerProfileId.toByteArray(Charsets.UTF_8))
+        val encrypted = cipher.doFinal(plaintext)
+        return ByteArrayOutputStream().use { bytes ->
+            DataOutputStream(bytes).use { output ->
+                output.writeInt(FILE_VERSION)
+                output.writeInt(cipher.iv.size)
+                output.write(cipher.iv)
+                output.writeInt(encrypted.size)
+                output.write(encrypted)
+            }
+            bytes.toByteArray()
+        }
+    }
+
+    private fun decode(providerProfileId: String, encoded: ByteArray): ByteArray =
+        DataInputStream(ByteArrayInputStream(encoded)).use { input ->
             check(input.readInt() == FILE_VERSION) { "Unsupported credential record version." }
             val ivLength = input.readInt()
             check(ivLength in 12..32) { "Invalid credential nonce." }
@@ -122,20 +185,20 @@ class AndroidKeystoreCredentialStore(
             check(input.read() == -1) { "Trailing data in credential record." }
 
             val cipher = Cipher.getInstance(TRANSFORMATION)
-            cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(GCM_TAG_BITS, iv))
+            val key = getExistingKey()
+                ?: error("Android Keystore credential key is unavailable.")
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(GCM_TAG_BITS, iv))
             cipher.updateAAD(providerProfileId.toByteArray(Charsets.UTF_8))
             cipher.doFinal(ciphertext)
         }
-        return try {
-            plaintext.toString(Charsets.UTF_8)
-        } finally {
-            plaintext.fill(0)
-        }
+
+    private fun getExistingKey(): SecretKey? {
+        val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER).apply { load(null) }
+        return keyStore.getKey(KEY_ALIAS, null) as? SecretKey
     }
 
     private fun getOrCreateKey(): SecretKey {
-        val keyStore = KeyStore.getInstance(KEYSTORE_PROVIDER).apply { load(null) }
-        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+        getExistingKey()?.let { return it }
 
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, KEYSTORE_PROVIDER)
         generator.init(
@@ -165,6 +228,35 @@ class AndroidKeystoreCredentialStore(
         require(providerProfileId.length <= 256) { "The provider profile ID is too long." }
     }
 
+    private fun isValidUtf8(value: ByteArray): Boolean {
+        var index = 0
+        while (index < value.size) {
+            val first = value[index].toInt() and 0xff
+            val (length, minimum) = when {
+                first <= 0x7f -> 1 to 0
+                first in 0xc2..0xdf -> 2 to 0x80
+                first in 0xe0..0xef -> 3 to 0x800
+                first in 0xf0..0xf4 -> 4 to 0x10000
+                else -> return false
+            }
+            if (index + length > value.size) return false
+            var codePoint = first and (0x7f shr length)
+            for (offset in 1 until length) {
+                val continuation = value[index + offset].toInt() and 0xff
+                if (continuation !in 0x80..0xbf) return false
+                codePoint = (codePoint shl 6) or (continuation and 0x3f)
+            }
+            if (codePoint < minimum ||
+                codePoint in 0xd800..0xdfff ||
+                codePoint > 0x10ffff
+            ) {
+                return false
+            }
+            index += length
+        }
+        return true
+    }
+
     companion object {
         private const val KEYSTORE_PROVIDER = "AndroidKeyStore"
         private const val KEY_ALIAS = "dev.lorepia.provider-credentials.v1"
@@ -173,5 +265,6 @@ class AndroidKeystoreCredentialStore(
         private const val FILE_VERSION = 1
         private const val MAXIMUM_PLAINTEXT_BYTES = 32 * 1024
         private const val MAXIMUM_CIPHERTEXT_BYTES = 64 * 1024
+        private val PROCESS_LOCK = Any()
     }
 }

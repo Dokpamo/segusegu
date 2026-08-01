@@ -42,6 +42,66 @@ public enum CoreClientFailure: Error, Equatable, Sendable {
     case configurationRequired(String)
 }
 
+/// The native surface and generated UniFFI source are released as one
+/// versioned contract. Fail closed when a different core is loaded instead of
+/// silently dropping events or interpreting newer DTOs with older semantics.
+public enum CoreRuntimeContract {
+    public static let coreAPIVersion: UInt32 = 8
+    public static let bindingAPIVersion: UInt32 = 8
+    public static let chatEventVersion: UInt32 = 4
+    public static let providerDiscoverySnapshotSchemaVersion: UInt32 = 3
+    public static let providerDiscoveryEventVersion: UInt32 = 2
+    public static let providerModelSyncEventVersion: UInt32 = 1
+    public static let providerModelSyncRedactionVersion: UInt32 = 1
+
+    public static func validate(_ versions: CoreVersionInfo) throws {
+        guard versions.coreAPIVersion == coreAPIVersion,
+              versions.bindingAPIVersion == bindingAPIVersion,
+              versions.chatEventVersion == chatEventVersion
+        else {
+            throw CoreClientFailure.invalidResponse(
+                "지원하지 않는 Core API 조합입니다. "
+                    + "필요: Core \(coreAPIVersion), "
+                    + "Binding \(bindingAPIVersion), "
+                    + "Chat \(chatEventVersion)."
+            )
+        }
+    }
+
+    public static func validateProviderDiscoverySnapshotVersion(
+        _ version: UInt32
+    ) throws {
+        guard version == providerDiscoverySnapshotSchemaVersion else {
+            throw CoreClientFailure.invalidResponse(
+                "지원하지 않는 provider discovery snapshot 버전입니다."
+            )
+        }
+    }
+
+    public static func validateProviderDiscoveryEventVersion(
+        _ version: UInt32
+    ) throws {
+        guard version == providerDiscoveryEventVersion else {
+            throw CoreClientFailure.invalidResponse(
+                "지원하지 않는 provider discovery event 버전입니다."
+            )
+        }
+    }
+
+    public static func validateProviderModelSyncEventVersions(
+        version: UInt32,
+        redactionVersion: UInt32
+    ) throws {
+        guard version == providerModelSyncEventVersion,
+              redactionVersion == providerModelSyncRedactionVersion
+        else {
+            throw CoreClientFailure.invalidResponse(
+                "지원하지 않는 provider model sync event 버전입니다."
+            )
+        }
+    }
+}
+
 extension CoreClientFailure: LocalizedError {
     public var errorDescription: String? {
         switch self {
@@ -102,6 +162,12 @@ public protocol CoreClient: Sendable {
         providerProfileID: String,
         credential: String?
     ) async throws -> String
+    func sendMessageWithTarget(
+        conversationID: String,
+        text: String,
+        target: ProviderGenerationTarget,
+        credential: String?
+    ) async throws -> String
     func sendMessageToBranch(
         conversationID: String,
         branchID: String,
@@ -109,6 +175,15 @@ public protocol CoreClient: Sendable {
         mode: ConversationMode,
         text: String,
         providerProfileID: String,
+        credential: String?
+    ) async throws -> String
+    func sendMessageToBranchWithTarget(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        mode: ConversationMode,
+        text: String,
+        target: ProviderGenerationTarget,
         credential: String?
     ) async throws -> String
     func editUserMessage(
@@ -120,12 +195,29 @@ public protocol CoreClient: Sendable {
         providerProfileID: String,
         credential: String?
     ) async throws -> CoreMessageActionGeneration
+    func editUserMessageWithTarget(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        replacementText: String,
+        target: ProviderGenerationTarget,
+        credential: String?
+    ) async throws -> CoreMessageActionGeneration
     func regenerateAssistantMessage(
         conversationID: String,
         branchID: String,
         expectedHeadMessageID: String?,
         messageID: String,
         providerProfileID: String,
+        credential: String?
+    ) async throws -> CoreMessageActionGeneration
+    func regenerateAssistantMessageWithTarget(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        target: ProviderGenerationTarget,
         credential: String?
     ) async throws -> CoreMessageActionGeneration
     func removeMessageFromBranch(
@@ -144,6 +236,187 @@ public protocol CoreClient: Sendable {
     func setPreservePartialGenerations(_ value: Bool) async throws
         -> CoreAppSettings
     func selectProviderProfile(id: String?) async throws -> CoreAppSettings
+    func selectProviderGenerationTarget(
+        _ target: ProviderGenerationTarget?
+    ) async throws -> CoreAppSettings
+    func listProviderTemplates() async throws
+        -> [ProviderTemplateDescriptor]
+    func listProviderConnections() async throws
+        -> [ProviderConnectionRecord]
+    func deleteProviderConnection(id: String) async throws
+    func listProviderModelRoutes(connectionID: String) async throws
+        -> [ProviderModelRoute]
+    func listProviderGenerationPresets(modelRouteID: String) async throws
+        -> [ProviderGenerationPreset]
+    func upsertProviderGenerationPreset(
+        _ preset: ProviderGenerationPreset
+    ) async throws -> ProviderGenerationPreset
+    func validateProviderGenerationPreset(
+        modelRouteID: String,
+        generationPresetID: String
+    ) async throws
+    func validateProviderGenerationPresetCandidate(
+        _ preset: ProviderGenerationPreset
+    ) async throws
+    func renderProviderReasoningControl(
+        for preset: ProviderGenerationPreset
+    ) async throws -> ProviderReasoningControl
+    func renderProviderPromptCacheControl(
+        for preset: ProviderGenerationPreset
+    ) async throws -> ProviderPromptCacheControl
+    func deleteProviderGenerationPreset(id: String) async throws
+    func listProviderCapabilities(modelRouteID: String) async throws
+        -> [ProviderEffectiveCapability]
+    func listProviderParameterSpecs(modelRouteID: String) async throws
+        -> [ProviderParameterSpec]
+    func inspectProviderCurl(
+        _ rawCurl: String,
+        networkPolicy: ProviderNetworkPolicy
+    ) async throws -> ProviderCurlInspection
+    func takeProviderCurlCredential(
+        handoffID: String
+    ) async throws -> Data?
+    func beginProviderDiscovery(
+        input: ProviderDiscoveryInput,
+        source: ProviderDiscoverySource,
+        rawCurl: String?
+    ) async throws -> ProviderDiscoverySnapshot
+    func prepareProviderDiscoveryAction(
+        actionID: String,
+        expectedRevision: UInt64,
+        action: ProviderDiscoveryAction
+    ) async throws -> ProviderDiscoveryActionEnvelope
+    func continueProviderDiscovery(
+        sessionID: String,
+        envelope: ProviderDiscoveryActionEnvelope,
+        targetCredential: String?
+    ) async throws -> ProviderDiscoverySnapshot
+    func supplyProviderDiscoveryDocumentEvidence(
+        sessionID: String,
+        expectedRevision: UInt64,
+        documentURL: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func supplyProviderDiscoveryCurlEvidence(
+        sessionID: String,
+        expectedRevision: UInt64,
+        redactedCurl: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func runProviderDiscoveryAssistantTurn(
+        sessionID: String,
+        estimate: ProviderDiscoveryAssistantCallEstimate,
+        assistantCredential: String?
+    ) async throws -> ProviderDiscoveryAssistantHostAction
+    func resumeProviderDiscoveryAssistantCoreHostAction(
+        sessionID: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func approveProviderDiscoveryAssistantRetry(
+        sessionID: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func requestProviderDiscoveryAssistantRevision(
+        sessionID: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func acceptProviderDiscoveryAssistantDraft(
+        sessionID: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func recordProviderDiscoveryAssistantFailure(
+        sessionID: String,
+        kind: String,
+        retryable: Bool
+    ) async throws -> ProviderDiscoverySnapshot
+    func getProviderDiscovery(
+        sessionID: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func listProviderDiscoveries(
+        limit: UInt32
+    ) async throws -> [ProviderDiscoverySnapshot]
+    func cancelProviderDiscovery(
+        sessionID: String,
+        expectedRevision: UInt64
+    ) async throws -> ProviderDiscoverySnapshot
+    func commitProviderDiscovery(
+        sessionID: String,
+        credentialSlotConfirmed: Bool
+    ) async throws -> ProviderConnectionRecord
+    func listProviderDiscoveryCompensationSteps(
+        commitAttemptID: String
+    ) async throws -> [ProviderDiscoveryCompensationStep]
+    func continueProviderDiscoveryCompensation(
+        sessionID: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func startProviderDiscoveryCredentialCompensation(
+        sessionID: String,
+        stepID: String
+    ) async throws -> ProviderDiscoveryCompensationStep
+    func completeProviderDiscoveryCredentialCompensation(
+        sessionID: String,
+        stepID: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func failProviderDiscoveryCredentialCompensation(
+        sessionID: String,
+        stepID: String,
+        failure: ProviderDiscoveryFailure
+    ) async throws -> ProviderDiscoverySnapshot
+    func markProviderDiscoveryCredentialCompensationUnknown(
+        sessionID: String,
+        stepID: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func resumeProviderDiscoveryCompensation(
+        sessionID: String
+    ) async throws -> ProviderDiscoverySnapshot
+    func recoverProviderDiscoveries() async throws
+        -> [ProviderDiscoveryRecoveryResult]
+    func pollProviderDiscoveryEvents(
+        limit: UInt32
+    ) async throws -> [ProviderDiscoveryOutboxEvent]
+    func ackProviderDiscoveryEvent(eventID: String) async throws -> Bool
+    func startProviderModelSync(
+        connectionID: String,
+        credential: String?
+    ) async throws -> ProviderModelSyncJob
+    func getProviderModelSync(jobID: String) async throws
+        -> ProviderModelSyncJob
+    func listProviderModelSyncs(
+        connectionID: String,
+        limit: UInt32
+    ) async throws -> [ProviderModelSyncJob]
+    func pollProviderModelSyncEvents(
+        jobID: String,
+        limit: UInt32
+    ) async throws -> [ProviderModelSyncEvent]
+    func ackProviderModelSyncEvent(
+        jobID: String,
+        sequence: UInt64
+    ) async throws -> Bool
+    func approveProviderModelSync(
+        jobID: String,
+        expectedRevision: UInt64,
+        reviewSHA256: String
+    ) async throws -> ProviderModelSyncJob
+    func cancelProviderModelSync(
+        jobID: String,
+        expectedRevision: UInt64
+    ) async throws -> ProviderModelSyncJob
+    func getProviderCatalogStatus() async throws -> ProviderCatalogStatus
+    func prepareSignedProviderCatalogImport(
+        envelopeJSON: Data
+    ) async throws -> ProviderCatalogImportPlan
+    func activateSignedProviderCatalogImport(
+        plan: ProviderCatalogImportPlan,
+        envelopeJSON: Data
+    ) async throws -> ProviderCatalogImportResult
+    func prepareProviderCatalogRollback(
+        targetRevision: UInt64
+    ) async throws -> ProviderCatalogRollbackPlan
+    func activateProviderCatalogRollback(
+        plan: ProviderCatalogRollbackPlan
+    ) async throws -> ProviderCatalogRollbackResult
+    func previewProviderRequest(
+        modelRouteID: String,
+        generationPresetID: String
+    ) async throws -> ProviderRequestPreview
+    func previewProviderRequestCandidate(
+        _ preset: ProviderGenerationPreset
+    ) async throws -> ProviderRequestPreview
     func databaseStats() async throws -> DatabaseStats
 }
 

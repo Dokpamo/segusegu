@@ -7,12 +7,12 @@ internal sealed class PasswordVaultCredentialStore : IProviderCredentialStore
     private const string Resource = "LorePia.ProviderCredential";
     private readonly PasswordVault vault = new();
 
-    public string? Get(string providerProfileId)
+    public string? Get(string connectionId)
     {
-        ValidateProfileId(providerProfileId);
+        ValidateConnectionId(connectionId);
         try
         {
-            var credential = vault.Retrieve(Resource, providerProfileId);
+            var credential = vault.Retrieve(Resource, connectionId);
             credential.RetrievePassword();
             return credential.Password;
         }
@@ -23,23 +23,49 @@ internal sealed class PasswordVaultCredentialStore : IProviderCredentialStore
         }
     }
 
-    public void Save(string providerProfileId, string credential)
+    public void Save(string connectionId, string credential)
     {
-        ValidateProfileId(providerProfileId);
+        ValidateConnectionId(connectionId);
         ArgumentException.ThrowIfNullOrWhiteSpace(credential);
-        Delete(providerProfileId);
-        vault.Add(new PasswordCredential(
-            Resource,
-            providerProfileId,
-            credential));
-    }
-
-    public void Delete(string providerProfileId)
-    {
-        ValidateProfileId(providerProfileId);
+        var previous = Get(connectionId);
+        Delete(connectionId);
         try
         {
-            var credential = vault.Retrieve(Resource, providerProfileId);
+            vault.Add(new PasswordCredential(
+                Resource,
+                connectionId,
+                credential));
+        }
+        catch (Exception primaryFailure)
+        {
+            if (previous is not null)
+            {
+                try
+                {
+                    vault.Add(new PasswordCredential(
+                        Resource,
+                        connectionId,
+                        previous));
+                }
+                catch (Exception compensationFailure)
+                {
+                    throw new ProviderCredentialCompensationException(
+                        "The replacement PasswordVault write failed and the previous credential could not be restored.",
+                        primaryFailure,
+                        compensationFailure);
+                }
+            }
+
+            throw;
+        }
+    }
+
+    public void Delete(string connectionId)
+    {
+        ValidateConnectionId(connectionId);
+        try
+        {
+            var credential = vault.Retrieve(Resource, connectionId);
             vault.Remove(credential);
         }
         catch (Exception exception) when (
@@ -49,8 +75,8 @@ internal sealed class PasswordVaultCredentialStore : IProviderCredentialStore
         }
     }
 
-    private static void ValidateProfileId(string providerProfileId)
+    private static void ValidateConnectionId(string connectionId)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(providerProfileId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionId);
     }
 }

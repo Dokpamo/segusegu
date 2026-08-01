@@ -50,6 +50,15 @@ jobs:
           ./scripts/build-apple.sh 2>&1 | tee apple-build.log
       - name: Verify exact generated Swift tree
         run: ./scripts/check-generated-tree.sh swift
+      - name: Test explicit source-only Apple package graph
+        env:
+          LOREPIA_SKIP_GENERATED: "1"
+        run: |
+          swift test \
+            --package-path apps/apple/Packages/LorepiaKit \
+            --scratch-path "$RUNNER_TEMP/lorepia-source-only-swiftpm" \
+            --manifest-cache none \
+            --disable-build-manifest-caching
       - name: Install pinned XcodeGen
         env:
           XCODEGEN_SHA256: 090ec29491aad50aec10631bf6e62253fed733c50f3aab0f5ffc86bc170bdbef
