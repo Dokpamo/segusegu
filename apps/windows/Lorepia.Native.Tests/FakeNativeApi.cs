@@ -837,6 +837,8 @@ internal sealed class FakeNativeApi : INativeApi
 
     internal int ValidateGenerationPresetCandidateCount { get; private set; }
 
+    internal int RunProviderDiscoveryAssistantTurnCount { get; private set; }
+
     internal int CreateProviderConnectionCount { get; private set; }
 
     internal int StartProviderDiscoveryCredentialCompensationCount
@@ -1672,6 +1674,7 @@ internal sealed class FakeNativeApi : INativeApi
         byte[]? credential)
     {
         ArgumentNullException.ThrowIfNull(core);
+        RunProviderDiscoveryAssistantTurnCount++;
         RecordContractRequest(
             "run_provider_discovery_assistant_turn",
             requestJson);

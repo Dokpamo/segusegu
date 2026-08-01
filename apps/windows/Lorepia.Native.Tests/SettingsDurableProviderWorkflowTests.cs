@@ -1577,7 +1577,9 @@ public sealed class SettingsDurableProviderWorkflowTests
 
         await viewModel.RetryAssistantAsync();
 
-        Assert.Null(api.LastContractOperation);
+        Assert.Equal(
+            0,
+            api.RunProviderDiscoveryAssistantTurnCount);
         Assert.Contains(
             "no model call was made",
             viewModel.ProviderStatus,
@@ -1661,7 +1663,6 @@ public sealed class SettingsDurableProviderWorkflowTests
             api.LastContinueProviderDiscoveryRequestJson!);
         var action = request.RootElement
             .GetProperty("payload")
-            .GetProperty("envelope")
             .GetProperty("action");
         Assert.Equal(
             "approve_assistant",
