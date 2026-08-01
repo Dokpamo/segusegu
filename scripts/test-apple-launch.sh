@@ -11,7 +11,7 @@ generated_modulemap="$generated_dir/LorepiaCoreFFI.modulemap"
 ios_bundle_id="dev.lorepia.ios"
 ios_console_timeout_seconds="${LOREPIA_IOS_CONSOLE_TIMEOUT_SECONDS:-60}"
 mac_smoke_timeout_seconds="${LOREPIA_MAC_SMOKE_TIMEOUT_SECONDS:-60}"
-simulator_transition_timeout_seconds="${LOREPIA_SIMULATOR_TRANSITION_TIMEOUT_SECONDS:-30}"
+simulator_transition_timeout_seconds="${LOREPIA_SIMULATOR_TRANSITION_TIMEOUT_SECONDS:-120}"
 
 validate_positive_timeout() {
   local value="$1"
