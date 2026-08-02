@@ -12,7 +12,12 @@ The binding exposes the complete high-level core contract:
   listing, chat/story mode selection, expected-head sending, immutable
   edit/regeneration branches, logical branch removal, cancellation, and bounded
   non-blocking event polling;
-- provider profile CRUD and application settings.
+- provider templates with typed connection fields and complete parameter
+  metadata;
+- provider connection, model route, and generation preset create/update/list/
+  delete flows, including typed configuration and preset values;
+- atomic generation-target selection, targeted send/edit/regeneration, legacy
+  provider profile CRUD, and application settings.
 
 `poll_events` accepts a batch size from 1 through 256. Each event includes the
 core event version, generation ID, conversation ID, branch ID, pending
@@ -20,8 +25,16 @@ assistant message ID, and per-generation sequence. A non-zero
 `dropped_event_count` means the platform must refresh the persisted active
 branch before applying later deltas.
 
-Provider credentials are accepted only as transient send, edit, or regenerate
-arguments. They are not part of provider profiles, settings, events, or errors.
+Provider credentials are accepted only as transient send, edit, regenerate, or
+model-refresh arguments. Persisted connections expose only an opaque credential
+reference and its non-secret origin/auth scope; credential material is not part
+of connection configuration, routes, presets, settings, events, or errors.
+
+Typed provider records distinguish inherited parameter defaults from explicit
+values and preserve every supported Boolean, integer, number, string, enum,
+list, JSON-schema, stop-sequence, and tool-policy literal. Compatibility count
+and credential-summary fields are validated against their typed records when a
+native caller writes them back.
 
 Errors keep the stable core error code, human-readable detail, recoverability
 flag, and operation ID. Import warnings remain structured code/message records.
@@ -34,7 +47,10 @@ chat-event contract versions. Message edit and regeneration create and select a
 new branch without rewriting the source lineage. Removing a message rewinds
 only the selected branch head; shared message rows and sibling branches remain
 intact. Every mutation validates the caller's expected branch head. These
-message-action APIs are binding API version 4; chat events remain version 2.
+Provider discovery, reviewed model synchronization, two-phase catalog
+activation/rollback, typed catalog diffs, candidate preset controls, typed
+network approval, generation-target, and message-action APIs are binding API
+version 8; chat events remain independently versioned.
 
 Generate bindings through `cargo xtask bindings kotlin` or
 `cargo xtask bindings swift`. Generated source is committed for IDE builds but

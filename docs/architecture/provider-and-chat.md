@@ -50,13 +50,33 @@ exceeded the 262144-byte or 65536-character safety limit`. The partial
 generation preference then determines whether the already accepted prefix is
 stored.
 
-The initial provider adapter supports OpenAI-compatible chat-completions
-streaming. HTTPS is required except for loopback HTTP. URLs with embedded
-credentials are rejected. A credential is passed to one request in memory and
-is not persisted. A successful stream must report a supported `finish_reason`
-before `[DONE]`; `stop`, `length`, and `content_filter` are terminal successes,
-while `tool_calls` and `function_call` remain unsupported. `[DONE]` alone does
-not complete a generation.
+Provider-template presentation includes a Rust-derived
+`default_network_mode`. It comes from the compiled adapter descriptor, not
+persisted template JSON or native family-name inference: Ollama defaults to
+`local_loopback`, while the other built-in families default to `public`.
+
+The compiled adapter registry covers OpenAI Responses, OpenAI-compatible Chat
+Completions, Anthropic Messages, Gemini Generate Content, OpenRouter, and
+Ollama's native API. Provider connections persist a template/version, display
+name, canonical API origin and optional base path, typed provider-specific
+connection fields, timeout, network mode, credential reference and exact
+credential scope, and the last connection status. The API key itself remains
+only in the native OS credential vault. Model IDs and generation controls are
+separate route and preset records populated by the reviewed model-sync flow.
+
+Public connections require HTTPS. `local_loopback` accepts only loopback
+origins. `approved_local_network` requires a separately reviewed grant binding
+one exact origin to 1–16 normalized, unique RFC1918 IPv4 or ULA IPv6 addresses;
+the grant is immutable for that connection and has a relational audit mirror.
+A generic “local” boolean can migrate only to loopback mode and can never
+create a LAN grant. URLs with embedded credentials are rejected, redirects do
+not inherit credentials, and a credential is released after the request rather
+than entering Rust persistence.
+
+OpenAI-compatible chat streams must report a supported `finish_reason` before
+`[DONE]`; `stop`, `length`, and `content_filter` are terminal successes, while
+`tool_calls` and `function_call` remain unsupported for that legacy adapter.
+`[DONE]` alone does not complete a generation.
 
 Each request receives a generation ID and cancellation channel. Provider deltas
 are buffered through bounded channels, assigned a monotonic sequence, and
@@ -71,6 +91,47 @@ while streaming at roughly 500-millisecond intervals or each additional 64
 KiB, whichever comes first. When it is disabled, streamed text is never
 written to the pending row. On restart, preserved pending rows are marked
 cancelled and non-preserved pending rows are removed.
+
+Terminal assistant and generation state is committed in one SQLite
+transaction. If that transaction rejects provider usage or otherwise fails,
+Core attempts a separate compensation transaction that marks both records
+failed, clears unpersistable usage, and stores only the stable
+`storage_unavailable` code. Raw storage errors and credentials are never
+written into the conversation or event stream. A compensated branch has no
+pending assistant and can accept the next send.
+
+Provider usage persistence includes input, output, cache-read, cache-write,
+reasoning, and tool token counters plus a 4 KiB canonical object containing
+only adapter-recognized numeric summary fields. Every counter is converted to
+SQLite's signed integer range before the terminal transaction starts, so one
+overflow leaves the generation running for the same compensation path rather
+than partially committing usage.
+
+Opaque provider reasoning topology and storage schemas remain internal,
+bounded, typed, and dormant so a future release can adopt them without accepting
+unstructured payloads. The current release advertises preservation off and
+rejects candidates that enable it before save, preview, provider construction,
+or network access. In addition, a target whose connection has a
+`credential_ref`, or any call carrying a non-empty raw credential, forcibly
+disables capture, persistence, and replay even if a legacy preset requested
+preservation. Existing typed rows may remain for migration compatibility, but
+Core never loads them into such a request and never writes newly returned state
+for it. This prevents continuity captured under one credential from crossing to
+another credential that uses the same route. Opaque payloads never become
+`ChatEvent` values, UI data, log/debug text, error text, or request previews.
+
+A provider connection's template, origin, API base path, connection values,
+network approval, and credential binding form its immutable endpoint identity.
+Renaming the connection or changing its timeout is allowed. Changing any
+endpoint-affecting field requires a new connection and therefore new model
+routes, preventing stored opaque state from crossing to a different upstream.
+
+Generation preset candidates pass the same effective catalog, capability
+dialect, family-specific parameter mapping, and route request-plan gate before
+Core writes them. Validation failure leaves the previous preset graph
+unchanged. Stored and unsaved-candidate request previews reuse that gate and
+the selected adapter's endpoint/body rules; previews contain only the method,
+canonical origin, safe path, header names, and scalar-free body shape.
 
 The async runtime is created and destroyed by a dedicated owner thread.
 Dropping the last core handle cancels every active generation, allows a bounded
@@ -87,3 +148,9 @@ Credentials are supplied from an OS credential store for one request and never
 enter Rust persistence. Profile IDs, display names, base URLs, and model names
 also have finite byte and character limits enforced before SQLite writes:
 256/64, 512/128, 4,096/1,024, and 1,024/256 respectively.
+
+The implemented provider-discovery and model-catalog architecture is recorded in
+[Provider Discovery, Model Catalog, and AI Setup Assistant](provider-discovery-and-model-catalog.md).
+Its durable discovery, model-sync review, catalog, adapter, capability,
+parameter, credential, and native-UI contracts are normative for current
+behavior.

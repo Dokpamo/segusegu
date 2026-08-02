@@ -47,11 +47,23 @@ class AppViewModel(
                 openedClient = withContext(ioDispatcher) {
                     coreClientFactory()
                 }
-                val version = openedClient.coreVersion()
+                val versionInfo = openedClient.versionInfo()
+                check(versionInfo.coreApiVersion == SUPPORTED_CORE_API_VERSION) {
+                    "Unsupported Core API version ${versionInfo.coreApiVersion}; " +
+                        "expected $SUPPORTED_CORE_API_VERSION."
+                }
+                check(versionInfo.bindingApiVersion == SUPPORTED_BINDING_API_VERSION) {
+                    "Unsupported binding API version ${versionInfo.bindingApiVersion}; " +
+                        "expected $SUPPORTED_BINDING_API_VERSION."
+                }
+                check(versionInfo.chatEventVersion == SUPPORTED_CHAT_EVENT_VERSION) {
+                    "Unsupported chat event version ${versionInfo.chatEventVersion}; " +
+                        "expected $SUPPORTED_CHAT_EVENT_VERSION."
+                }
                 val health = openedClient.healthCheck()
                 coreClient = openedClient
                 openedClient = null
-                _uiState.value = AppUiState.Ready(version, health)
+                _uiState.value = AppUiState.Ready(versionInfo.coreVersion, health)
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (error: Throwable) {
@@ -71,6 +83,10 @@ class AppViewModel(
     }
 
     companion object {
+        private const val SUPPORTED_CORE_API_VERSION = 8u
+        private const val SUPPORTED_BINDING_API_VERSION = 8u
+        private const val SUPPORTED_CHAT_EVENT_VERSION = 4u
+
         fun factory(
             coreClientFactory: () -> CoreClient,
             releaseCoreClient: (CoreClient) -> Unit,

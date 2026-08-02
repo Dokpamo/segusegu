@@ -80,12 +80,48 @@ struct FakeProviderSendRequest: Equatable, Sendable {
     let mode: ConversationMode?
     let text: String
     let providerProfileID: String
+    let modelRouteID: String?
+    let generationPresetID: String?
     let hasCredential: Bool
+
+    init(
+        entryPoint: EntryPoint,
+        conversationID: String,
+        branchID: String?,
+        mode: ConversationMode?,
+        text: String,
+        providerProfileID: String,
+        modelRouteID: String? = nil,
+        generationPresetID: String? = nil,
+        hasCredential: Bool
+    ) {
+        self.entryPoint = entryPoint
+        self.conversationID = conversationID
+        self.branchID = branchID
+        self.mode = mode
+        self.text = text
+        self.providerProfileID = providerProfileID
+        self.modelRouteID = modelRouteID
+        self.generationPresetID = generationPresetID
+        self.hasCredential = hasCredential
+    }
 }
 
 struct FakeProviderReadInvocationCounts: Equatable, Sendable {
     let profiles: Int
     let settings: Int
+}
+
+enum FakeReasoningMetadataFixture: Equatable, Sendable {
+    case generic
+    case openRouterExact(defaultEffort: String?)
+    case openRouterNotExposed
+    case openRouterExactEmpty
+    case openRouterExactNoneOnly
+
+    var isOpenRouter: Bool {
+        self != .generic
+    }
 }
 
 struct FakeCoreClientTestingOptions: Sendable {
@@ -95,6 +131,8 @@ struct FakeCoreClientTestingOptions: Sendable {
     let upsertProviderFailureInvocations: Set<Int>
     let updateSettingsFailure: CoreClientFailure?
     let updateSettingsFailureInvocations: Set<Int>
+    let forcesOpaqueReasoningStateOff: Bool
+    let reasoningMetadataFixture: FakeReasoningMetadataFixture
 
     init(
         deleteProviderFailuresBeforeSuccess: UInt = 0,
@@ -102,7 +140,9 @@ struct FakeCoreClientTestingOptions: Sendable {
         upsertProviderProfileFailure: CoreClientFailure? = nil,
         upsertProviderFailureInvocations: Set<Int> = [],
         updateSettingsFailure: CoreClientFailure? = nil,
-        updateSettingsFailureInvocations: Set<Int> = []
+        updateSettingsFailureInvocations: Set<Int> = [],
+        forcesOpaqueReasoningStateOff: Bool = false,
+        reasoningMetadataFixture: FakeReasoningMetadataFixture = .generic
     ) {
         self.deleteProviderFailuresBeforeSuccess =
             deleteProviderFailuresBeforeSuccess
@@ -113,6 +153,9 @@ struct FakeCoreClientTestingOptions: Sendable {
         self.updateSettingsFailure = updateSettingsFailure
         self.updateSettingsFailureInvocations =
             updateSettingsFailureInvocations
+        self.forcesOpaqueReasoningStateOff =
+            forcesOpaqueReasoningStateOff
+        self.reasoningMetadataFixture = reasoningMetadataFixture
     }
 }
 
@@ -120,6 +163,7 @@ struct FakeCoreClientTestingOptions: Sendable {
 ///
 /// Production app construction never selects this client automatically.
 public actor FakeCoreClient: CoreClient {
+    let providerFeatures: FakeProviderFeatureCore
     private let reportedVersion: String
     private let reportedHealth: HealthStatus
     private var characters: [CoreCharacter]
@@ -265,6 +309,13 @@ public actor FakeCoreClient: CoreClient {
         self.characters = Self.resolvedCharacters(characters)
         let resolvedProfiles = Self.resolvedProfiles(profiles)
         self.profiles = resolvedProfiles
+        providerFeatures = FakeProviderFeatureCore(
+            legacyProfiles: resolvedProfiles,
+            forcesOpaqueReasoningStateOff:
+                testingOptions.forcesOpaqueReasoningStateOff,
+            reasoningMetadataFixture:
+                testingOptions.reasoningMetadataFixture
+        )
         listProviderFailuresRemaining = listProviderFailuresBeforeSuccess
         deleteProviderFailuresRemaining =
             testingOptions.deleteProviderFailuresBeforeSuccess
@@ -584,9 +635,9 @@ public actor FakeCoreClient: CoreClient {
     public func apiVersions() async throws -> CoreVersionInfo {
         CoreVersionInfo(
             coreVersion: reportedVersion,
-            coreAPIVersion: 4,
-            bindingAPIVersion: 4,
-            chatEventVersion: 2
+            coreAPIVersion: 8,
+            bindingAPIVersion: 8,
+            chatEventVersion: CoreRuntimeContract.chatEventVersion
         )
     }
 
@@ -868,6 +919,11 @@ public actor FakeCoreClient: CoreClient {
         providerProfileID: String,
         credential: String?
     ) async throws -> String {
+        guard profiles.contains(where: { $0.id == providerProfileID }) else {
+            throw CoreClientFailure.invalidResponse(
+                "프로바이더 프로필이 없습니다."
+            )
+        }
         providerSendRequests.append(
             FakeProviderSendRequest(
                 entryPoint: .conversation,
@@ -891,8 +947,43 @@ public actor FakeCoreClient: CoreClient {
             branchID: branch.id,
             expectedHeadMessageID: branch.headMessageID,
             mode: state.selectedMode,
-            text: text,
-            providerProfileID: providerProfileID
+            text: text
+        )
+    }
+
+    public func sendMessageWithTarget(
+        conversationID: String,
+        text: String,
+        target: ProviderGenerationTarget,
+        credential: String?
+    ) async throws -> String {
+        let option = try await providerFeatures.resolveTarget(target)
+        providerSendRequests.append(
+            FakeProviderSendRequest(
+                entryPoint: .conversation,
+                conversationID: conversationID,
+                branchID: nil,
+                mode: nil,
+                text: text,
+                providerProfileID: option.connection.id,
+                modelRouteID: target.modelRouteID,
+                generationPresetID: target.generationPresetID,
+                hasCredential: credential != nil
+            )
+        )
+        guard let state = statesByConversation[conversationID],
+              let branch = branchesByConversation[conversationID]?.first(
+                  where: { $0.id == state.activeBranchID }
+              )
+        else {
+            throw CoreClientFailure.invalidResponse("대화 상태가 없습니다.")
+        }
+        return try sendMessageRecord(
+            conversationID: conversationID,
+            branchID: branch.id,
+            expectedHeadMessageID: branch.headMessageID,
+            mode: state.selectedMode,
+            text: text
         )
     }
 
@@ -905,6 +996,11 @@ public actor FakeCoreClient: CoreClient {
         providerProfileID: String,
         credential: String?
     ) async throws -> String {
+        guard profiles.contains(where: { $0.id == providerProfileID }) else {
+            throw CoreClientFailure.invalidResponse(
+                "프로바이더 프로필이 없습니다."
+            )
+        }
         providerSendRequests.append(
             FakeProviderSendRequest(
                 entryPoint: .branch,
@@ -924,8 +1020,42 @@ public actor FakeCoreClient: CoreClient {
             branchID: branchID,
             expectedHeadMessageID: expectedHeadMessageID,
             mode: mode,
-            text: text,
-            providerProfileID: providerProfileID
+            text: text
+        )
+    }
+
+    public func sendMessageToBranchWithTarget(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        mode: ConversationMode,
+        text: String,
+        target: ProviderGenerationTarget,
+        credential: String?
+    ) async throws -> String {
+        let option = try await providerFeatures.resolveTarget(target)
+        providerSendRequests.append(
+            FakeProviderSendRequest(
+                entryPoint: .branch,
+                conversationID: conversationID,
+                branchID: branchID,
+                mode: mode,
+                text: text,
+                providerProfileID: option.connection.id,
+                modelRouteID: target.modelRouteID,
+                generationPresetID: target.generationPresetID,
+                hasCredential: credential != nil
+            )
+        )
+        if let sendMessageToBranchFailure {
+            throw sendMessageToBranchFailure
+        }
+        return try sendMessageRecord(
+            conversationID: conversationID,
+            branchID: branchID,
+            expectedHeadMessageID: expectedHeadMessageID,
+            mode: mode,
+            text: text
         )
     }
 
@@ -990,6 +1120,41 @@ public actor FakeCoreClient: CoreClient {
         guard profiles.contains(where: { $0.id == providerProfileID }) else {
             throw CoreClientFailure.invalidResponse("프로바이더 프로필이 없습니다.")
         }
+        return try editUserMessageRecord(
+            conversationID: conversationID,
+            branchID: branchID,
+            expectedHeadMessageID: expectedHeadMessageID,
+            messageID: messageID,
+            replacementText: replacementText
+        )
+    }
+
+    public func editUserMessageWithTarget(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        replacementText: String,
+        target: ProviderGenerationTarget,
+        credential _: String?
+    ) async throws -> CoreMessageActionGeneration {
+        _ = try await providerFeatures.resolveTarget(target)
+        return try editUserMessageRecord(
+            conversationID: conversationID,
+            branchID: branchID,
+            expectedHeadMessageID: expectedHeadMessageID,
+            messageID: messageID,
+            replacementText: replacementText
+        )
+    }
+
+    private func editUserMessageRecord(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        replacementText: String
+    ) throws -> CoreMessageActionGeneration {
         let context = try messageActionContext(
             conversationID: conversationID,
             branchID: branchID,
@@ -1056,6 +1221,37 @@ public actor FakeCoreClient: CoreClient {
         guard profiles.contains(where: { $0.id == providerProfileID }) else {
             throw CoreClientFailure.invalidResponse("프로바이더 프로필이 없습니다.")
         }
+        return try regenerateAssistantMessageRecord(
+            conversationID: conversationID,
+            branchID: branchID,
+            expectedHeadMessageID: expectedHeadMessageID,
+            messageID: messageID
+        )
+    }
+
+    public func regenerateAssistantMessageWithTarget(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String,
+        target: ProviderGenerationTarget,
+        credential _: String?
+    ) async throws -> CoreMessageActionGeneration {
+        _ = try await providerFeatures.resolveTarget(target)
+        return try regenerateAssistantMessageRecord(
+            conversationID: conversationID,
+            branchID: branchID,
+            expectedHeadMessageID: expectedHeadMessageID,
+            messageID: messageID
+        )
+    }
+
+    private func regenerateAssistantMessageRecord(
+        conversationID: String,
+        branchID: String,
+        expectedHeadMessageID: String?,
+        messageID: String
+    ) throws -> CoreMessageActionGeneration {
         let context = try messageActionContext(
             conversationID: conversationID,
             branchID: branchID,
@@ -1249,7 +1445,7 @@ public actor FakeCoreClient: CoreClient {
     ) {
         events.append(contentsOf: [
             ChatEvent(
-                eventVersion: 2,
+                eventVersion: CoreRuntimeContract.chatEventVersion,
                 generationID: generationID,
                 conversationID: conversationID,
                 branchID: branchID,
@@ -1258,7 +1454,7 @@ public actor FakeCoreClient: CoreClient {
                 kind: "generation_started"
             ),
             ChatEvent(
-                eventVersion: 2,
+                eventVersion: CoreRuntimeContract.chatEventVersion,
                 generationID: generationID,
                 conversationID: conversationID,
                 branchID: branchID,
@@ -1268,7 +1464,7 @@ public actor FakeCoreClient: CoreClient {
                 text: assistant.text
             ),
             ChatEvent(
-                eventVersion: 2,
+                eventVersion: CoreRuntimeContract.chatEventVersion,
                 generationID: generationID,
                 conversationID: conversationID,
                 branchID: branchID,
@@ -1279,7 +1475,7 @@ public actor FakeCoreClient: CoreClient {
                 messageStatus: "complete"
             ),
             ChatEvent(
-                eventVersion: 2,
+                eventVersion: CoreRuntimeContract.chatEventVersion,
                 generationID: generationID,
                 conversationID: conversationID,
                 branchID: branchID,
@@ -1314,12 +1510,8 @@ public actor FakeCoreClient: CoreClient {
         branchID: String,
         expectedHeadMessageID: String?,
         mode: ConversationMode,
-        text: String,
-        providerProfileID: String
+        text: String
     ) throws -> String {
-        guard profiles.contains(where: { $0.id == providerProfileID }) else {
-            throw CoreClientFailure.invalidResponse("프로바이더 프로필이 없습니다.")
-        }
         guard let branchIndex = branchesByConversation[conversationID]?.firstIndex(
             where: { $0.id == branchID }
         ), let branch = branchesByConversation[conversationID]?[branchIndex]
@@ -1385,7 +1577,7 @@ public actor FakeCoreClient: CoreClient {
         }
         events.append(contentsOf: [
             ChatEvent(
-                eventVersion: 2,
+                eventVersion: CoreRuntimeContract.chatEventVersion,
                 generationID: generationID,
                 conversationID: conversationID,
                 branchID: branchID,
@@ -1394,7 +1586,7 @@ public actor FakeCoreClient: CoreClient {
                 kind: "generation_started"
             ),
             ChatEvent(
-                eventVersion: 2,
+                eventVersion: CoreRuntimeContract.chatEventVersion,
                 generationID: generationID,
                 conversationID: conversationID,
                 branchID: branchID,
@@ -1404,7 +1596,7 @@ public actor FakeCoreClient: CoreClient {
                 text: assistantMessage.text
             ),
             ChatEvent(
-                eventVersion: 2,
+                eventVersion: CoreRuntimeContract.chatEventVersion,
                 generationID: generationID,
                 conversationID: conversationID,
                 branchID: branchID,
@@ -1415,7 +1607,7 @@ public actor FakeCoreClient: CoreClient {
                 messageStatus: "complete"
             ),
             ChatEvent(
-                eventVersion: 2,
+                eventVersion: CoreRuntimeContract.chatEventVersion,
                 generationID: generationID,
                 conversationID: conversationID,
                 branchID: branchID,
@@ -1441,7 +1633,7 @@ public actor FakeCoreClient: CoreClient {
         })?.id
         events.append(
             ChatEvent(
-                eventVersion: 2,
+                eventVersion: CoreRuntimeContract.chatEventVersion,
                 generationID: generationID,
                 conversationID: conversationID,
                 branchID: branchEntry.key,
@@ -1607,6 +1799,50 @@ public actor FakeCoreClient: CoreClient {
         return settings
     }
 
+    public func selectProviderGenerationTarget(
+        _ target: ProviderGenerationTarget?
+    ) async throws -> CoreAppSettings {
+        try await prepareSettingsUpdate()
+        if let target {
+            _ = try await providerFeatures.resolveTarget(target)
+        }
+        settings.selectedProviderProfileID = nil
+        settings.selectedModelRouteID = target?.modelRouteID
+        settings.selectedGenerationPresetID =
+            target?.generationPresetID
+        return settings
+    }
+
+    func clearProviderGenerationSelection(
+        deletingConnectionID connectionID: String,
+        modelRouteIDs: Set<String>
+    ) {
+        if settings.selectedProviderProfileID == connectionID {
+            settings.selectedProviderProfileID = nil
+        }
+        if let selectedModelRouteID = settings.selectedModelRouteID,
+           modelRouteIDs.contains(selectedModelRouteID)
+        {
+            settings.selectedModelRouteID = nil
+            settings.selectedGenerationPresetID = nil
+        }
+    }
+
+    func clearProviderGenerationSelection(
+        deletingPresetID presetID: String,
+        modelRouteID: String?
+    ) {
+        guard settings.selectedGenerationPresetID == presetID else {
+            return
+        }
+        if modelRouteID == nil
+            || settings.selectedModelRouteID == modelRouteID
+        {
+            settings.selectedModelRouteID = nil
+            settings.selectedGenerationPresetID = nil
+        }
+    }
+
     private func prepareSettingsUpdate() async throws {
         updateSettingsInvocationCount += 1
         if updateSettingsFailureInvocations.contains(
@@ -1664,6 +1900,10 @@ public actor UnavailableCoreClient: CoreClient {
 
     public init(message: String) {
         failure = .startupFailed(message)
+    }
+
+    public init(dataRoot _: URL) throws {
+        throw CoreClientFailure.bindingsUnavailable
     }
 
     public func version() async throws -> String { try unavailable() }
@@ -1742,6 +1982,14 @@ public actor UnavailableCoreClient: CoreClient {
     ) async throws -> String {
         try unavailable()
     }
+    public func sendMessageWithTarget(
+        conversationID _: String,
+        text _: String,
+        target _: ProviderGenerationTarget,
+        credential _: String?
+    ) async throws -> String {
+        try unavailable()
+    }
     public func sendMessageToBranch(
         conversationID _: String,
         branchID _: String,
@@ -1749,6 +1997,17 @@ public actor UnavailableCoreClient: CoreClient {
         mode _: ConversationMode,
         text _: String,
         providerProfileID _: String,
+        credential _: String?
+    ) async throws -> String {
+        try unavailable()
+    }
+    public func sendMessageToBranchWithTarget(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        mode _: ConversationMode,
+        text _: String,
+        target _: ProviderGenerationTarget,
         credential _: String?
     ) async throws -> String {
         try unavailable()
@@ -1764,12 +2023,33 @@ public actor UnavailableCoreClient: CoreClient {
     ) async throws -> CoreMessageActionGeneration {
         try unavailable()
     }
+    public func editUserMessageWithTarget(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        messageID _: String,
+        replacementText _: String,
+        target _: ProviderGenerationTarget,
+        credential _: String?
+    ) async throws -> CoreMessageActionGeneration {
+        try unavailable()
+    }
     public func regenerateAssistantMessage(
         conversationID _: String,
         branchID _: String,
         expectedHeadMessageID _: String?,
         messageID _: String,
         providerProfileID _: String,
+        credential _: String?
+    ) async throws -> CoreMessageActionGeneration {
+        try unavailable()
+    }
+    public func regenerateAssistantMessageWithTarget(
+        conversationID _: String,
+        branchID _: String,
+        expectedHeadMessageID _: String?,
+        messageID _: String,
+        target _: ProviderGenerationTarget,
         credential _: String?
     ) async throws -> CoreMessageActionGeneration {
         try unavailable()
@@ -1807,6 +2087,311 @@ public actor UnavailableCoreClient: CoreClient {
     public func selectProviderProfile(
         id: String?
     ) async throws -> CoreAppSettings {
+        try unavailable()
+    }
+    public func selectProviderGenerationTarget(
+        _ target: ProviderGenerationTarget?
+    ) async throws -> CoreAppSettings {
+        try unavailable()
+    }
+    public func listProviderTemplates() async throws
+        -> [ProviderTemplateDescriptor]
+    {
+        try unavailable()
+    }
+    public func listProviderConnections() async throws
+        -> [ProviderConnectionRecord]
+    {
+        try unavailable()
+    }
+    public func deleteProviderConnection(id _: String) async throws {
+        throw failure
+    }
+    public func listProviderModelRoutes(
+        connectionID _: String
+    ) async throws -> [ProviderModelRoute] {
+        try unavailable()
+    }
+    public func listProviderGenerationPresets(
+        modelRouteID _: String
+    ) async throws -> [ProviderGenerationPreset] {
+        try unavailable()
+    }
+    public func upsertProviderGenerationPreset(
+        _ preset: ProviderGenerationPreset
+    ) async throws -> ProviderGenerationPreset {
+        try unavailable()
+    }
+    public func validateProviderGenerationPreset(
+        modelRouteID _: String,
+        generationPresetID _: String
+    ) async throws {
+        throw failure
+    }
+    public func validateProviderGenerationPresetCandidate(
+        _ preset: ProviderGenerationPreset
+    ) async throws {
+        throw failure
+    }
+    public func renderProviderReasoningControl(
+        for preset: ProviderGenerationPreset
+    ) async throws -> ProviderReasoningControl {
+        try unavailable()
+    }
+    public func renderProviderPromptCacheControl(
+        for preset: ProviderGenerationPreset
+    ) async throws -> ProviderPromptCacheControl {
+        try unavailable()
+    }
+    public func deleteProviderGenerationPreset(
+        id _: String
+    ) async throws {
+        throw failure
+    }
+    public func listProviderCapabilities(
+        modelRouteID _: String
+    ) async throws -> [ProviderEffectiveCapability] {
+        try unavailable()
+    }
+    public func listProviderParameterSpecs(
+        modelRouteID _: String
+    ) async throws -> [ProviderParameterSpec] {
+        try unavailable()
+    }
+    public func inspectProviderCurl(
+        _ rawCurl: String,
+        networkPolicy _: ProviderNetworkPolicy
+    ) async throws -> ProviderCurlInspection {
+        try unavailable()
+    }
+    public func takeProviderCurlCredential(
+        handoffID _: String
+    ) async throws -> Data? {
+        try unavailable()
+    }
+    public func beginProviderDiscovery(
+        input _: ProviderDiscoveryInput,
+        source _: ProviderDiscoverySource,
+        rawCurl _: String?
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func prepareProviderDiscoveryAction(
+        actionID _: String,
+        expectedRevision _: UInt64,
+        action _: ProviderDiscoveryAction
+    ) async throws -> ProviderDiscoveryActionEnvelope {
+        try unavailable()
+    }
+    public func continueProviderDiscovery(
+        sessionID _: String,
+        envelope _: ProviderDiscoveryActionEnvelope,
+        targetCredential _: String?
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func supplyProviderDiscoveryDocumentEvidence(
+        sessionID _: String,
+        expectedRevision _: UInt64,
+        documentURL _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func supplyProviderDiscoveryCurlEvidence(
+        sessionID _: String,
+        expectedRevision _: UInt64,
+        redactedCurl _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func runProviderDiscoveryAssistantTurn(
+        sessionID _: String,
+        estimate _: ProviderDiscoveryAssistantCallEstimate,
+        assistantCredential _: String?
+    ) async throws -> ProviderDiscoveryAssistantHostAction {
+        try unavailable()
+    }
+    public func resumeProviderDiscoveryAssistantCoreHostAction(
+        sessionID _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func approveProviderDiscoveryAssistantRetry(
+        sessionID _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func requestProviderDiscoveryAssistantRevision(
+        sessionID _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func acceptProviderDiscoveryAssistantDraft(
+        sessionID _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func recordProviderDiscoveryAssistantFailure(
+        sessionID _: String,
+        kind _: String,
+        retryable _: Bool
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func getProviderDiscovery(
+        sessionID _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func listProviderDiscoveries(
+        limit _: UInt32
+    ) async throws -> [ProviderDiscoverySnapshot] {
+        try unavailable()
+    }
+    public func cancelProviderDiscovery(
+        sessionID _: String,
+        expectedRevision _: UInt64
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func commitProviderDiscovery(
+        sessionID _: String,
+        credentialSlotConfirmed _: Bool
+    ) async throws -> ProviderConnectionRecord {
+        try unavailable()
+    }
+    public func listProviderDiscoveryCompensationSteps(
+        commitAttemptID _: String
+    ) async throws -> [ProviderDiscoveryCompensationStep] {
+        try unavailable()
+    }
+    public func continueProviderDiscoveryCompensation(
+        sessionID _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func startProviderDiscoveryCredentialCompensation(
+        sessionID _: String,
+        stepID _: String
+    ) async throws -> ProviderDiscoveryCompensationStep {
+        try unavailable()
+    }
+    public func completeProviderDiscoveryCredentialCompensation(
+        sessionID _: String,
+        stepID _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func failProviderDiscoveryCredentialCompensation(
+        sessionID _: String,
+        stepID _: String,
+        failure _: ProviderDiscoveryFailure
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func markProviderDiscoveryCredentialCompensationUnknown(
+        sessionID _: String,
+        stepID _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func resumeProviderDiscoveryCompensation(
+        sessionID _: String
+    ) async throws -> ProviderDiscoverySnapshot {
+        try unavailable()
+    }
+    public func recoverProviderDiscoveries() async throws
+        -> [ProviderDiscoveryRecoveryResult]
+    {
+        try unavailable()
+    }
+    public func pollProviderDiscoveryEvents(
+        limit _: UInt32
+    ) async throws -> [ProviderDiscoveryOutboxEvent] {
+        try unavailable()
+    }
+    public func ackProviderDiscoveryEvent(
+        eventID _: String
+    ) async throws -> Bool {
+        try unavailable()
+    }
+    public func startProviderModelSync(
+        connectionID _: String,
+        credential _: String?
+    ) async throws -> ProviderModelSyncJob {
+        try unavailable()
+    }
+    public func getProviderModelSync(
+        jobID _: String
+    ) async throws -> ProviderModelSyncJob {
+        try unavailable()
+    }
+    public func listProviderModelSyncs(
+        connectionID _: String,
+        limit _: UInt32
+    ) async throws -> [ProviderModelSyncJob] {
+        try unavailable()
+    }
+    public func pollProviderModelSyncEvents(
+        jobID _: String,
+        limit _: UInt32
+    ) async throws -> [ProviderModelSyncEvent] {
+        try unavailable()
+    }
+    public func ackProviderModelSyncEvent(
+        jobID _: String,
+        sequence _: UInt64
+    ) async throws -> Bool {
+        try unavailable()
+    }
+    public func approveProviderModelSync(
+        jobID _: String,
+        expectedRevision _: UInt64,
+        reviewSHA256 _: String
+    ) async throws -> ProviderModelSyncJob {
+        try unavailable()
+    }
+    public func cancelProviderModelSync(
+        jobID _: String,
+        expectedRevision _: UInt64
+    ) async throws -> ProviderModelSyncJob {
+        try unavailable()
+    }
+    public func getProviderCatalogStatus() async throws
+        -> ProviderCatalogStatus
+    {
+        try unavailable()
+    }
+    public func prepareSignedProviderCatalogImport(
+        envelopeJSON _: Data
+    ) async throws -> ProviderCatalogImportPlan {
+        try unavailable()
+    }
+    public func activateSignedProviderCatalogImport(
+        plan _: ProviderCatalogImportPlan,
+        envelopeJSON _: Data
+    ) async throws -> ProviderCatalogImportResult {
+        try unavailable()
+    }
+    public func prepareProviderCatalogRollback(
+        targetRevision _: UInt64
+    ) async throws -> ProviderCatalogRollbackPlan {
+        try unavailable()
+    }
+    public func activateProviderCatalogRollback(
+        plan _: ProviderCatalogRollbackPlan
+    ) async throws -> ProviderCatalogRollbackResult {
+        try unavailable()
+    }
+    public func previewProviderRequest(
+        modelRouteID _: String,
+        generationPresetID _: String
+    ) async throws -> ProviderRequestPreview {
+        try unavailable()
+    }
+    public func previewProviderRequestCandidate(
+        _ preset: ProviderGenerationPreset
+    ) async throws -> ProviderRequestPreview {
         try unavailable()
     }
     public func databaseStats() async throws -> DatabaseStats { try unavailable() }

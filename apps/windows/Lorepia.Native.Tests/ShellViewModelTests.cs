@@ -16,7 +16,7 @@ public sealed class ShellViewModelTests
 
         await viewModel.RefreshCoreStatusAsync();
 
-        Assert.Equal("Core 0.1.0-test · ABI 3", viewModel.CoreVersionLabel);
+        Assert.Equal("Core 0.1.0-test · ABI 7", viewModel.CoreVersionLabel);
         Assert.Equal("DB schema 3", viewModel.HealthLabel);
         Assert.Contains(nameof(viewModel.CoreVersionLabel), changes);
         Assert.Contains(nameof(viewModel.HealthLabel), changes);
@@ -55,7 +55,7 @@ public sealed class ShellViewModelTests
         }
 
         await refresh;
-        Assert.Equal("Core 0.1.0-test · ABI 3", viewModel.CoreVersionLabel);
+        Assert.Equal("Core 0.1.0-test · ABI 7", viewModel.CoreVersionLabel);
         Assert.Equal("DB schema 3", viewModel.HealthLabel);
     }
 

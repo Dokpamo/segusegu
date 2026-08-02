@@ -422,7 +422,7 @@ public sealed class LiveNativeSmokeTests
             var escaped = System.Text.Json.JsonSerializer.Serialize(
                 responseText);
             var eventText =
-                $"data: {{\"choices\":[{{\"delta\":{{\"content\":{escaped}}}}}]}}\n\n";
+                $"data: {{\"choices\":[{{\"index\":0,\"delta\":{{\"content\":{escaped}}}}}]}}\n\n";
             var eventBytes = Encoding.UTF8.GetBytes(eventText);
             var header = Encoding.ASCII.GetBytes(
                 "HTTP/1.1 200 OK\r\n"
@@ -510,8 +510,8 @@ public sealed class LiveNativeSmokeTests
             var escaped = System.Text.Json.JsonSerializer.Serialize(
                 responseText);
             var body =
-                $"data: {{\"choices\":[{{\"delta\":{{\"content\":{escaped}}}}}],\"usage\":null}}\n\n"
-                + "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":null}\n\n"
+                $"data: {{\"choices\":[{{\"index\":0,\"delta\":{{\"content\":{escaped}}}}}],\"usage\":null}}\n\n"
+                + "data: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}],\"usage\":null}\n\n"
                 + "data: [DONE]\n\n";
             var bodyBytes = Encoding.UTF8.GetBytes(body);
             var header = Encoding.ASCII.GetBytes(

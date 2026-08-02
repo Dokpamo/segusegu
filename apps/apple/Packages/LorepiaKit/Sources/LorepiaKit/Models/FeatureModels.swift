@@ -324,14 +324,35 @@ public struct ProviderProfile: Identifiable, Equatable, Sendable {
 
 public struct CoreAppSettings: Equatable, Sendable {
     public var preservePartialGenerations: Bool
+    /// Retained only so existing databases can be read and migrated.
+    ///
+    /// New model selection writes use `selectedGenerationTarget`.
     public var selectedProviderProfileID: String?
+    public var selectedModelRouteID: String?
+    public var selectedGenerationPresetID: String?
 
     public init(
         preservePartialGenerations: Bool,
-        selectedProviderProfileID: String?
+        selectedProviderProfileID: String?,
+        selectedModelRouteID: String? = nil,
+        selectedGenerationPresetID: String? = nil
     ) {
         self.preservePartialGenerations = preservePartialGenerations
         self.selectedProviderProfileID = selectedProviderProfileID
+        self.selectedModelRouteID = selectedModelRouteID
+        self.selectedGenerationPresetID = selectedGenerationPresetID
+    }
+
+    public var selectedGenerationTarget: ProviderGenerationTarget? {
+        guard let selectedModelRouteID,
+              let selectedGenerationPresetID
+        else {
+            return nil
+        }
+        return ProviderGenerationTarget(
+            modelRouteID: selectedModelRouteID,
+            generationPresetID: selectedGenerationPresetID
+        )
     }
 }
 
@@ -353,7 +374,7 @@ public struct ChatEvent: Equatable, Sendable {
     public let usageOutputTokens: UInt64?
 
     public init(
-        eventVersion: UInt32 = 2,
+        eventVersion: UInt32 = CoreRuntimeContract.chatEventVersion,
         generationID: String,
         conversationID: String,
         branchID: String? = nil,

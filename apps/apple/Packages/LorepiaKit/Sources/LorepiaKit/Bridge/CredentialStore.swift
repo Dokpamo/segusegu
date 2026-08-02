@@ -134,7 +134,38 @@ private func validatedCredential(
 public protocol CredentialStore: Sendable {
     func credential(for profileID: String) async throws -> String?
     func setCredential(_ credential: String?, for profileID: String) async throws
+    func credentialData(for profileID: String) async throws -> Data?
+    func setCredentialData(
+        _ credential: Data?,
+        for profileID: String
+    ) async throws
     func deleteCredential(for profileID: String) async throws
+}
+
+public extension CredentialStore {
+    func credentialData(for profileID: String) async throws -> Data? {
+        try await credential(for: profileID).map { Data($0.utf8) }
+    }
+
+    func setCredentialData(
+        _ credential: Data?,
+        for profileID: String
+    ) async throws {
+        guard let credential, !credential.isEmpty else {
+            try await deleteCredential(for: profileID)
+            return
+        }
+        guard
+            credential.count
+                <= CredentialStorePolicy.maximumCredentialUTF8Bytes
+        else {
+            throw CredentialStoreError.credentialTooLarge
+        }
+        guard let value = String(data: credential, encoding: .utf8) else {
+            throw CredentialStoreError.invalidEncoding
+        }
+        try await setCredential(value, for: profileID)
+    }
 }
 
 public enum CredentialStoreError: Error, LocalizedError, Equatable, Sendable {
@@ -175,7 +206,7 @@ public actor KeychainCredentialStore: CredentialStore {
     }
 
     public func credential(for profileID: String) async throws -> String? {
-        if let data = try credentialData(
+        if let data = try copyCredentialData(
             query: dataProtectionQuery(profileID: profileID)
         ) {
             let credential = try decodeCredential(data)
@@ -191,7 +222,7 @@ public actor KeychainCredentialStore: CredentialStore {
         }
 
         #if os(macOS)
-        guard let legacyData = try credentialData(
+        guard let legacyData = try copyCredentialData(
             query: legacyQuery(profileID: profileID)
         ) else {
             return nil
@@ -220,7 +251,7 @@ public actor KeychainCredentialStore: CredentialStore {
         }
 
         let query = dataProtectionQuery(profileID: profileID)
-        let previousData = try credentialData(query: query)
+        let previousData = try copyCredentialData(query: query)
         try upsertCredentialData(data, query: query)
         do {
             try verifyDataProtectionItem(
@@ -236,9 +267,65 @@ public actor KeychainCredentialStore: CredentialStore {
         }
     }
 
+    public func credentialData(
+        for profileID: String
+    ) async throws -> Data? {
+        if let data = try copyCredentialData(
+            query: dataProtectionQuery(profileID: profileID)
+        ) {
+            try validateCredentialData(data)
+            #if os(macOS)
+            try deleteItem(query: legacyQuery(profileID: profileID))
+            #endif
+            return data
+        }
+
+        #if os(macOS)
+        guard let legacyData = try copyCredentialData(
+            query: legacyQuery(profileID: profileID)
+        ) else {
+            return nil
+        }
+        try validateCredentialData(legacyData)
+        try migrateLegacyCredential(
+            legacyData,
+            profileID: profileID
+        )
+        return legacyData
+        #else
+        return nil
+        #endif
+    }
+
+    public func setCredentialData(
+        _ credential: Data?,
+        for profileID: String
+    ) async throws {
+        guard let credential, !credential.isEmpty else {
+            try await deleteCredential(for: profileID)
+            return
+        }
+        try validateCredentialData(credential)
+        let query = dataProtectionQuery(profileID: profileID)
+        let previousData = try copyCredentialData(query: query)
+        try upsertCredentialData(credential, query: query)
+        do {
+            try verifyDataProtectionItem(
+                expectedData: credential,
+                profileID: profileID
+            )
+            #if os(macOS)
+            try deleteItem(query: legacyQuery(profileID: profileID))
+            #endif
+        } catch {
+            try? restoreCredentialData(previousData, query: query)
+            throw error
+        }
+    }
+
     public func deleteCredential(for profileID: String) async throws {
         let query = dataProtectionQuery(profileID: profileID)
-        let previousData = try credentialData(query: query)
+        let previousData = try copyCredentialData(query: query)
         try deleteItem(query: query)
         #if os(macOS)
         do {
@@ -266,7 +353,7 @@ public actor KeychainCredentialStore: CredentialStore {
         )
     }
 
-    private func credentialData(
+    private func copyCredentialData(
         query: [String: Any]
     ) throws -> Data? {
         var dataQuery = query
@@ -294,6 +381,17 @@ public actor KeychainCredentialStore: CredentialStore {
             throw CredentialStoreError.invalidEncoding
         }
         return normalized
+    }
+
+    private func validateCredentialData(_ data: Data) throws {
+        guard !data.isEmpty else {
+            throw CredentialStoreError.invalidEncoding
+        }
+        guard
+            data.count <= CredentialStorePolicy.maximumCredentialUTF8Bytes
+        else {
+            throw CredentialStoreError.credentialTooLarge
+        }
     }
 
     private func upsertCredentialData(
@@ -329,7 +427,7 @@ public actor KeychainCredentialStore: CredentialStore {
         var query = dataProtectionQuery(profileID: profileID)
         query[kSecAttrAccessible as String] =
             kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        guard try credentialData(query: query) == expectedData else {
+        guard try copyCredentialData(query: query) == expectedData else {
             throw CredentialStoreError.verificationFailed
         }
     }
@@ -342,7 +440,7 @@ public actor KeychainCredentialStore: CredentialStore {
         var hardenedQuery = dataProtectionQuery(profileID: profileID)
         hardenedQuery[kSecAttrAccessible as String] =
             kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-        if try credentialData(query: hardenedQuery) == normalizedData {
+        if try copyCredentialData(query: hardenedQuery) == normalizedData {
             return
         }
 
@@ -399,14 +497,24 @@ public actor KeychainCredentialStore: CredentialStore {
 }
 
 public actor InMemoryCredentialStore: CredentialStore {
-    private var values: [String: String]
+    private var values: [String: Data]
 
     public init(values: [String: String] = [:]) {
-        self.values = values.compactMapValues(normalizedCredential)
+        self.values = values.compactMapValues { value in
+            normalizedCredential(value).map { Data($0.utf8) }
+        }
     }
 
     public func credential(for profileID: String) async throws -> String? {
-        try validatedCredential(values[profileID])
+        guard let data = values[profileID],
+              let value = String(data: data, encoding: .utf8)
+        else {
+            if values[profileID] != nil {
+                throw CredentialStoreError.invalidEncoding
+            }
+            return nil
+        }
+        return try validatedCredential(value)
     }
 
     public func setCredential(
@@ -414,10 +522,31 @@ public actor InMemoryCredentialStore: CredentialStore {
         for profileID: String
     ) async throws {
         if let normalized = try validatedCredential(credential) {
-            values[profileID] = normalized
+            values[profileID] = Data(normalized.utf8)
         } else {
             values.removeValue(forKey: profileID)
         }
+    }
+
+    public func credentialData(for profileID: String) async throws -> Data? {
+        values[profileID]
+    }
+
+    public func setCredentialData(
+        _ credential: Data?,
+        for profileID: String
+    ) async throws {
+        guard let credential, !credential.isEmpty else {
+            values.removeValue(forKey: profileID)
+            return
+        }
+        guard
+            credential.count
+                <= CredentialStorePolicy.maximumCredentialUTF8Bytes
+        else {
+            throw CredentialStoreError.credentialTooLarge
+        }
+        values[profileID] = credential
     }
 
     public func deleteCredential(for profileID: String) async throws {

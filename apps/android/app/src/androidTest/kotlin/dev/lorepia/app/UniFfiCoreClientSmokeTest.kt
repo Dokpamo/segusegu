@@ -82,9 +82,9 @@ class UniFfiCoreClientSmokeTest {
         try {
             val versions = core.versionInfo()
             assertEquals(core.coreVersion(), versions.coreVersion)
-            assertEquals(4u, versions.coreApiVersion)
-            assertEquals(4u, versions.bindingApiVersion)
-            assertEquals(2u, versions.chatEventVersion)
+            assertEquals(8u, versions.coreApiVersion)
+            assertEquals(8u, versions.bindingApiVersion)
+            assertEquals(4u, versions.chatEventVersion)
             assertTrue(core.listCharacters().isEmpty())
             assertTrue(core.listConversations().isEmpty())
             assertTrue(core.listProviderProfiles().isEmpty())
@@ -220,7 +220,11 @@ class UniFfiCoreClientSmokeTest {
                     events += core.pollEvents(64u).events.filter {
                         it.generationId == generationId
                     }
-                    assertTrue("text delta did not arrive", System.nanoTime() < deadline)
+                    assertTrue(
+                        "text delta did not arrive; events=" +
+                            events.joinToString { "${it.kind}:${it.errorCode}:${it.errorMessage}" },
+                        System.nanoTime() < deadline,
+                    )
                     Thread.sleep(10)
                 }
 
@@ -305,7 +309,7 @@ class UniFfiCoreClientSmokeTest {
         val profile = ProviderProfile(
             id = "provider-$runId",
             displayName = "Synthetic provider",
-            baseUrl = "https://example.invalid/v1",
+            baseUrl = "https://example.com/v1",
             model = "synthetic-model",
             timeoutSeconds = 30u,
         )
@@ -350,7 +354,7 @@ class UniFfiCoreClientSmokeTest {
                 listener.accept().use { socket ->
                     readRequest(socket)
                     val event =
-                        """data: {"choices":[{"delta":{"content":"부분😀"}}]}
+                        """data: {"choices":[{"index":0,"delta":{"content":"부분😀"}}]}
 
 """
                     val eventBytes = event.toByteArray(StandardCharsets.UTF_8)

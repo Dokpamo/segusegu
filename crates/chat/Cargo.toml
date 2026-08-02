@@ -10,7 +10,9 @@ chrono.workspace = true
 lorepia-domain = { path = "../domain" }
 lorepia-providers = { path = "../providers" }
 serde.workspace = true
+serde_json.workspace = true
 tokio.workspace = true
+zeroize.workspace = true
 
 [dev-dependencies]
 async-trait.workspace = true

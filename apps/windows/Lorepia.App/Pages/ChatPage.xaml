@@ -27,10 +27,11 @@
             </StackPanel>
             <ComboBox
                 Grid.Column="1"
+                AutomationProperties.AutomationId="ChatGenerationTarget"
                 DisplayMemberPath="DisplayName"
-                Header="Provider"
-                ItemsSource="{x:Bind ViewModel.Profiles}"
-                SelectedItem="{x:Bind ViewModel.SelectedProfile, Mode=TwoWay}" />
+                Header="Model and preset"
+                ItemsSource="{x:Bind ViewModel.Targets}"
+                SelectedItem="{x:Bind ViewModel.SelectedTarget, Mode=TwoWay}" />
         </Grid>
 
         <ListView
@@ -66,17 +67,20 @@
             </Grid.ColumnDefinitions>
             <TextBox
                 AcceptsReturn="True"
+                AutomationProperties.AutomationId="ChatMessageComposer"
                 PlaceholderText="Message"
                 Text="{x:Bind ViewModel.Draft, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                 TextWrapping="Wrap" />
             <Button
                 Grid.Column="1"
+                AutomationProperties.AutomationId="CancelGeneration"
                 Click="Cancel_Click"
                 Content="Cancel"
                 IsEnabled="{x:Bind ViewModel.CanCancel, Mode=OneWay}"
                 VerticalAlignment="Bottom" />
             <Button
                 Grid.Column="2"
+                AutomationProperties.AutomationId="SendMessage"
                 Click="Send_Click"
                 Content="Send"
                 IsEnabled="{x:Bind ViewModel.IsComposerEnabled, Mode=OneWay}"

@@ -2,9 +2,9 @@ namespace Lorepia.App.Platform;
 
 internal interface IProviderCredentialStore
 {
-    string? Get(string providerProfileId);
+    string? Get(string connectionId);
 
-    void Save(string providerProfileId, string credential);
+    void Save(string connectionId, string credential);
 
-    void Delete(string providerProfileId);
+    void Delete(string connectionId);
 }

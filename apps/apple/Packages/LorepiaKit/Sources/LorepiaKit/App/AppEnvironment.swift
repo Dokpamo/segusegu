@@ -81,6 +81,7 @@ public final class AppEnvironment {
         await libraryViewModel.refresh()
         await conversationListViewModel.refresh()
         await settingsViewModel.refresh()
+        await settingsViewModel.providerSetupViewModel.refresh()
     }
 
     /// Performs a fail-closed validation for executable launch smoke tests.
@@ -98,6 +99,7 @@ public final class AppEnvironment {
         let version = try await coreClient.version()
         let versions = try await coreClient.apiVersions()
         let health = try await coreClient.health()
+        try CoreRuntimeContract.validate(versions)
         guard !version.isEmpty,
               version == versions.coreVersion,
               version == health.coreVersion,

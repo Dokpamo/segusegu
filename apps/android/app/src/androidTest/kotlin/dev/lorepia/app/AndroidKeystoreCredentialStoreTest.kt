@@ -17,12 +17,12 @@ class AndroidKeystoreCredentialStoreTest {
     fun credentialRoundTripUsesEncryptedNoBackupStorage() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val store = AndroidKeystoreCredentialStore(context)
-        val profileId = "instrumented-${UUID.randomUUID()}"
+        val connectionId = "instrumented-${UUID.randomUUID()}"
         val secret = "synthetic-secret-${UUID.randomUUID()}"
 
         try {
-            store.write(profileId, secret)
-            assertEquals(secret, store.read(profileId))
+            store.write(connectionId, secret)
+            assertEquals(secret, store.read(connectionId))
 
             val records = context.noBackupFilesDir
                 .resolve("provider-credentials")
@@ -32,10 +32,28 @@ class AndroidKeystoreCredentialStoreTest {
                 file.readBytes().toString(Charsets.UTF_8).contains(secret)
             })
 
-            store.delete(profileId)
-            assertNull(store.read(profileId))
+            store.delete(connectionId)
+            assertNull(store.read(connectionId))
         } finally {
-            store.delete(profileId)
+            store.delete(connectionId)
+        }
+    }
+
+    @Test
+    fun immutableConnectionIdPreservesCredentialAcrossStoreInstances() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val legacyWriter = AndroidKeystoreCredentialStore(context)
+        val migratedReader = AndroidKeystoreCredentialStore(context)
+        val connectionId = "legacy-profile-id-${UUID.randomUUID()}"
+        val secret = "synthetic-migrated-secret-${UUID.randomUUID()}"
+
+        try {
+            legacyWriter.write(connectionId, secret)
+            assertEquals(secret, migratedReader.read(connectionId))
+            migratedReader.write(connectionId, "$secret-replaced")
+            assertEquals("$secret-replaced", legacyWriter.read(connectionId))
+        } finally {
+            migratedReader.delete(connectionId)
         }
     }
 }

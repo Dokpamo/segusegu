@@ -27,11 +27,32 @@
       Include="..\Lorepia.App\Platform\PasswordVaultError.cs"
       Link="AppLogic\PasswordVaultError.cs" />
     <Compile
+      Include="..\Lorepia.App\Platform\IProviderCredentialStore.cs"
+      Link="AppLogic\IProviderCredentialStore.cs" />
+    <Compile
+      Include="..\Lorepia.App\Platform\ProviderCredentialTransaction.cs"
+      Link="AppLogic\ProviderCredentialTransaction.cs" />
+    <Compile
       Include="..\Lorepia.App\ViewModels\GenerationEventCursor.cs"
       Link="AppLogic\GenerationEventCursor.cs" />
     <Compile
+      Include="..\Lorepia.App\ViewModels\ChatViewModel.cs"
+      Link="AppLogic\ChatViewModel.cs" />
+    <Compile
       Include="..\Lorepia.App\ViewModels\ObservableObject.cs"
       Link="AppLogic\ObservableObject.cs" />
+    <Compile
+      Include="..\Lorepia.App\ViewModels\ProviderCredentialDraftGuard.cs"
+      Link="AppLogic\ProviderCredentialDraftGuard.cs" />
+    <Compile
+      Include="..\Lorepia.App\ViewModels\ProviderSelectionGuard.cs"
+      Link="AppLogic\ProviderSelectionGuard.cs" />
+    <Compile
+      Include="..\Lorepia.App\ViewModels\ProviderPresentationModels.cs"
+      Link="AppLogic\ProviderPresentationModels.cs" />
+    <Compile
+      Include="..\Lorepia.App\ViewModels\SettingsViewModel.cs"
+      Link="AppLogic\SettingsViewModel.cs" />
     <Compile
       Include="..\Lorepia.App\ViewModels\ShellNavigationModel.cs"
       Link="AppLogic\ShellNavigationModel.cs" />

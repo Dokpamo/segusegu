@@ -784,6 +784,156 @@ internal interface UniffiForeignFutureCompleteVoid : com.sun.jna.Callback {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // For large crates we prevent `MethodTooLargeException` (see #2340)
 // N.B. the name of the extension is very misleading, since it is 
 // rather `InterfaceTooLargeException`, caused by too many methods 
@@ -803,21 +953,69 @@ internal interface IntegrityCheckingUniffiLib : Library {
 ): Short
 fun uniffi_lorepia_uniffi_checksum_func_version_info(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_accept_provider_discovery_assistant_draft(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_ack_provider_discovery_event(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_ack_provider_model_sync_event(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_activate_provider_catalog_rollback(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_activate_signed_provider_catalog_import(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_approve_provider_discovery_assistant_retry(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_approve_provider_model_sync(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_begin_provider_discovery(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_cancel_generation(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_cancel_provider_discovery(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_cancel_provider_model_sync(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_commit_import(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_commit_provider_discovery(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_complete_provider_discovery_credential_compensation(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_continue_provider_discovery(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_continue_provider_discovery_compensation(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_conversation(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_conversation_branch(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_provider_connection(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_database_stats(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_generation_preset(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_model_route(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_provider_connection(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_provider_profile(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_user_capability_override(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_diff_provider_catalog_revisions(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_discard_import(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_edit_user_message(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_edit_user_message_with_target(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_effective_capability(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_effective_parameter_specs(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_fail_provider_discovery_credential_compensation(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_character(
 ): Short
@@ -825,13 +1023,27 @@ fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_conversation(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_conversation_state(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_provider_discovery(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_provider_discovery_approval_proposal(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_provider_discovery_review(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_provider_discovery_review_proposal(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_provider_model_sync(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_settings(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_health_check(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_inspect_import(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_inspect_provider_curl(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_branch_messages(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_capability_observations(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_characters(
 ): Short
@@ -841,29 +1053,117 @@ fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations_for_character(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_generation_presets(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_messages(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_model_routes(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_connections(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_discoveries(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_discovery_approvals(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_discovery_candidates(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_discovery_compensation_steps(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_discovery_evidence(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_model_syncs(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_profiles(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_templates(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_mark_provider_discovery_credential_compensation_unknown(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_open_conversation(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_events(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_provider_discovery_events(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_provider_model_sync_job_events(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_prepare_provider_catalog_rollback(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_prepare_provider_discovery_action(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_prepare_signed_provider_catalog_import(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_preview_provider_request(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_preview_provider_request_candidate(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_provider_catalog_history(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_provider_catalog_status(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_record_provider_discovery_assistant_failure(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_recover_provider_discoveries(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_refresh_provider_models(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_regenerate_assistant_message(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_regenerate_assistant_message_with_target(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_remove_message_from_branch(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_render_prompt_cache_control_for_preset(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_render_reasoning_control_for_preset(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_request_provider_discovery_assistant_revision(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_resume_provider_discovery_assistant_core_host_action(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_resume_provider_discovery_compensation(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_run_provider_discovery_assistant_turn(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_select_conversation_branch(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_select_generation_target(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message_to_branch(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message_to_branch_with_target(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message_with_target(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_set_conversation_mode(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_start_provider_discovery_credential_compensation(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_start_provider_model_sync(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_supply_provider_discovery_curl_evidence(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_supply_provider_discovery_document_evidence(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_take_provider_curl_credential(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_update_settings(
 ): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_generation_preset(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_model_route(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_provider_connection(
+): Short
 fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_provider_profile(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_user_capability_override(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_validate_generation_preset(
+): Short
+fun uniffi_lorepia_uniffi_checksum_method_lorepiacore_validate_generation_preset_candidate(
 ): Short
 fun uniffi_lorepia_uniffi_checksum_constructor_lorepiacore_open(
 ): Short
@@ -922,21 +1222,69 @@ fun uniffi_lorepia_uniffi_fn_free_lorepiacore(`ptr`: Pointer,uniffi_out_err: Uni
 ): Unit
 fun uniffi_lorepia_uniffi_fn_constructor_lorepiacore_open(`config`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Pointer
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_accept_provider_discovery_assistant_draft(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_ack_provider_discovery_event(`ptr`: Pointer,`eventId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_ack_provider_model_sync_event(`ptr`: Pointer,`jobId`: RustBuffer.ByValue,`sequence`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): Byte
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_activate_provider_catalog_rollback(`ptr`: Pointer,`plan`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_activate_signed_provider_catalog_import(`ptr`: Pointer,`plan`: RustBuffer.ByValue,`envelopeJson`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_approve_provider_discovery_assistant_retry(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_approve_provider_model_sync(`ptr`: Pointer,`jobId`: RustBuffer.ByValue,`reviewSha256`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_begin_provider_discovery(`ptr`: Pointer,`input`: RustBuffer.ByValue,`source`: RustBuffer.ByValue,`rawCurl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_cancel_generation(`ptr`: Pointer,`generationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_cancel_provider_discovery(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`expectedRevision`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_cancel_provider_model_sync(`ptr`: Pointer,`jobId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_commit_import(`ptr`: Pointer,`inspectionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_commit_provider_discovery(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`credentialReferenceConfirmed`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_complete_provider_discovery_credential_compensation(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`stepId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_continue_provider_discovery(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`envelope`: RustBuffer.ByValue,`targetCredential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_continue_provider_discovery_compensation(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_create_conversation(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,`title`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_create_conversation_branch(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`fromMessageId`: RustBuffer.ByValue,`title`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_create_provider_connection(`ptr`: Pointer,`draft`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_database_stats(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_generation_preset(`ptr`: Pointer,`generationPresetId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_model_route(`ptr`: Pointer,`modelRouteId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_provider_connection(`ptr`: Pointer,`connectionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_provider_profile(`ptr`: Pointer,`profileId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_user_capability_override(`ptr`: Pointer,`modelRouteId`: RustBuffer.ByValue,`observationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_diff_provider_catalog_revisions(`ptr`: Pointer,`fromRevision`: Long,`toRevision`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_discard_import(`ptr`: Pointer,`inspectionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): Unit
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_edit_user_message(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,`replacementText`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_edit_user_message_with_target(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,`replacementText`: RustBuffer.ByValue,`target`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_effective_capability(`ptr`: Pointer,`modelRouteId`: RustBuffer.ByValue,`key`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_effective_parameter_specs(`ptr`: Pointer,`modelRouteId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_fail_provider_discovery_credential_compensation(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`stepId`: RustBuffer.ByValue,`failure`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_character(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -944,13 +1292,27 @@ fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_conversation(`ptr`: Pointer,
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_conversation_state(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_provider_discovery(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_provider_discovery_approval_proposal(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_provider_discovery_review(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_provider_discovery_review_proposal(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_provider_model_sync(`ptr`: Pointer,`jobId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_get_settings(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_health_check(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_inspect_import(`ptr`: Pointer,`stagedPath`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_inspect_provider_curl(`ptr`: Pointer,`rawCurl`: RustBuffer.ByValue,`networkPolicy`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_branch_messages(`ptr`: Pointer,`branchId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_capability_observations(`ptr`: Pointer,`modelRouteId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_characters(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
@@ -960,30 +1322,118 @@ fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversations(`ptr`: Pointe
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_conversations_for_character(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_generation_presets(`ptr`: Pointer,`modelRouteId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_messages(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_model_routes(`ptr`: Pointer,`connectionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_connections(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_discoveries(`ptr`: Pointer,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_discovery_approvals(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_discovery_candidates(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_discovery_compensation_steps(`ptr`: Pointer,`commitAttemptId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_discovery_evidence(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_model_syncs(`ptr`: Pointer,`connectionId`: RustBuffer.ByValue,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_profiles(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_templates(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_mark_provider_discovery_credential_compensation_unknown(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`stepId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_open_conversation(`ptr`: Pointer,`characterId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_events(`ptr`: Pointer,`maxEvents`: Int,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_provider_discovery_events(`ptr`: Pointer,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_provider_model_sync_job_events(`ptr`: Pointer,`jobId`: RustBuffer.ByValue,`limit`: Int,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_prepare_provider_catalog_rollback(`ptr`: Pointer,`targetRevision`: Long,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_prepare_provider_discovery_action(`ptr`: Pointer,`actionId`: RustBuffer.ByValue,`expectedRevision`: Long,`action`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_prepare_signed_provider_catalog_import(`ptr`: Pointer,`envelopeJson`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_preview_provider_request(`ptr`: Pointer,`modelRouteId`: RustBuffer.ByValue,`generationPresetId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_preview_provider_request_candidate(`ptr`: Pointer,`preset`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_provider_catalog_history(`ptr`: Pointer,`limit`: Int,`beforeRevision`: RustBuffer.ByValue,`beforeStateVersion`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_provider_catalog_status(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_record_provider_discovery_assistant_failure(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`kind`: RustBuffer.ByValue,`retryable`: Byte,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_recover_provider_discoveries(`ptr`: Pointer,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_refresh_provider_models(`ptr`: Pointer,`connectionId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_regenerate_assistant_message(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_regenerate_assistant_message_with_target(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,`target`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_remove_message_from_branch(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`messageId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_render_prompt_cache_control_for_preset(`ptr`: Pointer,`preset`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_render_reasoning_control_for_preset(`ptr`: Pointer,`preset`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_request_provider_discovery_assistant_revision(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_resume_provider_discovery_assistant_core_host_action(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_resume_provider_discovery_compensation(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_run_provider_discovery_assistant_turn(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`estimate`: RustBuffer.ByValue,`assistantCredential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_select_conversation_branch(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_select_generation_target(`ptr`: Pointer,`target`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`text`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message_to_branch(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,`text`: RustBuffer.ByValue,`providerProfileId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message_to_branch_with_target(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`branchId`: RustBuffer.ByValue,`expectedHead`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,`text`: RustBuffer.ByValue,`target`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message_with_target(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`text`: RustBuffer.ByValue,`target`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_set_conversation_mode(`ptr`: Pointer,`conversationId`: RustBuffer.ByValue,`mode`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_start_provider_discovery_credential_compensation(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`stepId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_start_provider_model_sync(`ptr`: Pointer,`connectionId`: RustBuffer.ByValue,`credential`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_supply_provider_discovery_curl_evidence(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`expectedRevision`: Long,`rawCurl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_supply_provider_discovery_document_evidence(`ptr`: Pointer,`sessionId`: RustBuffer.ByValue,`expectedRevision`: Long,`documentUrl`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_take_provider_curl_credential(`ptr`: Pointer,`credentialHandoffId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_update_settings(`ptr`: Pointer,`settings`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_generation_preset(`ptr`: Pointer,`preset`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_model_route(`ptr`: Pointer,`route`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_provider_connection(`ptr`: Pointer,`connection`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_provider_profile(`ptr`: Pointer,`profile`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_user_capability_override(`ptr`: Pointer,`draft`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): RustBuffer.ByValue
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_validate_generation_preset(`ptr`: Pointer,`modelRouteId`: RustBuffer.ByValue,`generationPresetId`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
+fun uniffi_lorepia_uniffi_fn_method_lorepiacore_validate_generation_preset_candidate(`ptr`: Pointer,`preset`: RustBuffer.ByValue,uniffi_out_err: UniffiRustCallStatus, 
+): Unit
 fun uniffi_lorepia_uniffi_fn_func_core_version(uniffi_out_err: UniffiRustCallStatus, 
 ): RustBuffer.ByValue
 fun uniffi_lorepia_uniffi_fn_func_version_info(uniffi_out_err: UniffiRustCallStatus, 
@@ -1120,10 +1570,52 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_func_version_info() != 4578.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_accept_provider_discovery_assistant_draft() != 8436.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_ack_provider_discovery_event() != 58458.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_ack_provider_model_sync_event() != 44275.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_activate_provider_catalog_rollback() != 33693.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_activate_signed_provider_catalog_import() != 20824.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_approve_provider_discovery_assistant_retry() != 2160.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_approve_provider_model_sync() != 18421.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_begin_provider_discovery() != 48168.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_cancel_generation() != 40179.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_cancel_provider_discovery() != 3568.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_cancel_provider_model_sync() != 50617.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_commit_import() != 10817.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_commit_provider_discovery() != 38215.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_complete_provider_discovery_credential_compensation() != 4985.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_continue_provider_discovery() != 21310.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_continue_provider_discovery_compensation() != 59847.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_conversation() != 42878.toShort()) {
@@ -1132,16 +1624,46 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_conversation_branch() != 45496.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_create_provider_connection() != 6064.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_database_stats() != 40106.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_generation_preset() != 53695.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_model_route() != 63970.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_provider_connection() != 30941.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_provider_profile() != 29655.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_delete_user_capability_override() != 45931.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_diff_provider_catalog_revisions() != 57775.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_discard_import() != 58614.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_edit_user_message() != 1681.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_edit_user_message_with_target() != 2673.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_effective_capability() != 16840.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_effective_parameter_specs() != 41563.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_fail_provider_discovery_credential_compensation() != 21742.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_character() != 14947.toShort()) {
@@ -1153,6 +1675,21 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_conversation_state() != 54639.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_provider_discovery() != 53491.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_provider_discovery_approval_proposal() != 53058.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_provider_discovery_review() != 19666.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_provider_discovery_review_proposal() != 52630.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_provider_model_sync() != 28175.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_get_settings() != 17684.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
@@ -1162,7 +1699,13 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_inspect_import() != 2442.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_inspect_provider_curl() != 15220.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_branch_messages() != 10026.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_capability_observations() != 26298.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_characters() != 14524.toShort()) {
@@ -1177,10 +1720,43 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_conversations_for_character() != 45805.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_generation_presets() != 26157.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_messages() != 26339.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_model_routes() != 20690.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_connections() != 30068.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_discoveries() != 51468.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_discovery_approvals() != 12475.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_discovery_candidates() != 9241.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_discovery_compensation_steps() != 39496.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_discovery_evidence() != 57710.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_model_syncs() != 58640.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_profiles() != 28847.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_list_provider_templates() != 65289.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_mark_provider_discovery_credential_compensation_unknown() != 19907.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_open_conversation() != 10904.toShort()) {
@@ -1189,13 +1765,73 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_events() != 26212.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_provider_discovery_events() != 46642.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_poll_provider_model_sync_job_events() != 9709.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_prepare_provider_catalog_rollback() != 4703.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_prepare_provider_discovery_action() != 63947.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_prepare_signed_provider_catalog_import() != 1665.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_preview_provider_request() != 7369.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_preview_provider_request_candidate() != 16229.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_provider_catalog_history() != 34529.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_provider_catalog_status() != 27972.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_record_provider_discovery_assistant_failure() != 62481.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_recover_provider_discoveries() != 53138.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_refresh_provider_models() != 41794.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_regenerate_assistant_message() != 55399.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_regenerate_assistant_message_with_target() != 41873.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_remove_message_from_branch() != 43222.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_render_prompt_cache_control_for_preset() != 34329.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_render_reasoning_control_for_preset() != 24920.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_request_provider_discovery_assistant_revision() != 27713.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_resume_provider_discovery_assistant_core_host_action() != 4499.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_resume_provider_discovery_compensation() != 38966.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_run_provider_discovery_assistant_turn() != 46194.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_select_conversation_branch() != 62171.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_select_generation_target() != 18577.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message() != 36804.toShort()) {
@@ -1204,13 +1840,52 @@ private fun uniffiCheckApiChecksums(lib: IntegrityCheckingUniffiLib) {
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message_to_branch() != 19800.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message_to_branch_with_target() != 46422.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_send_message_with_target() != 38518.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_set_conversation_mode() != 60815.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_start_provider_discovery_credential_compensation() != 21977.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_start_provider_model_sync() != 1226.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_supply_provider_discovery_curl_evidence() != 2305.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_supply_provider_discovery_document_evidence() != 39202.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_take_provider_curl_credential() != 13810.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_update_settings() != 60549.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_generation_preset() != 23290.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_model_route() != 1621.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_provider_connection() != 23262.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
     if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_provider_profile() != 8414.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_upsert_user_capability_override() != 45100.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_validate_generation_preset() != 38323.toShort()) {
+        throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
+    }
+    if (lib.uniffi_lorepia_uniffi_checksum_method_lorepiacore_validate_generation_preset_candidate() != 53990.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_lorepia_uniffi_checksum_constructor_lorepiacore_open() != 9294.toShort()) {
@@ -1408,6 +2083,52 @@ public object FfiConverterULong: FfiConverter<ULong, Long> {
 /**
  * @suppress
  */
+public object FfiConverterLong: FfiConverter<Long, Long> {
+    override fun lift(value: Long): Long {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Long {
+        return buf.getLong()
+    }
+
+    override fun lower(value: Long): Long {
+        return value
+    }
+
+    override fun allocationSize(value: Long) = 8UL
+
+    override fun write(value: Long, buf: ByteBuffer) {
+        buf.putLong(value)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterDouble: FfiConverter<Double, Double> {
+    override fun lift(value: Double): Double {
+        return value
+    }
+
+    override fun read(buf: ByteBuffer): Double {
+        return buf.getDouble()
+    }
+
+    override fun lower(value: Double): Double {
+        return value
+    }
+
+    override fun allocationSize(value: Double) = 8UL
+
+    override fun write(value: Double, buf: ByteBuffer) {
+        buf.putDouble(value)
+    }
+}
+
+/**
+ * @suppress
+ */
 public object FfiConverterBoolean: FfiConverter<Boolean, Byte> {
     override fun lift(value: Byte): Boolean {
         return value.toInt() != 0
@@ -1482,6 +2203,25 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
         val byteBuf = toUtf8(value)
         buf.putInt(byteBuf.limit())
         buf.put(byteBuf)
+    }
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterByteArray: FfiConverterRustBuffer<ByteArray> {
+    override fun read(buf: ByteBuffer): ByteArray {
+        val len = buf.getInt()
+        val byteArr = ByteArray(len)
+        buf.get(byteArr)
+        return byteArr
+    }
+    override fun allocationSize(value: ByteArray): ULong {
+        return 4UL + value.size.toULong()
+    }
+    override fun write(value: ByteArray, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        buf.put(value)
     }
 }
 
@@ -1586,21 +2326,75 @@ public object FfiConverterString: FfiConverter<String, RustBuffer.ByValue> {
 
 public interface LorepiaCoreInterface {
     
+    fun `acceptProviderDiscoveryAssistantDraft`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot
+    
+    fun `ackProviderDiscoveryEvent`(`eventId`: kotlin.String): kotlin.Boolean
+    
+    fun `ackProviderModelSyncEvent`(`jobId`: kotlin.String, `sequence`: kotlin.ULong): kotlin.Boolean
+    
+    fun `activateProviderCatalogRollback`(`plan`: FfiProviderCatalogRollbackPlan): FfiProviderCatalogRollbackResult
+    
+    fun `activateSignedProviderCatalogImport`(`plan`: FfiProviderCatalogImportPlan, `envelopeJson`: kotlin.ByteArray): FfiProviderCatalogImportResult
+    
+    fun `approveProviderDiscoveryAssistantRetry`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot
+    
+    fun `approveProviderModelSync`(`jobId`: kotlin.String, `reviewSha256`: kotlin.String): FfiModelSyncJob
+    
+    fun `beginProviderDiscovery`(`input`: FfiProviderDiscoveryInput, `source`: FfiProviderDiscoverySource, `rawCurl`: kotlin.String?): FfiProviderDiscoverySnapshot
+    
     fun `cancelGeneration`(`generationId`: kotlin.String)
     
+    fun `cancelProviderDiscovery`(`sessionId`: kotlin.String, `expectedRevision`: kotlin.ULong): FfiProviderDiscoverySnapshot
+    
+    fun `cancelProviderModelSync`(`jobId`: kotlin.String): FfiModelSyncJob
+    
     fun `commitImport`(`inspectionId`: kotlin.String): FfiCharacter
+    
+    fun `commitProviderDiscovery`(`sessionId`: kotlin.String, `credentialReferenceConfirmed`: kotlin.Boolean): FfiProviderConnection
+    
+    fun `completeProviderDiscoveryCredentialCompensation`(`sessionId`: kotlin.String, `stepId`: kotlin.String): FfiProviderDiscoverySnapshot
+    
+    /**
+     * Applies one canonical public action.
+     *
+     * `target_credential` is an optional request-scoped vault read used only
+     * by an approved provider probe. It is never persisted or returned.
+     */
+    fun `continueProviderDiscovery`(`sessionId`: kotlin.String, `envelope`: FfiProviderDiscoveryActionEnvelope, `targetCredential`: kotlin.String?): FfiProviderDiscoverySnapshot
+    
+    fun `continueProviderDiscoveryCompensation`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot
     
     fun `createConversation`(`characterId`: kotlin.String, `title`: kotlin.String, `mode`: kotlin.String): FfiConversation
     
     fun `createConversationBranch`(`conversationId`: kotlin.String, `fromMessageId`: kotlin.String?, `title`: kotlin.String?): FfiConversationBranch
     
+    fun `createProviderConnection`(`draft`: FfiProviderConnectionDraft): FfiProviderConnection
+    
     fun `databaseStats`(): FfiDatabaseStats
     
+    fun `deleteGenerationPreset`(`generationPresetId`: kotlin.String)
+    
+    fun `deleteModelRoute`(`modelRouteId`: kotlin.String)
+    
+    fun `deleteProviderConnection`(`connectionId`: kotlin.String)
+    
     fun `deleteProviderProfile`(`profileId`: kotlin.String)
+    
+    fun `deleteUserCapabilityOverride`(`modelRouteId`: kotlin.String, `observationId`: kotlin.String)
+    
+    fun `diffProviderCatalogRevisions`(`fromRevision`: kotlin.ULong, `toRevision`: kotlin.ULong): FfiProviderCatalogDiff
     
     fun `discardImport`(`inspectionId`: kotlin.String)
     
     fun `editUserMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `replacementText`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration
+    
+    fun `editUserMessageWithTarget`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `replacementText`: kotlin.String, `target`: FfiGenerationTarget, `credential`: kotlin.String?): FfiMessageActionGeneration
+    
+    fun `effectiveCapability`(`modelRouteId`: kotlin.String, `key`: kotlin.String): FfiEffectiveCapability?
+    
+    fun `effectiveParameterSpecs`(`modelRouteId`: kotlin.String): List<FfiParameterSpec>
+    
+    fun `failProviderDiscoveryCredentialCompensation`(`sessionId`: kotlin.String, `stepId`: kotlin.String, `failure`: FfiDiscoveryFailure): FfiProviderDiscoverySnapshot
     
     fun `getCharacter`(`characterId`: kotlin.String): FfiCharacter
     
@@ -1608,13 +2402,27 @@ public interface LorepiaCoreInterface {
     
     fun `getConversationState`(`conversationId`: kotlin.String): FfiConversationState
     
+    fun `getProviderDiscovery`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot
+    
+    fun `getProviderDiscoveryApprovalProposal`(`sessionId`: kotlin.String): FfiDiscoveryApprovalProposal?
+    
+    fun `getProviderDiscoveryReview`(`sessionId`: kotlin.String): FfiDiscoveryReview?
+    
+    fun `getProviderDiscoveryReviewProposal`(`sessionId`: kotlin.String): FfiDiscoveryReviewProposal?
+    
+    fun `getProviderModelSync`(`jobId`: kotlin.String): FfiModelSyncJob
+    
     fun `getSettings`(): FfiAppSettings
     
     fun `healthCheck`(): FfiHealthReport
     
     fun `inspectImport`(`stagedPath`: kotlin.String): FfiImportInspection
     
+    fun `inspectProviderCurl`(`rawCurl`: kotlin.String, `networkPolicy`: FfiProviderNetworkPolicy): FfiProviderCurlInspection
+    
     fun `listBranchMessages`(`branchId`: kotlin.String): List<FfiMessage>
+    
+    fun `listCapabilityObservations`(`modelRouteId`: kotlin.String): List<FfiCapabilityObservation>
     
     fun `listCharacters`(): List<FfiCharacter>
     
@@ -1624,9 +2432,31 @@ public interface LorepiaCoreInterface {
     
     fun `listConversationsForCharacter`(`characterId`: kotlin.String): List<FfiConversation>
     
+    fun `listGenerationPresets`(`modelRouteId`: kotlin.String): List<FfiGenerationPreset>
+    
     fun `listMessages`(`conversationId`: kotlin.String): List<FfiMessage>
     
+    fun `listModelRoutes`(`connectionId`: kotlin.String): List<FfiModelRoute>
+    
+    fun `listProviderConnections`(): List<FfiProviderConnection>
+    
+    fun `listProviderDiscoveries`(`limit`: kotlin.UInt): List<FfiProviderDiscoverySnapshot>
+    
+    fun `listProviderDiscoveryApprovals`(`sessionId`: kotlin.String): List<FfiDiscoveryApproval>
+    
+    fun `listProviderDiscoveryCandidates`(`sessionId`: kotlin.String): List<FfiDiscoveryCandidate>
+    
+    fun `listProviderDiscoveryCompensationSteps`(`commitAttemptId`: kotlin.String): List<FfiDiscoveryCompensationStep>
+    
+    fun `listProviderDiscoveryEvidence`(`sessionId`: kotlin.String): List<FfiDiscoveryEvidence>
+    
+    fun `listProviderModelSyncs`(`connectionId`: kotlin.String, `limit`: kotlin.UInt): List<FfiModelSyncJob>
+    
     fun `listProviderProfiles`(): List<FfiProviderProfile>
+    
+    fun `listProviderTemplates`(): List<FfiProviderTemplate>
+    
+    fun `markProviderDiscoveryCredentialCompensationUnknown`(`sessionId`: kotlin.String, `stepId`: kotlin.String): FfiProviderDiscoverySnapshot
     
     fun `openConversation`(`characterId`: kotlin.String): FfiConversation
     
@@ -1635,21 +2465,109 @@ public interface LorepiaCoreInterface {
      */
     fun `pollEvents`(`maxEvents`: kotlin.UInt): FfiEventBatch
     
+    fun `pollProviderDiscoveryEvents`(`limit`: kotlin.UInt): List<FfiDiscoveryOutboxEvent>
+    
+    fun `pollProviderModelSyncJobEvents`(`jobId`: kotlin.String, `limit`: kotlin.UInt): List<FfiModelSyncEvent>
+    
+    fun `prepareProviderCatalogRollback`(`targetRevision`: kotlin.ULong): FfiProviderCatalogRollbackPlan
+    
+    fun `prepareProviderDiscoveryAction`(`actionId`: kotlin.String, `expectedRevision`: kotlin.ULong, `action`: FfiProviderDiscoveryAction): FfiProviderDiscoveryActionEnvelope
+    
+    fun `prepareSignedProviderCatalogImport`(`envelopeJson`: kotlin.ByteArray): FfiProviderCatalogImportPlan
+    
+    fun `previewProviderRequest`(`modelRouteId`: kotlin.String, `generationPresetId`: kotlin.String): FfiRequestPreview
+    
+    fun `previewProviderRequestCandidate`(`preset`: FfiGenerationPreset): FfiRequestPreview
+    
+    fun `providerCatalogHistory`(`limit`: kotlin.UInt, `beforeRevision`: kotlin.ULong?, `beforeStateVersion`: kotlin.ULong?): FfiProviderCatalogHistory
+    
+    fun `providerCatalogStatus`(): FfiProviderCatalogStatus
+    
+    fun `recordProviderDiscoveryAssistantFailure`(`sessionId`: kotlin.String, `kind`: kotlin.String, `retryable`: kotlin.Boolean): FfiProviderDiscoverySnapshot
+    
+    fun `recoverProviderDiscoveries`(): List<FfiDiscoveryRecoveryResult>
+    
+    fun `refreshProviderModels`(`connectionId`: kotlin.String, `credential`: kotlin.String?): FfiProviderModelRefreshResult
+    
     fun `regenerateAssistantMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration
+    
+    fun `regenerateAssistantMessageWithTarget`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `target`: FfiGenerationTarget, `credential`: kotlin.String?): FfiMessageActionGeneration
     
     fun `removeMessageFromBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String): FfiConversationBranch
     
+    fun `renderPromptCacheControlForPreset`(`preset`: FfiGenerationPreset): FfiPromptCacheControl
+    
+    fun `renderReasoningControlForPreset`(`preset`: FfiGenerationPreset): FfiReasoningControl
+    
+    fun `requestProviderDiscoveryAssistantRevision`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot
+    
+    /**
+     * Resumes one durably pending allowlisted assistant tool action entirely
+     * inside Core. No raw tool call or tool-result payload crosses `UniFFI`.
+     */
+    fun `resumeProviderDiscoveryAssistantCoreHostAction`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot
+    
+    fun `resumeProviderDiscoveryCompensation`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot
+    
+    /**
+     * Runs one provider-discovery assistant turn inside Core.
+     *
+     * `assistant_credential` is request-scoped secret material obtained from
+     * the native vault. It is never retained in a DTO, event, or snapshot.
+     */
+    fun `runProviderDiscoveryAssistantTurn`(`sessionId`: kotlin.String, `estimate`: FfiDiscoveryAssistantCallEstimate, `assistantCredential`: kotlin.String?): FfiDiscoveryAssistantHostAction
+    
     fun `selectConversationBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String): FfiConversationState
+    
+    fun `selectGenerationTarget`(`target`: FfiGenerationTarget?): FfiAppSettings
     
     fun `sendMessage`(`conversationId`: kotlin.String, `text`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): kotlin.String
     
     fun `sendMessageToBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `mode`: kotlin.String, `text`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): kotlin.String
     
+    fun `sendMessageToBranchWithTarget`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `mode`: kotlin.String, `text`: kotlin.String, `target`: FfiGenerationTarget, `credential`: kotlin.String?): kotlin.String
+    
+    fun `sendMessageWithTarget`(`conversationId`: kotlin.String, `text`: kotlin.String, `target`: FfiGenerationTarget, `credential`: kotlin.String?): kotlin.String
+    
     fun `setConversationMode`(`conversationId`: kotlin.String, `mode`: kotlin.String): FfiConversationState
+    
+    /**
+     * Claims the one native-owned credential deletion step.
+     *
+     * The returned typed target is the only OS-vault slot native may delete.
+     */
+    fun `startProviderDiscoveryCredentialCompensation`(`sessionId`: kotlin.String, `stepId`: kotlin.String): FfiDiscoveryCompensationStep
+    
+    fun `startProviderModelSync`(`connectionId`: kotlin.String, `credential`: kotlin.String?): kotlin.String
+    
+    fun `supplyProviderDiscoveryCurlEvidence`(`sessionId`: kotlin.String, `expectedRevision`: kotlin.ULong, `rawCurl`: kotlin.String): FfiProviderDiscoverySnapshot
+    
+    fun `supplyProviderDiscoveryDocumentEvidence`(`sessionId`: kotlin.String, `expectedRevision`: kotlin.ULong, `documentUrl`: kotlin.String): FfiProviderDiscoverySnapshot
+    
+    /**
+     * Takes one inspected cURL credential exactly once.
+     *
+     * The opaque handoff expires after two minutes and is kept only in this
+     * binding object's memory. Native must write the bytes directly to its OS
+     * credential vault and clear its temporary buffer.
+     */
+    fun `takeProviderCurlCredential`(`credentialHandoffId`: kotlin.String): kotlin.ByteArray?
     
     fun `updateSettings`(`settings`: FfiAppSettings): FfiAppSettings
     
+    fun `upsertGenerationPreset`(`preset`: FfiGenerationPreset): FfiGenerationPreset
+    
+    fun `upsertModelRoute`(`route`: FfiModelRoute): FfiModelRoute
+    
+    fun `upsertProviderConnection`(`connection`: FfiProviderConnection): FfiProviderConnection
+    
     fun `upsertProviderProfile`(`profile`: FfiProviderProfile): FfiProviderProfile
+    
+    fun `upsertUserCapabilityOverride`(`draft`: FfiCapabilityOverrideDraft): FfiCapabilityObservation
+    
+    fun `validateGenerationPreset`(`modelRouteId`: kotlin.String, `generationPresetId`: kotlin.String)
+    
+    fun `validateGenerationPresetCandidate`(`preset`: FfiGenerationPreset)
     
     companion object
 }
@@ -1737,6 +2655,110 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     }
 
     
+    @Throws(FfiException::class)override fun `acceptProviderDiscoveryAssistantDraft`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_accept_provider_discovery_assistant_draft(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `ackProviderDiscoveryEvent`(`eventId`: kotlin.String): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_ack_provider_discovery_event(
+        it, FfiConverterString.lower(`eventId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `ackProviderModelSyncEvent`(`jobId`: kotlin.String, `sequence`: kotlin.ULong): kotlin.Boolean {
+            return FfiConverterBoolean.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_ack_provider_model_sync_event(
+        it, FfiConverterString.lower(`jobId`),FfiConverterULong.lower(`sequence`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `activateProviderCatalogRollback`(`plan`: FfiProviderCatalogRollbackPlan): FfiProviderCatalogRollbackResult {
+            return FfiConverterTypeFfiProviderCatalogRollbackResult.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_activate_provider_catalog_rollback(
+        it, FfiConverterTypeFfiProviderCatalogRollbackPlan.lower(`plan`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `activateSignedProviderCatalogImport`(`plan`: FfiProviderCatalogImportPlan, `envelopeJson`: kotlin.ByteArray): FfiProviderCatalogImportResult {
+            return FfiConverterTypeFfiProviderCatalogImportResult.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_activate_signed_provider_catalog_import(
+        it, FfiConverterTypeFfiProviderCatalogImportPlan.lower(`plan`),FfiConverterByteArray.lower(`envelopeJson`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `approveProviderDiscoveryAssistantRetry`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_approve_provider_discovery_assistant_retry(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `approveProviderModelSync`(`jobId`: kotlin.String, `reviewSha256`: kotlin.String): FfiModelSyncJob {
+            return FfiConverterTypeFfiModelSyncJob.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_approve_provider_model_sync(
+        it, FfiConverterString.lower(`jobId`),FfiConverterString.lower(`reviewSha256`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `beginProviderDiscovery`(`input`: FfiProviderDiscoveryInput, `source`: FfiProviderDiscoverySource, `rawCurl`: kotlin.String?): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_begin_provider_discovery(
+        it, FfiConverterTypeFfiProviderDiscoveryInput.lower(`input`),FfiConverterTypeFfiProviderDiscoverySource.lower(`source`),FfiConverterOptionalString.lower(`rawCurl`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `cancelGeneration`(`generationId`: kotlin.String)
         = 
     callWithPointer {
@@ -1749,12 +2771,96 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `cancelProviderDiscovery`(`sessionId`: kotlin.String, `expectedRevision`: kotlin.ULong): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_cancel_provider_discovery(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterULong.lower(`expectedRevision`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `cancelProviderModelSync`(`jobId`: kotlin.String): FfiModelSyncJob {
+            return FfiConverterTypeFfiModelSyncJob.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_cancel_provider_model_sync(
+        it, FfiConverterString.lower(`jobId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `commitImport`(`inspectionId`: kotlin.String): FfiCharacter {
             return FfiConverterTypeFfiCharacter.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_commit_import(
         it, FfiConverterString.lower(`inspectionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `commitProviderDiscovery`(`sessionId`: kotlin.String, `credentialReferenceConfirmed`: kotlin.Boolean): FfiProviderConnection {
+            return FfiConverterTypeFfiProviderConnection.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_commit_provider_discovery(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterBoolean.lower(`credentialReferenceConfirmed`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `completeProviderDiscoveryCredentialCompensation`(`sessionId`: kotlin.String, `stepId`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_complete_provider_discovery_credential_compensation(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterString.lower(`stepId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Applies one canonical public action.
+     *
+     * `target_credential` is an optional request-scoped vault read used only
+     * by an approved provider probe. It is never persisted or returned.
+     */
+    @Throws(FfiException::class)override fun `continueProviderDiscovery`(`sessionId`: kotlin.String, `envelope`: FfiProviderDiscoveryActionEnvelope, `targetCredential`: kotlin.String?): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_continue_provider_discovery(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterTypeFfiProviderDiscoveryActionEnvelope.lower(`envelope`),FfiConverterOptionalString.lower(`targetCredential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `continueProviderDiscoveryCompensation`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_continue_provider_discovery_compensation(
+        it, FfiConverterString.lower(`sessionId`),_status)
 }
     }
     )
@@ -1788,6 +2894,19 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `createProviderConnection`(`draft`: FfiProviderConnectionDraft): FfiProviderConnection {
+            return FfiConverterTypeFfiProviderConnection.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_create_provider_connection(
+        it, FfiConverterTypeFfiProviderConnectionDraft.lower(`draft`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `databaseStats`(): FfiDatabaseStats {
             return FfiConverterTypeFfiDatabaseStats.lift(
     callWithPointer {
@@ -1801,6 +2920,42 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `deleteGenerationPreset`(`generationPresetId`: kotlin.String)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_generation_preset(
+        it, FfiConverterString.lower(`generationPresetId`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `deleteModelRoute`(`modelRouteId`: kotlin.String)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_model_route(
+        it, FfiConverterString.lower(`modelRouteId`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `deleteProviderConnection`(`connectionId`: kotlin.String)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_provider_connection(
+        it, FfiConverterString.lower(`connectionId`),_status)
+}
+    }
+    
+    
+
+    
     @Throws(FfiException::class)override fun `deleteProviderProfile`(`profileId`: kotlin.String)
         = 
     callWithPointer {
@@ -1810,6 +2965,31 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
 }
     }
     
+    
+
+    
+    @Throws(FfiException::class)override fun `deleteUserCapabilityOverride`(`modelRouteId`: kotlin.String, `observationId`: kotlin.String)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_delete_user_capability_override(
+        it, FfiConverterString.lower(`modelRouteId`),FfiConverterString.lower(`observationId`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `diffProviderCatalogRevisions`(`fromRevision`: kotlin.ULong, `toRevision`: kotlin.ULong): FfiProviderCatalogDiff {
+            return FfiConverterTypeFfiProviderCatalogDiff.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_diff_provider_catalog_revisions(
+        it, FfiConverterULong.lower(`fromRevision`),FfiConverterULong.lower(`toRevision`),_status)
+}
+    }
+    )
+    }
     
 
     
@@ -1831,6 +3011,58 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_edit_user_message(
         it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`messageId`),FfiConverterString.lower(`replacementText`),FfiConverterString.lower(`providerProfileId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `editUserMessageWithTarget`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `replacementText`: kotlin.String, `target`: FfiGenerationTarget, `credential`: kotlin.String?): FfiMessageActionGeneration {
+            return FfiConverterTypeFfiMessageActionGeneration.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_edit_user_message_with_target(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`messageId`),FfiConverterString.lower(`replacementText`),FfiConverterTypeFfiGenerationTarget.lower(`target`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `effectiveCapability`(`modelRouteId`: kotlin.String, `key`: kotlin.String): FfiEffectiveCapability? {
+            return FfiConverterOptionalTypeFfiEffectiveCapability.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_effective_capability(
+        it, FfiConverterString.lower(`modelRouteId`),FfiConverterString.lower(`key`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `effectiveParameterSpecs`(`modelRouteId`: kotlin.String): List<FfiParameterSpec> {
+            return FfiConverterSequenceTypeFfiParameterSpec.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_effective_parameter_specs(
+        it, FfiConverterString.lower(`modelRouteId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `failProviderDiscoveryCredentialCompensation`(`sessionId`: kotlin.String, `stepId`: kotlin.String, `failure`: FfiDiscoveryFailure): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_fail_provider_discovery_credential_compensation(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterString.lower(`stepId`),FfiConverterTypeFfiDiscoveryFailure.lower(`failure`),_status)
 }
     }
     )
@@ -1877,6 +3109,71 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `getProviderDiscovery`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_get_provider_discovery(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `getProviderDiscoveryApprovalProposal`(`sessionId`: kotlin.String): FfiDiscoveryApprovalProposal? {
+            return FfiConverterOptionalTypeFfiDiscoveryApprovalProposal.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_get_provider_discovery_approval_proposal(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `getProviderDiscoveryReview`(`sessionId`: kotlin.String): FfiDiscoveryReview? {
+            return FfiConverterOptionalTypeFfiDiscoveryReview.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_get_provider_discovery_review(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `getProviderDiscoveryReviewProposal`(`sessionId`: kotlin.String): FfiDiscoveryReviewProposal? {
+            return FfiConverterOptionalTypeFfiDiscoveryReviewProposal.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_get_provider_discovery_review_proposal(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `getProviderModelSync`(`jobId`: kotlin.String): FfiModelSyncJob {
+            return FfiConverterTypeFfiModelSyncJob.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_get_provider_model_sync(
+        it, FfiConverterString.lower(`jobId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `getSettings`(): FfiAppSettings {
             return FfiConverterTypeFfiAppSettings.lift(
     callWithPointer {
@@ -1916,12 +3213,38 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `inspectProviderCurl`(`rawCurl`: kotlin.String, `networkPolicy`: FfiProviderNetworkPolicy): FfiProviderCurlInspection {
+            return FfiConverterTypeFfiProviderCurlInspection.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_inspect_provider_curl(
+        it, FfiConverterString.lower(`rawCurl`),FfiConverterTypeFfiProviderNetworkPolicy.lower(`networkPolicy`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `listBranchMessages`(`branchId`: kotlin.String): List<FfiMessage> {
             return FfiConverterSequenceTypeFfiMessage.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_branch_messages(
         it, FfiConverterString.lower(`branchId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listCapabilityObservations`(`modelRouteId`: kotlin.String): List<FfiCapabilityObservation> {
+            return FfiConverterSequenceTypeFfiCapabilityObservation.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_capability_observations(
+        it, FfiConverterString.lower(`modelRouteId`),_status)
 }
     }
     )
@@ -1981,6 +3304,19 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `listGenerationPresets`(`modelRouteId`: kotlin.String): List<FfiGenerationPreset> {
+            return FfiConverterSequenceTypeFfiGenerationPreset.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_generation_presets(
+        it, FfiConverterString.lower(`modelRouteId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `listMessages`(`conversationId`: kotlin.String): List<FfiMessage> {
             return FfiConverterSequenceTypeFfiMessage.lift(
     callWithPointer {
@@ -1994,12 +3330,142 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `listModelRoutes`(`connectionId`: kotlin.String): List<FfiModelRoute> {
+            return FfiConverterSequenceTypeFfiModelRoute.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_model_routes(
+        it, FfiConverterString.lower(`connectionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listProviderConnections`(): List<FfiProviderConnection> {
+            return FfiConverterSequenceTypeFfiProviderConnection.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_connections(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listProviderDiscoveries`(`limit`: kotlin.UInt): List<FfiProviderDiscoverySnapshot> {
+            return FfiConverterSequenceTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_discoveries(
+        it, FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listProviderDiscoveryApprovals`(`sessionId`: kotlin.String): List<FfiDiscoveryApproval> {
+            return FfiConverterSequenceTypeFfiDiscoveryApproval.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_discovery_approvals(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listProviderDiscoveryCandidates`(`sessionId`: kotlin.String): List<FfiDiscoveryCandidate> {
+            return FfiConverterSequenceTypeFfiDiscoveryCandidate.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_discovery_candidates(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listProviderDiscoveryCompensationSteps`(`commitAttemptId`: kotlin.String): List<FfiDiscoveryCompensationStep> {
+            return FfiConverterSequenceTypeFfiDiscoveryCompensationStep.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_discovery_compensation_steps(
+        it, FfiConverterString.lower(`commitAttemptId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listProviderDiscoveryEvidence`(`sessionId`: kotlin.String): List<FfiDiscoveryEvidence> {
+            return FfiConverterSequenceTypeFfiDiscoveryEvidence.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_discovery_evidence(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listProviderModelSyncs`(`connectionId`: kotlin.String, `limit`: kotlin.UInt): List<FfiModelSyncJob> {
+            return FfiConverterSequenceTypeFfiModelSyncJob.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_model_syncs(
+        it, FfiConverterString.lower(`connectionId`),FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `listProviderProfiles`(): List<FfiProviderProfile> {
             return FfiConverterSequenceTypeFfiProviderProfile.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_profiles(
         it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `listProviderTemplates`(): List<FfiProviderTemplate> {
+            return FfiConverterSequenceTypeFfiProviderTemplate.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_list_provider_templates(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `markProviderDiscoveryCredentialCompensationUnknown`(`sessionId`: kotlin.String, `stepId`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_mark_provider_discovery_credential_compensation_unknown(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterString.lower(`stepId`),_status)
 }
     }
     )
@@ -2036,12 +3502,181 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `pollProviderDiscoveryEvents`(`limit`: kotlin.UInt): List<FfiDiscoveryOutboxEvent> {
+            return FfiConverterSequenceTypeFfiDiscoveryOutboxEvent.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_provider_discovery_events(
+        it, FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `pollProviderModelSyncJobEvents`(`jobId`: kotlin.String, `limit`: kotlin.UInt): List<FfiModelSyncEvent> {
+            return FfiConverterSequenceTypeFfiModelSyncEvent.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_poll_provider_model_sync_job_events(
+        it, FfiConverterString.lower(`jobId`),FfiConverterUInt.lower(`limit`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `prepareProviderCatalogRollback`(`targetRevision`: kotlin.ULong): FfiProviderCatalogRollbackPlan {
+            return FfiConverterTypeFfiProviderCatalogRollbackPlan.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_prepare_provider_catalog_rollback(
+        it, FfiConverterULong.lower(`targetRevision`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `prepareProviderDiscoveryAction`(`actionId`: kotlin.String, `expectedRevision`: kotlin.ULong, `action`: FfiProviderDiscoveryAction): FfiProviderDiscoveryActionEnvelope {
+            return FfiConverterTypeFfiProviderDiscoveryActionEnvelope.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_prepare_provider_discovery_action(
+        it, FfiConverterString.lower(`actionId`),FfiConverterULong.lower(`expectedRevision`),FfiConverterTypeFfiProviderDiscoveryAction.lower(`action`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `prepareSignedProviderCatalogImport`(`envelopeJson`: kotlin.ByteArray): FfiProviderCatalogImportPlan {
+            return FfiConverterTypeFfiProviderCatalogImportPlan.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_prepare_signed_provider_catalog_import(
+        it, FfiConverterByteArray.lower(`envelopeJson`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `previewProviderRequest`(`modelRouteId`: kotlin.String, `generationPresetId`: kotlin.String): FfiRequestPreview {
+            return FfiConverterTypeFfiRequestPreview.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_preview_provider_request(
+        it, FfiConverterString.lower(`modelRouteId`),FfiConverterString.lower(`generationPresetId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `previewProviderRequestCandidate`(`preset`: FfiGenerationPreset): FfiRequestPreview {
+            return FfiConverterTypeFfiRequestPreview.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_preview_provider_request_candidate(
+        it, FfiConverterTypeFfiGenerationPreset.lower(`preset`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `providerCatalogHistory`(`limit`: kotlin.UInt, `beforeRevision`: kotlin.ULong?, `beforeStateVersion`: kotlin.ULong?): FfiProviderCatalogHistory {
+            return FfiConverterTypeFfiProviderCatalogHistory.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_provider_catalog_history(
+        it, FfiConverterUInt.lower(`limit`),FfiConverterOptionalULong.lower(`beforeRevision`),FfiConverterOptionalULong.lower(`beforeStateVersion`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `providerCatalogStatus`(): FfiProviderCatalogStatus {
+            return FfiConverterTypeFfiProviderCatalogStatus.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_provider_catalog_status(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `recordProviderDiscoveryAssistantFailure`(`sessionId`: kotlin.String, `kind`: kotlin.String, `retryable`: kotlin.Boolean): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_record_provider_discovery_assistant_failure(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterString.lower(`kind`),FfiConverterBoolean.lower(`retryable`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `recoverProviderDiscoveries`(): List<FfiDiscoveryRecoveryResult> {
+            return FfiConverterSequenceTypeFfiDiscoveryRecoveryResult.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_recover_provider_discoveries(
+        it, _status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `refreshProviderModels`(`connectionId`: kotlin.String, `credential`: kotlin.String?): FfiProviderModelRefreshResult {
+            return FfiConverterTypeFfiProviderModelRefreshResult.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_refresh_provider_models(
+        it, FfiConverterString.lower(`connectionId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `regenerateAssistantMessage`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `providerProfileId`: kotlin.String, `credential`: kotlin.String?): FfiMessageActionGeneration {
             return FfiConverterTypeFfiMessageActionGeneration.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_regenerate_assistant_message(
         it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`messageId`),FfiConverterString.lower(`providerProfileId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `regenerateAssistantMessageWithTarget`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `messageId`: kotlin.String, `target`: FfiGenerationTarget, `credential`: kotlin.String?): FfiMessageActionGeneration {
+            return FfiConverterTypeFfiMessageActionGeneration.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_regenerate_assistant_message_with_target(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`messageId`),FfiConverterTypeFfiGenerationTarget.lower(`target`),FfiConverterOptionalString.lower(`credential`),_status)
 }
     }
     )
@@ -2062,12 +3697,113 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `renderPromptCacheControlForPreset`(`preset`: FfiGenerationPreset): FfiPromptCacheControl {
+            return FfiConverterTypeFfiPromptCacheControl.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_render_prompt_cache_control_for_preset(
+        it, FfiConverterTypeFfiGenerationPreset.lower(`preset`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `renderReasoningControlForPreset`(`preset`: FfiGenerationPreset): FfiReasoningControl {
+            return FfiConverterTypeFfiReasoningControl.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_render_reasoning_control_for_preset(
+        it, FfiConverterTypeFfiGenerationPreset.lower(`preset`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `requestProviderDiscoveryAssistantRevision`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_request_provider_discovery_assistant_revision(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Resumes one durably pending allowlisted assistant tool action entirely
+     * inside Core. No raw tool call or tool-result payload crosses `UniFFI`.
+     */
+    @Throws(FfiException::class)override fun `resumeProviderDiscoveryAssistantCoreHostAction`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_resume_provider_discovery_assistant_core_host_action(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `resumeProviderDiscoveryCompensation`(`sessionId`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_resume_provider_discovery_compensation(
+        it, FfiConverterString.lower(`sessionId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Runs one provider-discovery assistant turn inside Core.
+     *
+     * `assistant_credential` is request-scoped secret material obtained from
+     * the native vault. It is never retained in a DTO, event, or snapshot.
+     */
+    @Throws(FfiException::class)override fun `runProviderDiscoveryAssistantTurn`(`sessionId`: kotlin.String, `estimate`: FfiDiscoveryAssistantCallEstimate, `assistantCredential`: kotlin.String?): FfiDiscoveryAssistantHostAction {
+            return FfiConverterTypeFfiDiscoveryAssistantHostAction.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_run_provider_discovery_assistant_turn(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterTypeFfiDiscoveryAssistantCallEstimate.lower(`estimate`),FfiConverterOptionalString.lower(`assistantCredential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `selectConversationBranch`(`conversationId`: kotlin.String, `branchId`: kotlin.String): FfiConversationState {
             return FfiConverterTypeFfiConversationState.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_select_conversation_branch(
         it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `selectGenerationTarget`(`target`: FfiGenerationTarget?): FfiAppSettings {
+            return FfiConverterTypeFfiAppSettings.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_select_generation_target(
+        it, FfiConverterOptionalTypeFfiGenerationTarget.lower(`target`),_status)
 }
     }
     )
@@ -2101,12 +3837,115 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `sendMessageToBranchWithTarget`(`conversationId`: kotlin.String, `branchId`: kotlin.String, `expectedHead`: kotlin.String?, `mode`: kotlin.String, `text`: kotlin.String, `target`: FfiGenerationTarget, `credential`: kotlin.String?): kotlin.String {
+            return FfiConverterString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message_to_branch_with_target(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`branchId`),FfiConverterOptionalString.lower(`expectedHead`),FfiConverterString.lower(`mode`),FfiConverterString.lower(`text`),FfiConverterTypeFfiGenerationTarget.lower(`target`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `sendMessageWithTarget`(`conversationId`: kotlin.String, `text`: kotlin.String, `target`: FfiGenerationTarget, `credential`: kotlin.String?): kotlin.String {
+            return FfiConverterString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_send_message_with_target(
+        it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`text`),FfiConverterTypeFfiGenerationTarget.lower(`target`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `setConversationMode`(`conversationId`: kotlin.String, `mode`: kotlin.String): FfiConversationState {
             return FfiConverterTypeFfiConversationState.lift(
     callWithPointer {
     uniffiRustCallWithError(FfiException) { _status ->
     UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_set_conversation_mode(
         it, FfiConverterString.lower(`conversationId`),FfiConverterString.lower(`mode`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Claims the one native-owned credential deletion step.
+     *
+     * The returned typed target is the only OS-vault slot native may delete.
+     */
+    @Throws(FfiException::class)override fun `startProviderDiscoveryCredentialCompensation`(`sessionId`: kotlin.String, `stepId`: kotlin.String): FfiDiscoveryCompensationStep {
+            return FfiConverterTypeFfiDiscoveryCompensationStep.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_start_provider_discovery_credential_compensation(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterString.lower(`stepId`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `startProviderModelSync`(`connectionId`: kotlin.String, `credential`: kotlin.String?): kotlin.String {
+            return FfiConverterString.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_start_provider_model_sync(
+        it, FfiConverterString.lower(`connectionId`),FfiConverterOptionalString.lower(`credential`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `supplyProviderDiscoveryCurlEvidence`(`sessionId`: kotlin.String, `expectedRevision`: kotlin.ULong, `rawCurl`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_supply_provider_discovery_curl_evidence(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterULong.lower(`expectedRevision`),FfiConverterString.lower(`rawCurl`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `supplyProviderDiscoveryDocumentEvidence`(`sessionId`: kotlin.String, `expectedRevision`: kotlin.ULong, `documentUrl`: kotlin.String): FfiProviderDiscoverySnapshot {
+            return FfiConverterTypeFfiProviderDiscoverySnapshot.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_supply_provider_discovery_document_evidence(
+        it, FfiConverterString.lower(`sessionId`),FfiConverterULong.lower(`expectedRevision`),FfiConverterString.lower(`documentUrl`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    /**
+     * Takes one inspected cURL credential exactly once.
+     *
+     * The opaque handoff expires after two minutes and is kept only in this
+     * binding object's memory. Native must write the bytes directly to its OS
+     * credential vault and clear its temporary buffer.
+     */
+    @Throws(FfiException::class)override fun `takeProviderCurlCredential`(`credentialHandoffId`: kotlin.String): kotlin.ByteArray? {
+            return FfiConverterOptionalByteArray.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_take_provider_curl_credential(
+        it, FfiConverterString.lower(`credentialHandoffId`),_status)
 }
     }
     )
@@ -2127,6 +3966,45 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     
 
     
+    @Throws(FfiException::class)override fun `upsertGenerationPreset`(`preset`: FfiGenerationPreset): FfiGenerationPreset {
+            return FfiConverterTypeFfiGenerationPreset.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_generation_preset(
+        it, FfiConverterTypeFfiGenerationPreset.lower(`preset`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `upsertModelRoute`(`route`: FfiModelRoute): FfiModelRoute {
+            return FfiConverterTypeFfiModelRoute.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_model_route(
+        it, FfiConverterTypeFfiModelRoute.lower(`route`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `upsertProviderConnection`(`connection`: FfiProviderConnection): FfiProviderConnection {
+            return FfiConverterTypeFfiProviderConnection.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_provider_connection(
+        it, FfiConverterTypeFfiProviderConnection.lower(`connection`),_status)
+}
+    }
+    )
+    }
+    
+
+    
     @Throws(FfiException::class)override fun `upsertProviderProfile`(`profile`: FfiProviderProfile): FfiProviderProfile {
             return FfiConverterTypeFfiProviderProfile.lift(
     callWithPointer {
@@ -2137,6 +4015,43 @@ open class LorepiaCore: Disposable, AutoCloseable, LorepiaCoreInterface
     }
     )
     }
+    
+
+    
+    @Throws(FfiException::class)override fun `upsertUserCapabilityOverride`(`draft`: FfiCapabilityOverrideDraft): FfiCapabilityObservation {
+            return FfiConverterTypeFfiCapabilityObservation.lift(
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_upsert_user_capability_override(
+        it, FfiConverterTypeFfiCapabilityOverrideDraft.lower(`draft`),_status)
+}
+    }
+    )
+    }
+    
+
+    
+    @Throws(FfiException::class)override fun `validateGenerationPreset`(`modelRouteId`: kotlin.String, `generationPresetId`: kotlin.String)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_validate_generation_preset(
+        it, FfiConverterString.lower(`modelRouteId`),FfiConverterString.lower(`generationPresetId`),_status)
+}
+    }
+    
+    
+
+    
+    @Throws(FfiException::class)override fun `validateGenerationPresetCandidate`(`preset`: FfiGenerationPreset)
+        = 
+    callWithPointer {
+    uniffiRustCallWithError(FfiException) { _status ->
+    UniffiLib.INSTANCE.uniffi_lorepia_uniffi_fn_method_lorepiacore_validate_generation_preset_candidate(
+        it, FfiConverterTypeFfiGenerationPreset.lower(`preset`),_status)
+}
+    }
+    
     
 
     
@@ -2191,7 +4106,9 @@ public object FfiConverterTypeLorepiaCore: FfiConverter<LorepiaCore, Pointer> {
 
 data class FfiAppSettings (
     var `preservePartialGenerations`: kotlin.Boolean, 
-    var `selectedProviderProfileId`: kotlin.String?
+    var `selectedProviderProfileId`: kotlin.String?, 
+    var `selectedModelRouteId`: kotlin.String?, 
+    var `selectedGenerationPresetId`: kotlin.String?
 ) {
     
     companion object
@@ -2205,17 +4122,185 @@ public object FfiConverterTypeFfiAppSettings: FfiConverterRustBuffer<FfiAppSetti
         return FfiAppSettings(
             FfiConverterBoolean.read(buf),
             FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
         )
     }
 
     override fun allocationSize(value: FfiAppSettings) = (
             FfiConverterBoolean.allocationSize(value.`preservePartialGenerations`) +
-            FfiConverterOptionalString.allocationSize(value.`selectedProviderProfileId`)
+            FfiConverterOptionalString.allocationSize(value.`selectedProviderProfileId`) +
+            FfiConverterOptionalString.allocationSize(value.`selectedModelRouteId`) +
+            FfiConverterOptionalString.allocationSize(value.`selectedGenerationPresetId`)
     )
 
     override fun write(value: FfiAppSettings, buf: ByteBuffer) {
             FfiConverterBoolean.write(value.`preservePartialGenerations`, buf)
             FfiConverterOptionalString.write(value.`selectedProviderProfileId`, buf)
+            FfiConverterOptionalString.write(value.`selectedModelRouteId`, buf)
+            FfiConverterOptionalString.write(value.`selectedGenerationPresetId`, buf)
+    }
+}
+
+
+
+data class FfiCapabilityObservation (
+    var `id`: kotlin.String, 
+    var `modelRouteId`: kotlin.String, 
+    var `key`: kotlin.String, 
+    var `value`: FfiCapabilityValue, 
+    var `status`: kotlin.String, 
+    var `source`: kotlin.String, 
+    var `confidence`: kotlin.String, 
+    var `observedAt`: kotlin.String, 
+    var `expiresAt`: kotlin.String?, 
+    var `evidenceRef`: kotlin.String?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiCapabilityObservation: FfiConverterRustBuffer<FfiCapabilityObservation> {
+    override fun read(buf: ByteBuffer): FfiCapabilityObservation {
+        return FfiCapabilityObservation(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiCapabilityValue.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiCapabilityObservation) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`modelRouteId`) +
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterTypeFfiCapabilityValue.allocationSize(value.`value`) +
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterString.allocationSize(value.`source`) +
+            FfiConverterString.allocationSize(value.`confidence`) +
+            FfiConverterString.allocationSize(value.`observedAt`) +
+            FfiConverterOptionalString.allocationSize(value.`expiresAt`) +
+            FfiConverterOptionalString.allocationSize(value.`evidenceRef`)
+    )
+
+    override fun write(value: FfiCapabilityObservation, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`modelRouteId`, buf)
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterTypeFfiCapabilityValue.write(value.`value`, buf)
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterString.write(value.`source`, buf)
+            FfiConverterString.write(value.`confidence`, buf)
+            FfiConverterString.write(value.`observedAt`, buf)
+            FfiConverterOptionalString.write(value.`expiresAt`, buf)
+            FfiConverterOptionalString.write(value.`evidenceRef`, buf)
+    }
+}
+
+
+
+data class FfiCapabilityOverrideDraft (
+    var `id`: kotlin.String, 
+    var `modelRouteId`: kotlin.String, 
+    var `key`: kotlin.String, 
+    var `value`: FfiCapabilityValue, 
+    var `status`: kotlin.String, 
+    var `expiresAt`: kotlin.String?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiCapabilityOverrideDraft: FfiConverterRustBuffer<FfiCapabilityOverrideDraft> {
+    override fun read(buf: ByteBuffer): FfiCapabilityOverrideDraft {
+        return FfiCapabilityOverrideDraft(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiCapabilityValue.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiCapabilityOverrideDraft) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`modelRouteId`) +
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterTypeFfiCapabilityValue.allocationSize(value.`value`) +
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterOptionalString.allocationSize(value.`expiresAt`)
+    )
+
+    override fun write(value: FfiCapabilityOverrideDraft, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`modelRouteId`, buf)
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterTypeFfiCapabilityValue.write(value.`value`, buf)
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterOptionalString.write(value.`expiresAt`, buf)
+    }
+}
+
+
+
+data class FfiCapabilityValue (
+    var `kind`: kotlin.String, 
+    var `booleanValue`: kotlin.Boolean?, 
+    var `integerValue`: kotlin.ULong?, 
+    var `enumValues`: List<kotlin.String>, 
+    /**
+     * Canonical JSON for read-only structured provider metadata.
+     *
+     * Native user overrides cannot submit this field; closed wire dialects
+     * come only from trusted provider/catalog/probe ingestion paths.
+     */
+    var `structuredJson`: kotlin.String?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiCapabilityValue: FfiConverterRustBuffer<FfiCapabilityValue> {
+    override fun read(buf: ByteBuffer): FfiCapabilityValue {
+        return FfiCapabilityValue(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiCapabilityValue) = (
+            FfiConverterString.allocationSize(value.`kind`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`booleanValue`) +
+            FfiConverterOptionalULong.allocationSize(value.`integerValue`) +
+            FfiConverterSequenceString.allocationSize(value.`enumValues`) +
+            FfiConverterOptionalString.allocationSize(value.`structuredJson`)
+    )
+
+    override fun write(value: FfiCapabilityValue, buf: ByteBuffer) {
+            FfiConverterString.write(value.`kind`, buf)
+            FfiConverterOptionalBoolean.write(value.`booleanValue`, buf)
+            FfiConverterOptionalULong.write(value.`integerValue`, buf)
+            FfiConverterSequenceString.write(value.`enumValues`, buf)
+            FfiConverterOptionalString.write(value.`structuredJson`, buf)
     }
 }
 
@@ -2283,12 +4368,20 @@ data class FfiChatEvent (
     var `emittedAt`: kotlin.String, 
     var `kind`: kotlin.String, 
     var `text`: kotlin.String?, 
+    var `toolCallId`: kotlin.String?, 
+    var `toolName`: kotlin.String?, 
+    var `toolArgumentsDelta`: kotlin.String?, 
     var `messageId`: kotlin.String?, 
     var `messageStatus`: kotlin.String?, 
     var `errorCode`: kotlin.String?, 
     var `errorMessage`: kotlin.String?, 
     var `usageInputTokens`: kotlin.ULong?, 
-    var `usageOutputTokens`: kotlin.ULong?
+    var `usageCachedReadTokens`: kotlin.ULong?, 
+    var `usageCachedWriteTokens`: kotlin.ULong?, 
+    var `usageOutputTokens`: kotlin.ULong?, 
+    var `usageReasoningTokens`: kotlin.ULong?, 
+    var `usageToolTokens`: kotlin.ULong?, 
+    var `usageProviderRawSummary`: kotlin.String?
 ) {
     
     companion object
@@ -2313,8 +4406,16 @@ public object FfiConverterTypeFfiChatEvent: FfiConverterRustBuffer<FfiChatEvent>
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
             FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
             FfiConverterOptionalULong.read(buf),
             FfiConverterOptionalULong.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterOptionalString.read(buf),
         )
     }
 
@@ -2328,12 +4429,20 @@ public object FfiConverterTypeFfiChatEvent: FfiConverterRustBuffer<FfiChatEvent>
             FfiConverterString.allocationSize(value.`emittedAt`) +
             FfiConverterString.allocationSize(value.`kind`) +
             FfiConverterOptionalString.allocationSize(value.`text`) +
+            FfiConverterOptionalString.allocationSize(value.`toolCallId`) +
+            FfiConverterOptionalString.allocationSize(value.`toolName`) +
+            FfiConverterOptionalString.allocationSize(value.`toolArgumentsDelta`) +
             FfiConverterOptionalString.allocationSize(value.`messageId`) +
             FfiConverterOptionalString.allocationSize(value.`messageStatus`) +
             FfiConverterOptionalString.allocationSize(value.`errorCode`) +
             FfiConverterOptionalString.allocationSize(value.`errorMessage`) +
             FfiConverterOptionalULong.allocationSize(value.`usageInputTokens`) +
-            FfiConverterOptionalULong.allocationSize(value.`usageOutputTokens`)
+            FfiConverterOptionalULong.allocationSize(value.`usageCachedReadTokens`) +
+            FfiConverterOptionalULong.allocationSize(value.`usageCachedWriteTokens`) +
+            FfiConverterOptionalULong.allocationSize(value.`usageOutputTokens`) +
+            FfiConverterOptionalULong.allocationSize(value.`usageReasoningTokens`) +
+            FfiConverterOptionalULong.allocationSize(value.`usageToolTokens`) +
+            FfiConverterOptionalString.allocationSize(value.`usageProviderRawSummary`)
     )
 
     override fun write(value: FfiChatEvent, buf: ByteBuffer) {
@@ -2346,12 +4455,96 @@ public object FfiConverterTypeFfiChatEvent: FfiConverterRustBuffer<FfiChatEvent>
             FfiConverterString.write(value.`emittedAt`, buf)
             FfiConverterString.write(value.`kind`, buf)
             FfiConverterOptionalString.write(value.`text`, buf)
+            FfiConverterOptionalString.write(value.`toolCallId`, buf)
+            FfiConverterOptionalString.write(value.`toolName`, buf)
+            FfiConverterOptionalString.write(value.`toolArgumentsDelta`, buf)
             FfiConverterOptionalString.write(value.`messageId`, buf)
             FfiConverterOptionalString.write(value.`messageStatus`, buf)
             FfiConverterOptionalString.write(value.`errorCode`, buf)
             FfiConverterOptionalString.write(value.`errorMessage`, buf)
             FfiConverterOptionalULong.write(value.`usageInputTokens`, buf)
+            FfiConverterOptionalULong.write(value.`usageCachedReadTokens`, buf)
+            FfiConverterOptionalULong.write(value.`usageCachedWriteTokens`, buf)
             FfiConverterOptionalULong.write(value.`usageOutputTokens`, buf)
+            FfiConverterOptionalULong.write(value.`usageReasoningTokens`, buf)
+            FfiConverterOptionalULong.write(value.`usageToolTokens`, buf)
+            FfiConverterOptionalString.write(value.`usageProviderRawSummary`, buf)
+    }
+}
+
+
+
+data class FfiConnectionConfigEntry (
+    var `key`: kotlin.String, 
+    var `value`: FfiConnectionConfigValue
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiConnectionConfigEntry: FfiConverterRustBuffer<FfiConnectionConfigEntry> {
+    override fun read(buf: ByteBuffer): FfiConnectionConfigEntry {
+        return FfiConnectionConfigEntry(
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiConnectionConfigValue.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiConnectionConfigEntry) = (
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterTypeFfiConnectionConfigValue.allocationSize(value.`value`)
+    )
+
+    override fun write(value: FfiConnectionConfigEntry, buf: ByteBuffer) {
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterTypeFfiConnectionConfigValue.write(value.`value`, buf)
+    }
+}
+
+
+
+data class FfiConnectionFieldSpec (
+    var `key`: kotlin.String, 
+    var `labelKey`: kotlin.String, 
+    var `descriptionKey`: kotlin.String?, 
+    var `valueType`: FfiConnectionFieldType, 
+    var `required`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiConnectionFieldSpec: FfiConverterRustBuffer<FfiConnectionFieldSpec> {
+    override fun read(buf: ByteBuffer): FfiConnectionFieldSpec {
+        return FfiConnectionFieldSpec(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeFfiConnectionFieldType.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiConnectionFieldSpec) = (
+            FfiConverterString.allocationSize(value.`key`) +
+            FfiConverterString.allocationSize(value.`labelKey`) +
+            FfiConverterOptionalString.allocationSize(value.`descriptionKey`) +
+            FfiConverterTypeFfiConnectionFieldType.allocationSize(value.`valueType`) +
+            FfiConverterBoolean.allocationSize(value.`required`)
+    )
+
+    override fun write(value: FfiConnectionFieldSpec, buf: ByteBuffer) {
+            FfiConverterString.write(value.`key`, buf)
+            FfiConverterString.write(value.`labelKey`, buf)
+            FfiConverterOptionalString.write(value.`descriptionKey`, buf)
+            FfiConverterTypeFfiConnectionFieldType.write(value.`valueType`, buf)
+            FfiConverterBoolean.write(value.`required`, buf)
     }
 }
 
@@ -2521,6 +4714,42 @@ public object FfiConverterTypeFfiCoreConfig: FfiConverterRustBuffer<FfiCoreConfi
 
 
 
+data class FfiCredentialScope (
+    var `allowedOrigins`: List<kotlin.String>, 
+    var `authBinding`: FfiAuthBinding, 
+    var `redirectPolicy`: FfiCredentialRedirectPolicy
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiCredentialScope: FfiConverterRustBuffer<FfiCredentialScope> {
+    override fun read(buf: ByteBuffer): FfiCredentialScope {
+        return FfiCredentialScope(
+            FfiConverterSequenceString.read(buf),
+            FfiConverterTypeFfiAuthBinding.read(buf),
+            FfiConverterTypeFfiCredentialRedirectPolicy.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiCredentialScope) = (
+            FfiConverterSequenceString.allocationSize(value.`allowedOrigins`) +
+            FfiConverterTypeFfiAuthBinding.allocationSize(value.`authBinding`) +
+            FfiConverterTypeFfiCredentialRedirectPolicy.allocationSize(value.`redirectPolicy`)
+    )
+
+    override fun write(value: FfiCredentialScope, buf: ByteBuffer) {
+            FfiConverterSequenceString.write(value.`allowedOrigins`, buf)
+            FfiConverterTypeFfiAuthBinding.write(value.`authBinding`, buf)
+            FfiConverterTypeFfiCredentialRedirectPolicy.write(value.`redirectPolicy`, buf)
+    }
+}
+
+
+
 data class FfiDatabaseStats (
     var `characters`: kotlin.ULong, 
     var `conversations`: kotlin.ULong, 
@@ -2561,6 +4790,1173 @@ public object FfiConverterTypeFfiDatabaseStats: FfiConverterRustBuffer<FfiDataba
 
 
 
+data class FfiDiscoveryApproval (
+    var `id`: kotlin.String, 
+    var `sessionRevision`: kotlin.ULong, 
+    var `decision`: FfiDiscoveryApprovalDecision, 
+    var `grant`: FfiDiscoveryApprovalGrant, 
+    var `createdAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryApproval: FfiConverterRustBuffer<FfiDiscoveryApproval> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryApproval {
+        return FfiDiscoveryApproval(
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypeFfiDiscoveryApprovalDecision.read(buf),
+            FfiConverterTypeFfiDiscoveryApprovalGrant.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryApproval) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterULong.allocationSize(value.`sessionRevision`) +
+            FfiConverterTypeFfiDiscoveryApprovalDecision.allocationSize(value.`decision`) +
+            FfiConverterTypeFfiDiscoveryApprovalGrant.allocationSize(value.`grant`) +
+            FfiConverterString.allocationSize(value.`createdAt`)
+    )
+
+    override fun write(value: FfiDiscoveryApproval, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterULong.write(value.`sessionRevision`, buf)
+            FfiConverterTypeFfiDiscoveryApprovalDecision.write(value.`decision`, buf)
+            FfiConverterTypeFfiDiscoveryApprovalGrant.write(value.`grant`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryApprovalProposal (
+    var `approvalId`: kotlin.String, 
+    var `grant`: FfiDiscoveryApprovalGrant, 
+    var `grantSha256`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryApprovalProposal: FfiConverterRustBuffer<FfiDiscoveryApprovalProposal> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryApprovalProposal {
+        return FfiDiscoveryApprovalProposal(
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiDiscoveryApprovalGrant.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryApprovalProposal) = (
+            FfiConverterString.allocationSize(value.`approvalId`) +
+            FfiConverterTypeFfiDiscoveryApprovalGrant.allocationSize(value.`grant`) +
+            FfiConverterString.allocationSize(value.`grantSha256`)
+    )
+
+    override fun write(value: FfiDiscoveryApprovalProposal, buf: ByteBuffer) {
+            FfiConverterString.write(value.`approvalId`, buf)
+            FfiConverterTypeFfiDiscoveryApprovalGrant.write(value.`grant`, buf)
+            FfiConverterString.write(value.`grantSha256`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantCallEstimate (
+    var `inputTokens`: kotlin.ULong, 
+    var `maximumOutputTokens`: kotlin.ULong, 
+    var `maximumCostMicroUnits`: kotlin.ULong
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantCallEstimate: FfiConverterRustBuffer<FfiDiscoveryAssistantCallEstimate> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantCallEstimate {
+        return FfiDiscoveryAssistantCallEstimate(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantCallEstimate) = (
+            FfiConverterULong.allocationSize(value.`inputTokens`) +
+            FfiConverterULong.allocationSize(value.`maximumOutputTokens`) +
+            FfiConverterULong.allocationSize(value.`maximumCostMicroUnits`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantCallEstimate, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`inputTokens`, buf)
+            FfiConverterULong.write(value.`maximumOutputTokens`, buf)
+            FfiConverterULong.write(value.`maximumCostMicroUnits`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantDraftReview (
+    var `draft`: FfiDiscoveryAssistantManifestDraft, 
+    var `unresolvedConflicts`: List<FfiDiscoveryAssistantDraftField>, 
+    var `requiredChecks`: List<FfiDiscoveryAssistantDraftReviewCheck>, 
+    var `persistence`: FfiDiscoveryAssistantDraftPersistence
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantDraftReview: FfiConverterRustBuffer<FfiDiscoveryAssistantDraftReview> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantDraftReview {
+        return FfiDiscoveryAssistantDraftReview(
+            FfiConverterTypeFfiDiscoveryAssistantManifestDraft.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryAssistantDraftField.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryAssistantDraftReviewCheck.read(buf),
+            FfiConverterTypeFfiDiscoveryAssistantDraftPersistence.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantDraftReview) = (
+            FfiConverterTypeFfiDiscoveryAssistantManifestDraft.allocationSize(value.`draft`) +
+            FfiConverterSequenceTypeFfiDiscoveryAssistantDraftField.allocationSize(value.`unresolvedConflicts`) +
+            FfiConverterSequenceTypeFfiDiscoveryAssistantDraftReviewCheck.allocationSize(value.`requiredChecks`) +
+            FfiConverterTypeFfiDiscoveryAssistantDraftPersistence.allocationSize(value.`persistence`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantDraftReview, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryAssistantManifestDraft.write(value.`draft`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryAssistantDraftField.write(value.`unresolvedConflicts`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryAssistantDraftReviewCheck.write(value.`requiredChecks`, buf)
+            FfiConverterTypeFfiDiscoveryAssistantDraftPersistence.write(value.`persistence`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantEndpoint (
+    var `method`: FfiDiscoveryAssistantHttpMethod, 
+    var `path`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantEndpoint: FfiConverterRustBuffer<FfiDiscoveryAssistantEndpoint> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantEndpoint {
+        return FfiDiscoveryAssistantEndpoint(
+            FfiConverterTypeFfiDiscoveryAssistantHttpMethod.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantEndpoint) = (
+            FfiConverterTypeFfiDiscoveryAssistantHttpMethod.allocationSize(value.`method`) +
+            FfiConverterString.allocationSize(value.`path`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantEndpoint, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryAssistantHttpMethod.write(value.`method`, buf)
+            FfiConverterString.write(value.`path`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantEvidenceConflict (
+    var `field`: FfiDiscoveryAssistantDraftField, 
+    var `evidenceIds`: List<kotlin.String>, 
+    var `disposition`: FfiDiscoveryAssistantConflictDisposition
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantEvidenceConflict: FfiConverterRustBuffer<FfiDiscoveryAssistantEvidenceConflict> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantEvidenceConflict {
+        return FfiDiscoveryAssistantEvidenceConflict(
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterTypeFfiDiscoveryAssistantConflictDisposition.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantEvidenceConflict) = (
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.allocationSize(value.`field`) +
+            FfiConverterSequenceString.allocationSize(value.`evidenceIds`) +
+            FfiConverterTypeFfiDiscoveryAssistantConflictDisposition.allocationSize(value.`disposition`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantEvidenceConflict, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.write(value.`field`, buf)
+            FfiConverterSequenceString.write(value.`evidenceIds`, buf)
+            FfiConverterTypeFfiDiscoveryAssistantConflictDisposition.write(value.`disposition`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantEvidenceMapping (
+    var `field`: FfiDiscoveryAssistantDraftField, 
+    var `evidenceIds`: List<kotlin.String>, 
+    var `explanation`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantEvidenceMapping: FfiConverterRustBuffer<FfiDiscoveryAssistantEvidenceMapping> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantEvidenceMapping {
+        return FfiDiscoveryAssistantEvidenceMapping(
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantEvidenceMapping) = (
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.allocationSize(value.`field`) +
+            FfiConverterSequenceString.allocationSize(value.`evidenceIds`) +
+            FfiConverterString.allocationSize(value.`explanation`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantEvidenceMapping, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.write(value.`field`, buf)
+            FfiConverterSequenceString.write(value.`evidenceIds`, buf)
+            FfiConverterString.write(value.`explanation`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantFieldConfidence (
+    var `field`: FfiDiscoveryAssistantDraftField, 
+    var `level`: FfiDiscoveryAssistantConfidenceLevel, 
+    var `rationale`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantFieldConfidence: FfiConverterRustBuffer<FfiDiscoveryAssistantFieldConfidence> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantFieldConfidence {
+        return FfiDiscoveryAssistantFieldConfidence(
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.read(buf),
+            FfiConverterTypeFfiDiscoveryAssistantConfidenceLevel.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantFieldConfidence) = (
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.allocationSize(value.`field`) +
+            FfiConverterTypeFfiDiscoveryAssistantConfidenceLevel.allocationSize(value.`level`) +
+            FfiConverterString.allocationSize(value.`rationale`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantFieldConfidence, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.write(value.`field`, buf)
+            FfiConverterTypeFfiDiscoveryAssistantConfidenceLevel.write(value.`level`, buf)
+            FfiConverterString.write(value.`rationale`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantManifest (
+    var `schemaVersion`: kotlin.UInt, 
+    var `apiFamily`: FfiDiscoveryAssistantApiFamily, 
+    var `sources`: List<FfiDiscoveryAssistantManifestSource>, 
+    var `defaultApiOrigin`: kotlin.String?, 
+    var `auth`: FfiAuthBinding, 
+    var `modelsEndpoint`: FfiDiscoveryAssistantEndpoint?, 
+    var `generateEndpoint`: FfiDiscoveryAssistantEndpoint, 
+    var `responseDecoder`: FfiDiscoveryAssistantDecoder, 
+    var `streamingDecoder`: FfiDiscoveryAssistantDecoder?, 
+    var `parameters`: List<FfiParameterSpec>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantManifest: FfiConverterRustBuffer<FfiDiscoveryAssistantManifest> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantManifest {
+        return FfiDiscoveryAssistantManifest(
+            FfiConverterUInt.read(buf),
+            FfiConverterTypeFfiDiscoveryAssistantApiFamily.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryAssistantManifestSource.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeFfiAuthBinding.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryAssistantEndpoint.read(buf),
+            FfiConverterTypeFfiDiscoveryAssistantEndpoint.read(buf),
+            FfiConverterTypeFfiDiscoveryAssistantDecoder.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryAssistantDecoder.read(buf),
+            FfiConverterSequenceTypeFfiParameterSpec.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantManifest) = (
+            FfiConverterUInt.allocationSize(value.`schemaVersion`) +
+            FfiConverterTypeFfiDiscoveryAssistantApiFamily.allocationSize(value.`apiFamily`) +
+            FfiConverterSequenceTypeFfiDiscoveryAssistantManifestSource.allocationSize(value.`sources`) +
+            FfiConverterOptionalString.allocationSize(value.`defaultApiOrigin`) +
+            FfiConverterTypeFfiAuthBinding.allocationSize(value.`auth`) +
+            FfiConverterOptionalTypeFfiDiscoveryAssistantEndpoint.allocationSize(value.`modelsEndpoint`) +
+            FfiConverterTypeFfiDiscoveryAssistantEndpoint.allocationSize(value.`generateEndpoint`) +
+            FfiConverterTypeFfiDiscoveryAssistantDecoder.allocationSize(value.`responseDecoder`) +
+            FfiConverterOptionalTypeFfiDiscoveryAssistantDecoder.allocationSize(value.`streamingDecoder`) +
+            FfiConverterSequenceTypeFfiParameterSpec.allocationSize(value.`parameters`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantManifest, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`schemaVersion`, buf)
+            FfiConverterTypeFfiDiscoveryAssistantApiFamily.write(value.`apiFamily`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryAssistantManifestSource.write(value.`sources`, buf)
+            FfiConverterOptionalString.write(value.`defaultApiOrigin`, buf)
+            FfiConverterTypeFfiAuthBinding.write(value.`auth`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryAssistantEndpoint.write(value.`modelsEndpoint`, buf)
+            FfiConverterTypeFfiDiscoveryAssistantEndpoint.write(value.`generateEndpoint`, buf)
+            FfiConverterTypeFfiDiscoveryAssistantDecoder.write(value.`responseDecoder`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryAssistantDecoder.write(value.`streamingDecoder`, buf)
+            FfiConverterSequenceTypeFfiParameterSpec.write(value.`parameters`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantManifestDraft (
+    var `manifest`: FfiDiscoveryAssistantManifest, 
+    var `evidenceMappings`: List<FfiDiscoveryAssistantEvidenceMapping>, 
+    var `conflicts`: List<FfiDiscoveryAssistantEvidenceConflict>, 
+    var `unresolvedQuestions`: List<FfiDiscoveryAssistantQuestion>, 
+    var `confidence`: List<FfiDiscoveryAssistantFieldConfidence>, 
+    var `summary`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantManifestDraft: FfiConverterRustBuffer<FfiDiscoveryAssistantManifestDraft> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantManifestDraft {
+        return FfiDiscoveryAssistantManifestDraft(
+            FfiConverterTypeFfiDiscoveryAssistantManifest.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryAssistantEvidenceMapping.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryAssistantEvidenceConflict.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryAssistantQuestion.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryAssistantFieldConfidence.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantManifestDraft) = (
+            FfiConverterTypeFfiDiscoveryAssistantManifest.allocationSize(value.`manifest`) +
+            FfiConverterSequenceTypeFfiDiscoveryAssistantEvidenceMapping.allocationSize(value.`evidenceMappings`) +
+            FfiConverterSequenceTypeFfiDiscoveryAssistantEvidenceConflict.allocationSize(value.`conflicts`) +
+            FfiConverterSequenceTypeFfiDiscoveryAssistantQuestion.allocationSize(value.`unresolvedQuestions`) +
+            FfiConverterSequenceTypeFfiDiscoveryAssistantFieldConfidence.allocationSize(value.`confidence`) +
+            FfiConverterString.allocationSize(value.`summary`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantManifestDraft, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryAssistantManifest.write(value.`manifest`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryAssistantEvidenceMapping.write(value.`evidenceMappings`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryAssistantEvidenceConflict.write(value.`conflicts`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryAssistantQuestion.write(value.`unresolvedQuestions`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryAssistantFieldConfidence.write(value.`confidence`, buf)
+            FfiConverterString.write(value.`summary`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantManifestSource (
+    var `kind`: FfiDiscoveryAssistantManifestSourceKind, 
+    var `url`: kotlin.String, 
+    var `contentSha256`: kotlin.String?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantManifestSource: FfiConverterRustBuffer<FfiDiscoveryAssistantManifestSource> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantManifestSource {
+        return FfiDiscoveryAssistantManifestSource(
+            FfiConverterTypeFfiDiscoveryAssistantManifestSourceKind.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantManifestSource) = (
+            FfiConverterTypeFfiDiscoveryAssistantManifestSourceKind.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`url`) +
+            FfiConverterOptionalString.allocationSize(value.`contentSha256`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantManifestSource, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryAssistantManifestSourceKind.write(value.`kind`, buf)
+            FfiConverterString.write(value.`url`, buf)
+            FfiConverterOptionalString.write(value.`contentSha256`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantQuestion (
+    var `id`: kotlin.String, 
+    var `field`: FfiDiscoveryAssistantDraftField?, 
+    var `question`: kotlin.String, 
+    var `requiredEvidence`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantQuestion: FfiConverterRustBuffer<FfiDiscoveryAssistantQuestion> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantQuestion {
+        return FfiDiscoveryAssistantQuestion(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryAssistantDraftField.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantQuestion) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterOptionalTypeFfiDiscoveryAssistantDraftField.allocationSize(value.`field`) +
+            FfiConverterString.allocationSize(value.`question`) +
+            FfiConverterString.allocationSize(value.`requiredEvidence`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantQuestion, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryAssistantDraftField.write(value.`field`, buf)
+            FfiConverterString.write(value.`question`, buf)
+            FfiConverterString.write(value.`requiredEvidence`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryAssistantResumeBoundary (
+    var `checkpoint`: FfiDiscoveryAssistantCheckpoint?, 
+    var `action`: FfiDiscoveryAssistantResumeAction, 
+    var `questions`: List<FfiDiscoveryAssistantQuestion>, 
+    var `draftReview`: FfiDiscoveryAssistantDraftReview?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantResumeBoundary: FfiConverterRustBuffer<FfiDiscoveryAssistantResumeBoundary> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantResumeBoundary {
+        return FfiDiscoveryAssistantResumeBoundary(
+            FfiConverterOptionalTypeFfiDiscoveryAssistantCheckpoint.read(buf),
+            FfiConverterTypeFfiDiscoveryAssistantResumeAction.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryAssistantQuestion.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryAssistantDraftReview.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantResumeBoundary) = (
+            FfiConverterOptionalTypeFfiDiscoveryAssistantCheckpoint.allocationSize(value.`checkpoint`) +
+            FfiConverterTypeFfiDiscoveryAssistantResumeAction.allocationSize(value.`action`) +
+            FfiConverterSequenceTypeFfiDiscoveryAssistantQuestion.allocationSize(value.`questions`) +
+            FfiConverterOptionalTypeFfiDiscoveryAssistantDraftReview.allocationSize(value.`draftReview`)
+    )
+
+    override fun write(value: FfiDiscoveryAssistantResumeBoundary, buf: ByteBuffer) {
+            FfiConverterOptionalTypeFfiDiscoveryAssistantCheckpoint.write(value.`checkpoint`, buf)
+            FfiConverterTypeFfiDiscoveryAssistantResumeAction.write(value.`action`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryAssistantQuestion.write(value.`questions`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryAssistantDraftReview.write(value.`draftReview`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryCandidate (
+    var `id`: kotlin.String, 
+    var `proposedRevision`: kotlin.ULong, 
+    var `summary`: FfiDiscoveryCandidateSummary, 
+    var `evidenceIds`: List<kotlin.String>, 
+    var `createdAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryCandidate: FfiConverterRustBuffer<FfiDiscoveryCandidate> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryCandidate {
+        return FfiDiscoveryCandidate(
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypeFfiDiscoveryCandidateSummary.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryCandidate) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterULong.allocationSize(value.`proposedRevision`) +
+            FfiConverterTypeFfiDiscoveryCandidateSummary.allocationSize(value.`summary`) +
+            FfiConverterSequenceString.allocationSize(value.`evidenceIds`) +
+            FfiConverterString.allocationSize(value.`createdAt`)
+    )
+
+    override fun write(value: FfiDiscoveryCandidate, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterULong.write(value.`proposedRevision`, buf)
+            FfiConverterTypeFfiDiscoveryCandidateSummary.write(value.`summary`, buf)
+            FfiConverterSequenceString.write(value.`evidenceIds`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryCompensationStep (
+    var `id`: kotlin.String, 
+    var `commitAttemptId`: kotlin.String, 
+    var `ordinal`: kotlin.UInt, 
+    var `actionId`: kotlin.String, 
+    var `kind`: FfiDiscoveryCompensationKind, 
+    var `target`: FfiDiscoveryCompensationTarget, 
+    var `status`: FfiDiscoveryCompensationStatus, 
+    var `attemptCount`: kotlin.UInt, 
+    var `lastFailure`: FfiDiscoveryFailure?, 
+    var `createdAt`: kotlin.String, 
+    var `updatedAt`: kotlin.String, 
+    var `completedAt`: kotlin.String?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryCompensationStep: FfiConverterRustBuffer<FfiDiscoveryCompensationStep> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryCompensationStep {
+        return FfiDiscoveryCompensationStep(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiDiscoveryCompensationKind.read(buf),
+            FfiConverterTypeFfiDiscoveryCompensationTarget.read(buf),
+            FfiConverterTypeFfiDiscoveryCompensationStatus.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryFailure.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryCompensationStep) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`commitAttemptId`) +
+            FfiConverterUInt.allocationSize(value.`ordinal`) +
+            FfiConverterString.allocationSize(value.`actionId`) +
+            FfiConverterTypeFfiDiscoveryCompensationKind.allocationSize(value.`kind`) +
+            FfiConverterTypeFfiDiscoveryCompensationTarget.allocationSize(value.`target`) +
+            FfiConverterTypeFfiDiscoveryCompensationStatus.allocationSize(value.`status`) +
+            FfiConverterUInt.allocationSize(value.`attemptCount`) +
+            FfiConverterOptionalTypeFfiDiscoveryFailure.allocationSize(value.`lastFailure`) +
+            FfiConverterString.allocationSize(value.`createdAt`) +
+            FfiConverterString.allocationSize(value.`updatedAt`) +
+            FfiConverterOptionalString.allocationSize(value.`completedAt`)
+    )
+
+    override fun write(value: FfiDiscoveryCompensationStep, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`commitAttemptId`, buf)
+            FfiConverterUInt.write(value.`ordinal`, buf)
+            FfiConverterString.write(value.`actionId`, buf)
+            FfiConverterTypeFfiDiscoveryCompensationKind.write(value.`kind`, buf)
+            FfiConverterTypeFfiDiscoveryCompensationTarget.write(value.`target`, buf)
+            FfiConverterTypeFfiDiscoveryCompensationStatus.write(value.`status`, buf)
+            FfiConverterUInt.write(value.`attemptCount`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryFailure.write(value.`lastFailure`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+            FfiConverterString.write(value.`updatedAt`, buf)
+            FfiConverterOptionalString.write(value.`completedAt`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryEvent (
+    var `eventVersion`: kotlin.UInt, 
+    var `eventId`: kotlin.String, 
+    var `sessionId`: kotlin.String, 
+    var `sequence`: kotlin.ULong, 
+    var `sessionRevision`: kotlin.ULong, 
+    var `state`: FfiDiscoveryState, 
+    var `progress`: FfiDiscoveryProgress?, 
+    var `actionRequired`: FfiDiscoveryActionRequired?, 
+    var `warning`: FfiDiscoveryWarning?, 
+    var `actionId`: kotlin.String, 
+    var `failure`: FfiDiscoveryFailure?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryEvent: FfiConverterRustBuffer<FfiDiscoveryEvent> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryEvent {
+        return FfiDiscoveryEvent(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypeFfiDiscoveryState.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryProgress.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryActionRequired.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryWarning.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryFailure.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryEvent) = (
+            FfiConverterUInt.allocationSize(value.`eventVersion`) +
+            FfiConverterString.allocationSize(value.`eventId`) +
+            FfiConverterString.allocationSize(value.`sessionId`) +
+            FfiConverterULong.allocationSize(value.`sequence`) +
+            FfiConverterULong.allocationSize(value.`sessionRevision`) +
+            FfiConverterTypeFfiDiscoveryState.allocationSize(value.`state`) +
+            FfiConverterOptionalTypeFfiDiscoveryProgress.allocationSize(value.`progress`) +
+            FfiConverterOptionalTypeFfiDiscoveryActionRequired.allocationSize(value.`actionRequired`) +
+            FfiConverterOptionalTypeFfiDiscoveryWarning.allocationSize(value.`warning`) +
+            FfiConverterString.allocationSize(value.`actionId`) +
+            FfiConverterOptionalTypeFfiDiscoveryFailure.allocationSize(value.`failure`)
+    )
+
+    override fun write(value: FfiDiscoveryEvent, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`eventVersion`, buf)
+            FfiConverterString.write(value.`eventId`, buf)
+            FfiConverterString.write(value.`sessionId`, buf)
+            FfiConverterULong.write(value.`sequence`, buf)
+            FfiConverterULong.write(value.`sessionRevision`, buf)
+            FfiConverterTypeFfiDiscoveryState.write(value.`state`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryProgress.write(value.`progress`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryActionRequired.write(value.`actionRequired`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryWarning.write(value.`warning`, buf)
+            FfiConverterString.write(value.`actionId`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryFailure.write(value.`failure`, buf)
+    }
+}
+
+
+
+/**
+ * A non-secret evidence index entry.
+ *
+ * Source URLs, document bodies, extracted JSON, and request data are omitted
+ * from the platform binding. The content digest and opaque evidence ID are
+ * enough for user selection and approval binding.
+ */
+data class FfiDiscoveryEvidence (
+    var `id`: kotlin.String, 
+    var `kind`: FfiDiscoveryEvidenceKind, 
+    var `contentSha256`: kotlin.String, 
+    var `fetchedAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryEvidence: FfiConverterRustBuffer<FfiDiscoveryEvidence> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryEvidence {
+        return FfiDiscoveryEvidence(
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiDiscoveryEvidenceKind.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryEvidence) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterTypeFfiDiscoveryEvidenceKind.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`contentSha256`) +
+            FfiConverterString.allocationSize(value.`fetchedAt`)
+    )
+
+    override fun write(value: FfiDiscoveryEvidence, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterTypeFfiDiscoveryEvidenceKind.write(value.`kind`, buf)
+            FfiConverterString.write(value.`contentSha256`, buf)
+            FfiConverterString.write(value.`fetchedAt`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryFailure (
+    var `code`: kotlin.String, 
+    var `messageKey`: kotlin.String, 
+    var `recoverable`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryFailure: FfiConverterRustBuffer<FfiDiscoveryFailure> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryFailure {
+        return FfiDiscoveryFailure(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryFailure) = (
+            FfiConverterString.allocationSize(value.`code`) +
+            FfiConverterString.allocationSize(value.`messageKey`) +
+            FfiConverterBoolean.allocationSize(value.`recoverable`)
+    )
+
+    override fun write(value: FfiDiscoveryFailure, buf: ByteBuffer) {
+            FfiConverterString.write(value.`code`, buf)
+            FfiConverterString.write(value.`messageKey`, buf)
+            FfiConverterBoolean.write(value.`recoverable`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryOutboxEvent (
+    var `event`: FfiDiscoveryEvent, 
+    var `deliveryAttempts`: kotlin.UInt, 
+    var `availableAt`: kotlin.String, 
+    var `createdAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryOutboxEvent: FfiConverterRustBuffer<FfiDiscoveryOutboxEvent> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryOutboxEvent {
+        return FfiDiscoveryOutboxEvent(
+            FfiConverterTypeFfiDiscoveryEvent.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryOutboxEvent) = (
+            FfiConverterTypeFfiDiscoveryEvent.allocationSize(value.`event`) +
+            FfiConverterUInt.allocationSize(value.`deliveryAttempts`) +
+            FfiConverterString.allocationSize(value.`availableAt`) +
+            FfiConverterString.allocationSize(value.`createdAt`)
+    )
+
+    override fun write(value: FfiDiscoveryOutboxEvent, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryEvent.write(value.`event`, buf)
+            FfiConverterUInt.write(value.`deliveryAttempts`, buf)
+            FfiConverterString.write(value.`availableAt`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryProbeBudget (
+    var `maxRequests`: kotlin.UInt, 
+    var `maxTotalTokensPerRequest`: kotlin.ULong, 
+    var `maxOutputTokensPerRequest`: kotlin.ULong, 
+    var `maxCostMicroUsdPerRequest`: kotlin.ULong, 
+    var `maxDurationMillisPerRequest`: kotlin.ULong, 
+    var `maxCallsPerRequest`: kotlin.UInt
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryProbeBudget: FfiConverterRustBuffer<FfiDiscoveryProbeBudget> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryProbeBudget {
+        return FfiDiscoveryProbeBudget(
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryProbeBudget) = (
+            FfiConverterUInt.allocationSize(value.`maxRequests`) +
+            FfiConverterULong.allocationSize(value.`maxTotalTokensPerRequest`) +
+            FfiConverterULong.allocationSize(value.`maxOutputTokensPerRequest`) +
+            FfiConverterULong.allocationSize(value.`maxCostMicroUsdPerRequest`) +
+            FfiConverterULong.allocationSize(value.`maxDurationMillisPerRequest`) +
+            FfiConverterUInt.allocationSize(value.`maxCallsPerRequest`)
+    )
+
+    override fun write(value: FfiDiscoveryProbeBudget, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`maxRequests`, buf)
+            FfiConverterULong.write(value.`maxTotalTokensPerRequest`, buf)
+            FfiConverterULong.write(value.`maxOutputTokensPerRequest`, buf)
+            FfiConverterULong.write(value.`maxCostMicroUsdPerRequest`, buf)
+            FfiConverterULong.write(value.`maxDurationMillisPerRequest`, buf)
+            FfiConverterUInt.write(value.`maxCallsPerRequest`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryProgress (
+    var `phase`: FfiDiscoveryProgressPhase, 
+    var `completed`: kotlin.UInt, 
+    var `total`: kotlin.UInt?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryProgress: FfiConverterRustBuffer<FfiDiscoveryProgress> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryProgress {
+        return FfiDiscoveryProgress(
+            FfiConverterTypeFfiDiscoveryProgressPhase.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryProgress) = (
+            FfiConverterTypeFfiDiscoveryProgressPhase.allocationSize(value.`phase`) +
+            FfiConverterUInt.allocationSize(value.`completed`) +
+            FfiConverterOptionalUInt.allocationSize(value.`total`)
+    )
+
+    override fun write(value: FfiDiscoveryProgress, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryProgressPhase.write(value.`phase`, buf)
+            FfiConverterUInt.write(value.`completed`, buf)
+            FfiConverterOptionalUInt.write(value.`total`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryRecoveryResult (
+    var `operationId`: kotlin.String, 
+    var `sessionId`: kotlin.String, 
+    var `state`: FfiDiscoveryState, 
+    var `event`: FfiDiscoveryEvent
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryRecoveryResult: FfiConverterRustBuffer<FfiDiscoveryRecoveryResult> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryRecoveryResult {
+        return FfiDiscoveryRecoveryResult(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiDiscoveryState.read(buf),
+            FfiConverterTypeFfiDiscoveryEvent.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryRecoveryResult) = (
+            FfiConverterString.allocationSize(value.`operationId`) +
+            FfiConverterString.allocationSize(value.`sessionId`) +
+            FfiConverterTypeFfiDiscoveryState.allocationSize(value.`state`) +
+            FfiConverterTypeFfiDiscoveryEvent.allocationSize(value.`event`)
+    )
+
+    override fun write(value: FfiDiscoveryRecoveryResult, buf: ByteBuffer) {
+            FfiConverterString.write(value.`operationId`, buf)
+            FfiConverterString.write(value.`sessionId`, buf)
+            FfiConverterTypeFfiDiscoveryState.write(value.`state`, buf)
+            FfiConverterTypeFfiDiscoveryEvent.write(value.`event`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryReview (
+    var `sha256`: kotlin.String, 
+    var `graphSha256`: kotlin.String, 
+    var `changes`: List<FfiDiscoveryReviewChange>, 
+    var `unresolvedQuestionCount`: kotlin.UInt, 
+    var `warningCount`: kotlin.UInt
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryReview: FfiConverterRustBuffer<FfiDiscoveryReview> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryReview {
+        return FfiDiscoveryReview(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryReviewChange.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryReview) = (
+            FfiConverterString.allocationSize(value.`sha256`) +
+            FfiConverterString.allocationSize(value.`graphSha256`) +
+            FfiConverterSequenceTypeFfiDiscoveryReviewChange.allocationSize(value.`changes`) +
+            FfiConverterUInt.allocationSize(value.`unresolvedQuestionCount`) +
+            FfiConverterUInt.allocationSize(value.`warningCount`)
+    )
+
+    override fun write(value: FfiDiscoveryReview, buf: ByteBuffer) {
+            FfiConverterString.write(value.`sha256`, buf)
+            FfiConverterString.write(value.`graphSha256`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryReviewChange.write(value.`changes`, buf)
+            FfiConverterUInt.write(value.`unresolvedQuestionCount`, buf)
+            FfiConverterUInt.write(value.`warningCount`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryReviewChange (
+    var `kind`: FfiDiscoveryReviewChangeKind, 
+    var `targetKind`: FfiDiscoveryReviewTargetKind, 
+    var `targetId`: kotlin.String, 
+    var `summaryKey`: kotlin.String, 
+    var `evidenceIds`: List<kotlin.String>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryReviewChange: FfiConverterRustBuffer<FfiDiscoveryReviewChange> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryReviewChange {
+        return FfiDiscoveryReviewChange(
+            FfiConverterTypeFfiDiscoveryReviewChangeKind.read(buf),
+            FfiConverterTypeFfiDiscoveryReviewTargetKind.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryReviewChange) = (
+            FfiConverterTypeFfiDiscoveryReviewChangeKind.allocationSize(value.`kind`) +
+            FfiConverterTypeFfiDiscoveryReviewTargetKind.allocationSize(value.`targetKind`) +
+            FfiConverterString.allocationSize(value.`targetId`) +
+            FfiConverterString.allocationSize(value.`summaryKey`) +
+            FfiConverterSequenceString.allocationSize(value.`evidenceIds`)
+    )
+
+    override fun write(value: FfiDiscoveryReviewChange, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryReviewChangeKind.write(value.`kind`, buf)
+            FfiConverterTypeFfiDiscoveryReviewTargetKind.write(value.`targetKind`, buf)
+            FfiConverterString.write(value.`targetId`, buf)
+            FfiConverterString.write(value.`summaryKey`, buf)
+            FfiConverterSequenceString.write(value.`evidenceIds`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryReviewProposal (
+    var `review`: FfiDiscoveryReview, 
+    var `approval`: FfiDiscoveryApprovalProposal, 
+    var `commitAttemptId`: kotlin.String, 
+    var `commitPlanSha256`: kotlin.String, 
+    var `requestPreview`: FfiRequestPreview?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryReviewProposal: FfiConverterRustBuffer<FfiDiscoveryReviewProposal> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryReviewProposal {
+        return FfiDiscoveryReviewProposal(
+            FfiConverterTypeFfiDiscoveryReview.read(buf),
+            FfiConverterTypeFfiDiscoveryApprovalProposal.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalTypeFfiRequestPreview.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryReviewProposal) = (
+            FfiConverterTypeFfiDiscoveryReview.allocationSize(value.`review`) +
+            FfiConverterTypeFfiDiscoveryApprovalProposal.allocationSize(value.`approval`) +
+            FfiConverterString.allocationSize(value.`commitAttemptId`) +
+            FfiConverterString.allocationSize(value.`commitPlanSha256`) +
+            FfiConverterOptionalTypeFfiRequestPreview.allocationSize(value.`requestPreview`)
+    )
+
+    override fun write(value: FfiDiscoveryReviewProposal, buf: ByteBuffer) {
+            FfiConverterTypeFfiDiscoveryReview.write(value.`review`, buf)
+            FfiConverterTypeFfiDiscoveryApprovalProposal.write(value.`approval`, buf)
+            FfiConverterString.write(value.`commitAttemptId`, buf)
+            FfiConverterString.write(value.`commitPlanSha256`, buf)
+            FfiConverterOptionalTypeFfiRequestPreview.write(value.`requestPreview`, buf)
+    }
+}
+
+
+
+data class FfiDiscoveryStep (
+    var `id`: kotlin.String, 
+    var `titleKey`: kotlin.String, 
+    var `state`: FfiDiscoveryStepState
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryStep: FfiConverterRustBuffer<FfiDiscoveryStep> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryStep {
+        return FfiDiscoveryStep(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiDiscoveryStepState.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiDiscoveryStep) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`titleKey`) +
+            FfiConverterTypeFfiDiscoveryStepState.allocationSize(value.`state`)
+    )
+
+    override fun write(value: FfiDiscoveryStep, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`titleKey`, buf)
+            FfiConverterTypeFfiDiscoveryStepState.write(value.`state`, buf)
+    }
+}
+
+
+
+data class FfiEffectiveCapability (
+    var `selected`: FfiCapabilityObservation, 
+    var `alternatives`: List<FfiCapabilityObservation>, 
+    var `evaluatedAt`: kotlin.String, 
+    var `selectedIsStale`: kotlin.Boolean, 
+    var `hasConflict`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiEffectiveCapability: FfiConverterRustBuffer<FfiEffectiveCapability> {
+    override fun read(buf: ByteBuffer): FfiEffectiveCapability {
+        return FfiEffectiveCapability(
+            FfiConverterTypeFfiCapabilityObservation.read(buf),
+            FfiConverterSequenceTypeFfiCapabilityObservation.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiEffectiveCapability) = (
+            FfiConverterTypeFfiCapabilityObservation.allocationSize(value.`selected`) +
+            FfiConverterSequenceTypeFfiCapabilityObservation.allocationSize(value.`alternatives`) +
+            FfiConverterString.allocationSize(value.`evaluatedAt`) +
+            FfiConverterBoolean.allocationSize(value.`selectedIsStale`) +
+            FfiConverterBoolean.allocationSize(value.`hasConflict`)
+    )
+
+    override fun write(value: FfiEffectiveCapability, buf: ByteBuffer) {
+            FfiConverterTypeFfiCapabilityObservation.write(value.`selected`, buf)
+            FfiConverterSequenceTypeFfiCapabilityObservation.write(value.`alternatives`, buf)
+            FfiConverterString.write(value.`evaluatedAt`, buf)
+            FfiConverterBoolean.write(value.`selectedIsStale`, buf)
+            FfiConverterBoolean.write(value.`hasConflict`, buf)
+    }
+}
+
+
+
 data class FfiEventBatch (
     var `events`: List<FfiChatEvent>, 
     /**
@@ -2594,6 +5990,126 @@ public object FfiConverterTypeFfiEventBatch: FfiConverterRustBuffer<FfiEventBatc
     override fun write(value: FfiEventBatch, buf: ByteBuffer) {
             FfiConverterSequenceTypeFfiChatEvent.write(value.`events`, buf)
             FfiConverterULong.write(value.`droppedEventCount`, buf)
+    }
+}
+
+
+
+data class FfiGenerationPreset (
+    var `id`: kotlin.String, 
+    var `modelRouteId`: kotlin.String, 
+    var `displayName`: kotlin.String, 
+    var `parameterValueCount`: kotlin.UInt, 
+    var `values`: List<FfiParameterValue>, 
+    var `reasoningMode`: kotlin.String, 
+    var `reasoningEffort`: kotlin.String?, 
+    var `reasoningBudgetTokens`: kotlin.UInt?, 
+    var `reasoningSummary`: kotlin.String, 
+    var `preserveOpaqueReasoningState`: kotlin.Boolean, 
+    var `promptCacheMode`: kotlin.String, 
+    var `promptCacheTtl`: kotlin.String, 
+    var `promptCacheCustomTtlSeconds`: kotlin.UInt?, 
+    var `promptCacheContextReference`: kotlin.String?, 
+    var `createdAt`: kotlin.String, 
+    var `updatedAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiGenerationPreset: FfiConverterRustBuffer<FfiGenerationPreset> {
+    override fun read(buf: ByteBuffer): FfiGenerationPreset {
+        return FfiGenerationPreset(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterSequenceTypeFfiParameterValue.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiGenerationPreset) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`modelRouteId`) +
+            FfiConverterString.allocationSize(value.`displayName`) +
+            FfiConverterUInt.allocationSize(value.`parameterValueCount`) +
+            FfiConverterSequenceTypeFfiParameterValue.allocationSize(value.`values`) +
+            FfiConverterString.allocationSize(value.`reasoningMode`) +
+            FfiConverterOptionalString.allocationSize(value.`reasoningEffort`) +
+            FfiConverterOptionalUInt.allocationSize(value.`reasoningBudgetTokens`) +
+            FfiConverterString.allocationSize(value.`reasoningSummary`) +
+            FfiConverterBoolean.allocationSize(value.`preserveOpaqueReasoningState`) +
+            FfiConverterString.allocationSize(value.`promptCacheMode`) +
+            FfiConverterString.allocationSize(value.`promptCacheTtl`) +
+            FfiConverterOptionalUInt.allocationSize(value.`promptCacheCustomTtlSeconds`) +
+            FfiConverterOptionalString.allocationSize(value.`promptCacheContextReference`) +
+            FfiConverterString.allocationSize(value.`createdAt`) +
+            FfiConverterString.allocationSize(value.`updatedAt`)
+    )
+
+    override fun write(value: FfiGenerationPreset, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`modelRouteId`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+            FfiConverterUInt.write(value.`parameterValueCount`, buf)
+            FfiConverterSequenceTypeFfiParameterValue.write(value.`values`, buf)
+            FfiConverterString.write(value.`reasoningMode`, buf)
+            FfiConverterOptionalString.write(value.`reasoningEffort`, buf)
+            FfiConverterOptionalUInt.write(value.`reasoningBudgetTokens`, buf)
+            FfiConverterString.write(value.`reasoningSummary`, buf)
+            FfiConverterBoolean.write(value.`preserveOpaqueReasoningState`, buf)
+            FfiConverterString.write(value.`promptCacheMode`, buf)
+            FfiConverterString.write(value.`promptCacheTtl`, buf)
+            FfiConverterOptionalUInt.write(value.`promptCacheCustomTtlSeconds`, buf)
+            FfiConverterOptionalString.write(value.`promptCacheContextReference`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+            FfiConverterString.write(value.`updatedAt`, buf)
+    }
+}
+
+
+
+data class FfiGenerationTarget (
+    var `modelRouteId`: kotlin.String, 
+    var `generationPresetId`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiGenerationTarget: FfiConverterRustBuffer<FfiGenerationTarget> {
+    override fun read(buf: ByteBuffer): FfiGenerationTarget {
+        return FfiGenerationTarget(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiGenerationTarget) = (
+            FfiConverterString.allocationSize(value.`modelRouteId`) +
+            FfiConverterString.allocationSize(value.`generationPresetId`)
+    )
+
+    override fun write(value: FfiGenerationTarget, buf: ByteBuffer) {
+            FfiConverterString.write(value.`modelRouteId`, buf)
+            FfiConverterString.write(value.`generationPresetId`, buf)
     }
 }
 
@@ -2883,6 +6399,2170 @@ public object FfiConverterTypeFfiMessageActionGeneration: FfiConverterRustBuffer
 
 
 
+data class FfiModelRoute (
+    var `id`: kotlin.String, 
+    var `connectionId`: kotlin.String, 
+    var `apiFamily`: kotlin.String, 
+    var `modelId`: kotlin.String, 
+    var `displayName`: kotlin.String?, 
+    var `routeConfig`: FfiModelRouteConfig, 
+    var `availability`: kotlin.String, 
+    var `missCount`: kotlin.UInt, 
+    /**
+     * Canonical, bounded normalized metadata. This is never a wholesale
+     * provider response and never contains credential material.
+     */
+    var `rawMetadataJson`: kotlin.String?, 
+    var `metadataSource`: kotlin.String, 
+    var `metadataObservedAt`: kotlin.String?, 
+    var `lastReconciledSyncJobId`: kotlin.String?, 
+    var `metadataSyncJobId`: kotlin.String?, 
+    var `firstSeenAt`: kotlin.String, 
+    var `lastSeenAt`: kotlin.String?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiModelRoute: FfiConverterRustBuffer<FfiModelRoute> {
+    override fun read(buf: ByteBuffer): FfiModelRoute {
+        return FfiModelRoute(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeFfiModelRouteConfig.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiModelRoute) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`connectionId`) +
+            FfiConverterString.allocationSize(value.`apiFamily`) +
+            FfiConverterString.allocationSize(value.`modelId`) +
+            FfiConverterOptionalString.allocationSize(value.`displayName`) +
+            FfiConverterTypeFfiModelRouteConfig.allocationSize(value.`routeConfig`) +
+            FfiConverterString.allocationSize(value.`availability`) +
+            FfiConverterUInt.allocationSize(value.`missCount`) +
+            FfiConverterOptionalString.allocationSize(value.`rawMetadataJson`) +
+            FfiConverterString.allocationSize(value.`metadataSource`) +
+            FfiConverterOptionalString.allocationSize(value.`metadataObservedAt`) +
+            FfiConverterOptionalString.allocationSize(value.`lastReconciledSyncJobId`) +
+            FfiConverterOptionalString.allocationSize(value.`metadataSyncJobId`) +
+            FfiConverterString.allocationSize(value.`firstSeenAt`) +
+            FfiConverterOptionalString.allocationSize(value.`lastSeenAt`)
+    )
+
+    override fun write(value: FfiModelRoute, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`connectionId`, buf)
+            FfiConverterString.write(value.`apiFamily`, buf)
+            FfiConverterString.write(value.`modelId`, buf)
+            FfiConverterOptionalString.write(value.`displayName`, buf)
+            FfiConverterTypeFfiModelRouteConfig.write(value.`routeConfig`, buf)
+            FfiConverterString.write(value.`availability`, buf)
+            FfiConverterUInt.write(value.`missCount`, buf)
+            FfiConverterOptionalString.write(value.`rawMetadataJson`, buf)
+            FfiConverterString.write(value.`metadataSource`, buf)
+            FfiConverterOptionalString.write(value.`metadataObservedAt`, buf)
+            FfiConverterOptionalString.write(value.`lastReconciledSyncJobId`, buf)
+            FfiConverterOptionalString.write(value.`metadataSyncJobId`, buf)
+            FfiConverterString.write(value.`firstSeenAt`, buf)
+            FfiConverterOptionalString.write(value.`lastSeenAt`, buf)
+    }
+}
+
+
+
+data class FfiModelRouteConfig (
+    var `deploymentId`: kotlin.String?, 
+    var `region`: kotlin.String?, 
+    var `endpointPath`: kotlin.String?, 
+    var `values`: List<FfiConnectionConfigEntry>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiModelRouteConfig: FfiConverterRustBuffer<FfiModelRouteConfig> {
+    override fun read(buf: ByteBuffer): FfiModelRouteConfig {
+        return FfiModelRouteConfig(
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiModelRouteConfig) = (
+            FfiConverterOptionalString.allocationSize(value.`deploymentId`) +
+            FfiConverterOptionalString.allocationSize(value.`region`) +
+            FfiConverterOptionalString.allocationSize(value.`endpointPath`) +
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.allocationSize(value.`values`)
+    )
+
+    override fun write(value: FfiModelRouteConfig, buf: ByteBuffer) {
+            FfiConverterOptionalString.write(value.`deploymentId`, buf)
+            FfiConverterOptionalString.write(value.`region`, buf)
+            FfiConverterOptionalString.write(value.`endpointPath`, buf)
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.write(value.`values`, buf)
+    }
+}
+
+
+
+data class FfiModelSyncEvent (
+    var `version`: kotlin.UInt, 
+    var `jobId`: kotlin.String, 
+    var `sequence`: kotlin.ULong, 
+    var `jobRevision`: kotlin.ULong, 
+    var `redactionVersion`: kotlin.UInt, 
+    var `state`: kotlin.String, 
+    var `completedSteps`: kotlin.UInt, 
+    var `totalSteps`: kotlin.UInt, 
+    var `messageKey`: kotlin.String, 
+    var `reviewSha256`: kotlin.String?, 
+    var `failure`: FfiModelSyncFailure?, 
+    var `emittedAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiModelSyncEvent: FfiConverterRustBuffer<FfiModelSyncEvent> {
+    override fun read(buf: ByteBuffer): FfiModelSyncEvent {
+        return FfiModelSyncEvent(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalTypeFfiModelSyncFailure.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiModelSyncEvent) = (
+            FfiConverterUInt.allocationSize(value.`version`) +
+            FfiConverterString.allocationSize(value.`jobId`) +
+            FfiConverterULong.allocationSize(value.`sequence`) +
+            FfiConverterULong.allocationSize(value.`jobRevision`) +
+            FfiConverterUInt.allocationSize(value.`redactionVersion`) +
+            FfiConverterString.allocationSize(value.`state`) +
+            FfiConverterUInt.allocationSize(value.`completedSteps`) +
+            FfiConverterUInt.allocationSize(value.`totalSteps`) +
+            FfiConverterString.allocationSize(value.`messageKey`) +
+            FfiConverterOptionalString.allocationSize(value.`reviewSha256`) +
+            FfiConverterOptionalTypeFfiModelSyncFailure.allocationSize(value.`failure`) +
+            FfiConverterString.allocationSize(value.`emittedAt`)
+    )
+
+    override fun write(value: FfiModelSyncEvent, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`version`, buf)
+            FfiConverterString.write(value.`jobId`, buf)
+            FfiConverterULong.write(value.`sequence`, buf)
+            FfiConverterULong.write(value.`jobRevision`, buf)
+            FfiConverterUInt.write(value.`redactionVersion`, buf)
+            FfiConverterString.write(value.`state`, buf)
+            FfiConverterUInt.write(value.`completedSteps`, buf)
+            FfiConverterUInt.write(value.`totalSteps`, buf)
+            FfiConverterString.write(value.`messageKey`, buf)
+            FfiConverterOptionalString.write(value.`reviewSha256`, buf)
+            FfiConverterOptionalTypeFfiModelSyncFailure.write(value.`failure`, buf)
+            FfiConverterString.write(value.`emittedAt`, buf)
+    }
+}
+
+
+
+data class FfiModelSyncFailure (
+    var `code`: kotlin.String, 
+    var `messageKey`: kotlin.String, 
+    var `recoverable`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiModelSyncFailure: FfiConverterRustBuffer<FfiModelSyncFailure> {
+    override fun read(buf: ByteBuffer): FfiModelSyncFailure {
+        return FfiModelSyncFailure(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiModelSyncFailure) = (
+            FfiConverterString.allocationSize(value.`code`) +
+            FfiConverterString.allocationSize(value.`messageKey`) +
+            FfiConverterBoolean.allocationSize(value.`recoverable`)
+    )
+
+    override fun write(value: FfiModelSyncFailure, buf: ByteBuffer) {
+            FfiConverterString.write(value.`code`, buf)
+            FfiConverterString.write(value.`messageKey`, buf)
+            FfiConverterBoolean.write(value.`recoverable`, buf)
+    }
+}
+
+
+
+data class FfiModelSyncJob (
+    var `id`: kotlin.String, 
+    var `connectionId`: kotlin.String, 
+    var `state`: kotlin.String, 
+    var `revision`: kotlin.ULong, 
+    var `review`: FfiModelSyncReview?, 
+    var `failure`: FfiModelSyncFailure?, 
+    var `createdAt`: kotlin.String, 
+    var `updatedAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiModelSyncJob: FfiConverterRustBuffer<FfiModelSyncJob> {
+    override fun read(buf: ByteBuffer): FfiModelSyncJob {
+        return FfiModelSyncJob(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterOptionalTypeFfiModelSyncReview.read(buf),
+            FfiConverterOptionalTypeFfiModelSyncFailure.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiModelSyncJob) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`connectionId`) +
+            FfiConverterString.allocationSize(value.`state`) +
+            FfiConverterULong.allocationSize(value.`revision`) +
+            FfiConverterOptionalTypeFfiModelSyncReview.allocationSize(value.`review`) +
+            FfiConverterOptionalTypeFfiModelSyncFailure.allocationSize(value.`failure`) +
+            FfiConverterString.allocationSize(value.`createdAt`) +
+            FfiConverterString.allocationSize(value.`updatedAt`)
+    )
+
+    override fun write(value: FfiModelSyncJob, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`connectionId`, buf)
+            FfiConverterString.write(value.`state`, buf)
+            FfiConverterULong.write(value.`revision`, buf)
+            FfiConverterOptionalTypeFfiModelSyncReview.write(value.`review`, buf)
+            FfiConverterOptionalTypeFfiModelSyncFailure.write(value.`failure`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+            FfiConverterString.write(value.`updatedAt`, buf)
+    }
+}
+
+
+
+data class FfiModelSyncProvenance (
+    var `source`: kotlin.String, 
+    var `apiFamily`: kotlin.String, 
+    var `apiOrigin`: kotlin.String, 
+    var `endpointPath`: kotlin.String, 
+    var `pagesFetched`: kotlin.UInt, 
+    var `responseBytes`: kotlin.ULong
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiModelSyncProvenance: FfiConverterRustBuffer<FfiModelSyncProvenance> {
+    override fun read(buf: ByteBuffer): FfiModelSyncProvenance {
+        return FfiModelSyncProvenance(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiModelSyncProvenance) = (
+            FfiConverterString.allocationSize(value.`source`) +
+            FfiConverterString.allocationSize(value.`apiFamily`) +
+            FfiConverterString.allocationSize(value.`apiOrigin`) +
+            FfiConverterString.allocationSize(value.`endpointPath`) +
+            FfiConverterUInt.allocationSize(value.`pagesFetched`) +
+            FfiConverterULong.allocationSize(value.`responseBytes`)
+    )
+
+    override fun write(value: FfiModelSyncProvenance, buf: ByteBuffer) {
+            FfiConverterString.write(value.`source`, buf)
+            FfiConverterString.write(value.`apiFamily`, buf)
+            FfiConverterString.write(value.`apiOrigin`, buf)
+            FfiConverterString.write(value.`endpointPath`, buf)
+            FfiConverterUInt.write(value.`pagesFetched`, buf)
+            FfiConverterULong.write(value.`responseBytes`, buf)
+    }
+}
+
+
+
+data class FfiModelSyncReview (
+    var `sha256`: kotlin.String, 
+    var `connectionId`: kotlin.String, 
+    var `expectedConnection`: FfiProviderConnection, 
+    var `observedAt`: kotlin.String, 
+    var `expectedModelRoutes`: List<FfiModelRoute>, 
+    var `listedRoutes`: List<FfiModelRoute>, 
+    var `newlySeenModelRouteIds`: List<kotlin.String>, 
+    var `missingModelRouteIds`: List<kotlin.String>, 
+    var `initialPresets`: List<FfiGenerationPreset>, 
+    var `capabilityObservations`: List<FfiCapabilityObservation>, 
+    var `routesRequiringPresetConfiguration`: List<kotlin.String>, 
+    var `provenance`: FfiModelSyncProvenance
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiModelSyncReview: FfiConverterRustBuffer<FfiModelSyncReview> {
+    override fun read(buf: ByteBuffer): FfiModelSyncReview {
+        return FfiModelSyncReview(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiProviderConnection.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeFfiModelRoute.read(buf),
+            FfiConverterSequenceTypeFfiModelRoute.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceTypeFfiGenerationPreset.read(buf),
+            FfiConverterSequenceTypeFfiCapabilityObservation.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterTypeFfiModelSyncProvenance.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiModelSyncReview) = (
+            FfiConverterString.allocationSize(value.`sha256`) +
+            FfiConverterString.allocationSize(value.`connectionId`) +
+            FfiConverterTypeFfiProviderConnection.allocationSize(value.`expectedConnection`) +
+            FfiConverterString.allocationSize(value.`observedAt`) +
+            FfiConverterSequenceTypeFfiModelRoute.allocationSize(value.`expectedModelRoutes`) +
+            FfiConverterSequenceTypeFfiModelRoute.allocationSize(value.`listedRoutes`) +
+            FfiConverterSequenceString.allocationSize(value.`newlySeenModelRouteIds`) +
+            FfiConverterSequenceString.allocationSize(value.`missingModelRouteIds`) +
+            FfiConverterSequenceTypeFfiGenerationPreset.allocationSize(value.`initialPresets`) +
+            FfiConverterSequenceTypeFfiCapabilityObservation.allocationSize(value.`capabilityObservations`) +
+            FfiConverterSequenceString.allocationSize(value.`routesRequiringPresetConfiguration`) +
+            FfiConverterTypeFfiModelSyncProvenance.allocationSize(value.`provenance`)
+    )
+
+    override fun write(value: FfiModelSyncReview, buf: ByteBuffer) {
+            FfiConverterString.write(value.`sha256`, buf)
+            FfiConverterString.write(value.`connectionId`, buf)
+            FfiConverterTypeFfiProviderConnection.write(value.`expectedConnection`, buf)
+            FfiConverterString.write(value.`observedAt`, buf)
+            FfiConverterSequenceTypeFfiModelRoute.write(value.`expectedModelRoutes`, buf)
+            FfiConverterSequenceTypeFfiModelRoute.write(value.`listedRoutes`, buf)
+            FfiConverterSequenceString.write(value.`newlySeenModelRouteIds`, buf)
+            FfiConverterSequenceString.write(value.`missingModelRouteIds`, buf)
+            FfiConverterSequenceTypeFfiGenerationPreset.write(value.`initialPresets`, buf)
+            FfiConverterSequenceTypeFfiCapabilityObservation.write(value.`capabilityObservations`, buf)
+            FfiConverterSequenceString.write(value.`routesRequiringPresetConfiguration`, buf)
+            FfiConverterTypeFfiModelSyncProvenance.write(value.`provenance`, buf)
+    }
+}
+
+
+
+data class FfiParameterChoice (
+    var `value`: FfiParameterLiteral, 
+    var `labelKey`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterChoice: FfiConverterRustBuffer<FfiParameterChoice> {
+    override fun read(buf: ByteBuffer): FfiParameterChoice {
+        return FfiParameterChoice(
+            FfiConverterTypeFfiParameterLiteral.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiParameterChoice) = (
+            FfiConverterTypeFfiParameterLiteral.allocationSize(value.`value`) +
+            FfiConverterString.allocationSize(value.`labelKey`)
+    )
+
+    override fun write(value: FfiParameterChoice, buf: ByteBuffer) {
+            FfiConverterTypeFfiParameterLiteral.write(value.`value`, buf)
+            FfiConverterString.write(value.`labelKey`, buf)
+    }
+}
+
+
+
+data class FfiParameterCondition (
+    var `parameterId`: kotlin.String, 
+    var `operator`: FfiParameterConditionOperator, 
+    var `value`: FfiParameterLiteral
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterCondition: FfiConverterRustBuffer<FfiParameterCondition> {
+    override fun read(buf: ByteBuffer): FfiParameterCondition {
+        return FfiParameterCondition(
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiParameterConditionOperator.read(buf),
+            FfiConverterTypeFfiParameterLiteral.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiParameterCondition) = (
+            FfiConverterString.allocationSize(value.`parameterId`) +
+            FfiConverterTypeFfiParameterConditionOperator.allocationSize(value.`operator`) +
+            FfiConverterTypeFfiParameterLiteral.allocationSize(value.`value`)
+    )
+
+    override fun write(value: FfiParameterCondition, buf: ByteBuffer) {
+            FfiConverterString.write(value.`parameterId`, buf)
+            FfiConverterTypeFfiParameterConditionOperator.write(value.`operator`, buf)
+            FfiConverterTypeFfiParameterLiteral.write(value.`value`, buf)
+    }
+}
+
+
+
+data class FfiParameterConflict (
+    var `parameterId`: kotlin.String, 
+    var `kind`: FfiParameterConflictKind, 
+    var `messageKey`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterConflict: FfiConverterRustBuffer<FfiParameterConflict> {
+    override fun read(buf: ByteBuffer): FfiParameterConflict {
+        return FfiParameterConflict(
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiParameterConflictKind.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiParameterConflict) = (
+            FfiConverterString.allocationSize(value.`parameterId`) +
+            FfiConverterTypeFfiParameterConflictKind.allocationSize(value.`kind`) +
+            FfiConverterString.allocationSize(value.`messageKey`)
+    )
+
+    override fun write(value: FfiParameterConflict, buf: ByteBuffer) {
+            FfiConverterString.write(value.`parameterId`, buf)
+            FfiConverterTypeFfiParameterConflictKind.write(value.`kind`, buf)
+            FfiConverterString.write(value.`messageKey`, buf)
+    }
+}
+
+
+
+data class FfiParameterIssue (
+    var `code`: kotlin.String, 
+    var `parameterId`: kotlin.String?, 
+    var `relatedParameterId`: kotlin.String?, 
+    var `message`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterIssue: FfiConverterRustBuffer<FfiParameterIssue> {
+    override fun read(buf: ByteBuffer): FfiParameterIssue {
+        return FfiParameterIssue(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiParameterIssue) = (
+            FfiConverterString.allocationSize(value.`code`) +
+            FfiConverterOptionalString.allocationSize(value.`parameterId`) +
+            FfiConverterOptionalString.allocationSize(value.`relatedParameterId`) +
+            FfiConverterString.allocationSize(value.`message`)
+    )
+
+    override fun write(value: FfiParameterIssue, buf: ByteBuffer) {
+            FfiConverterString.write(value.`code`, buf)
+            FfiConverterOptionalString.write(value.`parameterId`, buf)
+            FfiConverterOptionalString.write(value.`relatedParameterId`, buf)
+            FfiConverterString.write(value.`message`, buf)
+    }
+}
+
+
+
+data class FfiParameterSpec (
+    var `id`: kotlin.String, 
+    var `labelKey`: kotlin.String, 
+    var `descriptionKey`: kotlin.String?, 
+    var `valueType`: FfiParameterType, 
+    var `allowedValues`: List<FfiParameterChoice>, 
+    var `minimum`: kotlin.Double?, 
+    var `maximum`: kotlin.Double?, 
+    var `step`: kotlin.Double?, 
+    var `defaultMode`: FfiParameterDefaultMode, 
+    var `visibility`: FfiParameterCondition?, 
+    var `conflicts`: List<FfiParameterConflict>, 
+    var `providerMapping`: FfiProviderParameterMapping, 
+    var `level`: FfiUiParameterLevel
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterSpec: FfiConverterRustBuffer<FfiParameterSpec> {
+    override fun read(buf: ByteBuffer): FfiParameterSpec {
+        return FfiParameterSpec(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeFfiParameterType.read(buf),
+            FfiConverterSequenceTypeFfiParameterChoice.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterOptionalDouble.read(buf),
+            FfiConverterTypeFfiParameterDefaultMode.read(buf),
+            FfiConverterOptionalTypeFfiParameterCondition.read(buf),
+            FfiConverterSequenceTypeFfiParameterConflict.read(buf),
+            FfiConverterTypeFfiProviderParameterMapping.read(buf),
+            FfiConverterTypeFfiUiParameterLevel.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiParameterSpec) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`labelKey`) +
+            FfiConverterOptionalString.allocationSize(value.`descriptionKey`) +
+            FfiConverterTypeFfiParameterType.allocationSize(value.`valueType`) +
+            FfiConverterSequenceTypeFfiParameterChoice.allocationSize(value.`allowedValues`) +
+            FfiConverterOptionalDouble.allocationSize(value.`minimum`) +
+            FfiConverterOptionalDouble.allocationSize(value.`maximum`) +
+            FfiConverterOptionalDouble.allocationSize(value.`step`) +
+            FfiConverterTypeFfiParameterDefaultMode.allocationSize(value.`defaultMode`) +
+            FfiConverterOptionalTypeFfiParameterCondition.allocationSize(value.`visibility`) +
+            FfiConverterSequenceTypeFfiParameterConflict.allocationSize(value.`conflicts`) +
+            FfiConverterTypeFfiProviderParameterMapping.allocationSize(value.`providerMapping`) +
+            FfiConverterTypeFfiUiParameterLevel.allocationSize(value.`level`)
+    )
+
+    override fun write(value: FfiParameterSpec, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`labelKey`, buf)
+            FfiConverterOptionalString.write(value.`descriptionKey`, buf)
+            FfiConverterTypeFfiParameterType.write(value.`valueType`, buf)
+            FfiConverterSequenceTypeFfiParameterChoice.write(value.`allowedValues`, buf)
+            FfiConverterOptionalDouble.write(value.`minimum`, buf)
+            FfiConverterOptionalDouble.write(value.`maximum`, buf)
+            FfiConverterOptionalDouble.write(value.`step`, buf)
+            FfiConverterTypeFfiParameterDefaultMode.write(value.`defaultMode`, buf)
+            FfiConverterOptionalTypeFfiParameterCondition.write(value.`visibility`, buf)
+            FfiConverterSequenceTypeFfiParameterConflict.write(value.`conflicts`, buf)
+            FfiConverterTypeFfiProviderParameterMapping.write(value.`providerMapping`, buf)
+            FfiConverterTypeFfiUiParameterLevel.write(value.`level`, buf)
+    }
+}
+
+
+
+data class FfiParameterValue (
+    var `parameterId`: kotlin.String, 
+    var `state`: FfiParameterValueState
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterValue: FfiConverterRustBuffer<FfiParameterValue> {
+    override fun read(buf: ByteBuffer): FfiParameterValue {
+        return FfiParameterValue(
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiParameterValueState.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiParameterValue) = (
+            FfiConverterString.allocationSize(value.`parameterId`) +
+            FfiConverterTypeFfiParameterValueState.allocationSize(value.`state`)
+    )
+
+    override fun write(value: FfiParameterValue, buf: ByteBuffer) {
+            FfiConverterString.write(value.`parameterId`, buf)
+            FfiConverterTypeFfiParameterValueState.write(value.`state`, buf)
+    }
+}
+
+
+
+data class FfiPromptCacheControl (
+    var `state`: kotlin.String, 
+    var `mode`: kotlin.String, 
+    var `ttl`: kotlin.String, 
+    var `customTtlSeconds`: kotlin.UInt?, 
+    var `contextReference`: kotlin.String?, 
+    var `allowedModes`: List<kotlin.String>, 
+    var `allowedTtls`: List<kotlin.String>, 
+    var `supportsCustomTtl`: kotlin.Boolean, 
+    var `minimumCustomTtlSeconds`: kotlin.UInt?, 
+    var `maximumCustomTtlSeconds`: kotlin.UInt?, 
+    var `ttlField`: kotlin.String, 
+    var `contextReferenceField`: kotlin.String, 
+    var `issues`: List<FfiParameterIssue>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiPromptCacheControl: FfiConverterRustBuffer<FfiPromptCacheControl> {
+    override fun read(buf: ByteBuffer): FfiPromptCacheControl {
+        return FfiPromptCacheControl(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeFfiParameterIssue.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiPromptCacheControl) = (
+            FfiConverterString.allocationSize(value.`state`) +
+            FfiConverterString.allocationSize(value.`mode`) +
+            FfiConverterString.allocationSize(value.`ttl`) +
+            FfiConverterOptionalUInt.allocationSize(value.`customTtlSeconds`) +
+            FfiConverterOptionalString.allocationSize(value.`contextReference`) +
+            FfiConverterSequenceString.allocationSize(value.`allowedModes`) +
+            FfiConverterSequenceString.allocationSize(value.`allowedTtls`) +
+            FfiConverterBoolean.allocationSize(value.`supportsCustomTtl`) +
+            FfiConverterOptionalUInt.allocationSize(value.`minimumCustomTtlSeconds`) +
+            FfiConverterOptionalUInt.allocationSize(value.`maximumCustomTtlSeconds`) +
+            FfiConverterString.allocationSize(value.`ttlField`) +
+            FfiConverterString.allocationSize(value.`contextReferenceField`) +
+            FfiConverterSequenceTypeFfiParameterIssue.allocationSize(value.`issues`)
+    )
+
+    override fun write(value: FfiPromptCacheControl, buf: ByteBuffer) {
+            FfiConverterString.write(value.`state`, buf)
+            FfiConverterString.write(value.`mode`, buf)
+            FfiConverterString.write(value.`ttl`, buf)
+            FfiConverterOptionalUInt.write(value.`customTtlSeconds`, buf)
+            FfiConverterOptionalString.write(value.`contextReference`, buf)
+            FfiConverterSequenceString.write(value.`allowedModes`, buf)
+            FfiConverterSequenceString.write(value.`allowedTtls`, buf)
+            FfiConverterBoolean.write(value.`supportsCustomTtl`, buf)
+            FfiConverterOptionalUInt.write(value.`minimumCustomTtlSeconds`, buf)
+            FfiConverterOptionalUInt.write(value.`maximumCustomTtlSeconds`, buf)
+            FfiConverterString.write(value.`ttlField`, buf)
+            FfiConverterString.write(value.`contextReferenceField`, buf)
+            FfiConverterSequenceTypeFfiParameterIssue.write(value.`issues`, buf)
+    }
+}
+
+
+
+data class FfiProviderCatalogActivation (
+    var `actionId`: kotlin.String, 
+    var `stateVersion`: kotlin.ULong, 
+    var `kind`: kotlin.String, 
+    var `fromRevision`: kotlin.ULong?, 
+    var `toRevision`: kotlin.ULong, 
+    var `activatedAt`: kotlin.String, 
+    var `diff`: FfiProviderCatalogDiff
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogActivation: FfiConverterRustBuffer<FfiProviderCatalogActivation> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogActivation {
+        return FfiProviderCatalogActivation(
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiProviderCatalogDiff.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogActivation) = (
+            FfiConverterString.allocationSize(value.`actionId`) +
+            FfiConverterULong.allocationSize(value.`stateVersion`) +
+            FfiConverterString.allocationSize(value.`kind`) +
+            FfiConverterOptionalULong.allocationSize(value.`fromRevision`) +
+            FfiConverterULong.allocationSize(value.`toRevision`) +
+            FfiConverterString.allocationSize(value.`activatedAt`) +
+            FfiConverterTypeFfiProviderCatalogDiff.allocationSize(value.`diff`)
+    )
+
+    override fun write(value: FfiProviderCatalogActivation, buf: ByteBuffer) {
+            FfiConverterString.write(value.`actionId`, buf)
+            FfiConverterULong.write(value.`stateVersion`, buf)
+            FfiConverterString.write(value.`kind`, buf)
+            FfiConverterOptionalULong.write(value.`fromRevision`, buf)
+            FfiConverterULong.write(value.`toRevision`, buf)
+            FfiConverterString.write(value.`activatedAt`, buf)
+            FfiConverterTypeFfiProviderCatalogDiff.write(value.`diff`, buf)
+    }
+}
+
+
+
+/**
+ * Typed catalog diff for native review screens.
+ *
+ * Separate buckets make the change direction explicit without requiring
+ * native clients to decode internal catalog JSON or compare optional fields.
+ */
+data class FfiProviderCatalogDiff (
+    var `diffSchemaVersion`: kotlin.UInt, 
+    var `fromRevision`: kotlin.ULong, 
+    var `toRevision`: kotlin.ULong, 
+    var `addedProviderTemplates`: List<FfiProviderCatalogTemplateDiffEntry>, 
+    var `changedProviderTemplates`: List<FfiProviderCatalogTemplateDiffEntry>, 
+    var `removedProviderTemplates`: List<FfiProviderCatalogTemplateDiffEntry>, 
+    var `addedModels`: List<FfiProviderCatalogModelDiffEntry>, 
+    var `changedModels`: List<FfiProviderCatalogModelDiffEntry>, 
+    var `removedModels`: List<FfiProviderCatalogModelDiffEntry>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogDiff: FfiConverterRustBuffer<FfiProviderCatalogDiff> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogDiff {
+        return FfiProviderCatalogDiff(
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateDiffEntry.read(buf),
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateDiffEntry.read(buf),
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateDiffEntry.read(buf),
+            FfiConverterSequenceTypeFfiProviderCatalogModelDiffEntry.read(buf),
+            FfiConverterSequenceTypeFfiProviderCatalogModelDiffEntry.read(buf),
+            FfiConverterSequenceTypeFfiProviderCatalogModelDiffEntry.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogDiff) = (
+            FfiConverterUInt.allocationSize(value.`diffSchemaVersion`) +
+            FfiConverterULong.allocationSize(value.`fromRevision`) +
+            FfiConverterULong.allocationSize(value.`toRevision`) +
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateDiffEntry.allocationSize(value.`addedProviderTemplates`) +
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateDiffEntry.allocationSize(value.`changedProviderTemplates`) +
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateDiffEntry.allocationSize(value.`removedProviderTemplates`) +
+            FfiConverterSequenceTypeFfiProviderCatalogModelDiffEntry.allocationSize(value.`addedModels`) +
+            FfiConverterSequenceTypeFfiProviderCatalogModelDiffEntry.allocationSize(value.`changedModels`) +
+            FfiConverterSequenceTypeFfiProviderCatalogModelDiffEntry.allocationSize(value.`removedModels`)
+    )
+
+    override fun write(value: FfiProviderCatalogDiff, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`diffSchemaVersion`, buf)
+            FfiConverterULong.write(value.`fromRevision`, buf)
+            FfiConverterULong.write(value.`toRevision`, buf)
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateDiffEntry.write(value.`addedProviderTemplates`, buf)
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateDiffEntry.write(value.`changedProviderTemplates`, buf)
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateDiffEntry.write(value.`removedProviderTemplates`, buf)
+            FfiConverterSequenceTypeFfiProviderCatalogModelDiffEntry.write(value.`addedModels`, buf)
+            FfiConverterSequenceTypeFfiProviderCatalogModelDiffEntry.write(value.`changedModels`, buf)
+            FfiConverterSequenceTypeFfiProviderCatalogModelDiffEntry.write(value.`removedModels`, buf)
+    }
+}
+
+
+
+data class FfiProviderCatalogHistory (
+    var `historySchemaVersion`: kotlin.UInt, 
+    var `activeRevision`: kotlin.ULong, 
+    var `revisions`: List<FfiProviderCatalogRevision>, 
+    var `activations`: List<FfiProviderCatalogActivation>, 
+    var `nextBeforeRevision`: kotlin.ULong?, 
+    var `nextBeforeStateVersion`: kotlin.ULong?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogHistory: FfiConverterRustBuffer<FfiProviderCatalogHistory> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogHistory {
+        return FfiProviderCatalogHistory(
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterSequenceTypeFfiProviderCatalogRevision.read(buf),
+            FfiConverterSequenceTypeFfiProviderCatalogActivation.read(buf),
+            FfiConverterOptionalULong.read(buf),
+            FfiConverterOptionalULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogHistory) = (
+            FfiConverterUInt.allocationSize(value.`historySchemaVersion`) +
+            FfiConverterULong.allocationSize(value.`activeRevision`) +
+            FfiConverterSequenceTypeFfiProviderCatalogRevision.allocationSize(value.`revisions`) +
+            FfiConverterSequenceTypeFfiProviderCatalogActivation.allocationSize(value.`activations`) +
+            FfiConverterOptionalULong.allocationSize(value.`nextBeforeRevision`) +
+            FfiConverterOptionalULong.allocationSize(value.`nextBeforeStateVersion`)
+    )
+
+    override fun write(value: FfiProviderCatalogHistory, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`historySchemaVersion`, buf)
+            FfiConverterULong.write(value.`activeRevision`, buf)
+            FfiConverterSequenceTypeFfiProviderCatalogRevision.write(value.`revisions`, buf)
+            FfiConverterSequenceTypeFfiProviderCatalogActivation.write(value.`activations`, buf)
+            FfiConverterOptionalULong.write(value.`nextBeforeRevision`, buf)
+            FfiConverterOptionalULong.write(value.`nextBeforeStateVersion`, buf)
+    }
+}
+
+
+
+data class FfiProviderCatalogImportPlan (
+    var `review`: FfiProviderCatalogImportReview, 
+    var `planSha256`: kotlin.String, 
+    /**
+     * Canonical opaque typed plan returned unchanged to activation.
+     */
+    var `planJson`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogImportPlan: FfiConverterRustBuffer<FfiProviderCatalogImportPlan> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogImportPlan {
+        return FfiProviderCatalogImportPlan(
+            FfiConverterTypeFfiProviderCatalogImportReview.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogImportPlan) = (
+            FfiConverterTypeFfiProviderCatalogImportReview.allocationSize(value.`review`) +
+            FfiConverterString.allocationSize(value.`planSha256`) +
+            FfiConverterString.allocationSize(value.`planJson`)
+    )
+
+    override fun write(value: FfiProviderCatalogImportPlan, buf: ByteBuffer) {
+            FfiConverterTypeFfiProviderCatalogImportReview.write(value.`review`, buf)
+            FfiConverterString.write(value.`planSha256`, buf)
+            FfiConverterString.write(value.`planJson`, buf)
+    }
+}
+
+
+
+data class FfiProviderCatalogImportResult (
+    var `signedCatalogRevision`: kotlin.ULong, 
+    var `activatedRevision`: kotlin.ULong, 
+    var `diff`: FfiProviderCatalogDiff, 
+    var `status`: FfiProviderCatalogStatus
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogImportResult: FfiConverterRustBuffer<FfiProviderCatalogImportResult> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogImportResult {
+        return FfiProviderCatalogImportResult(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypeFfiProviderCatalogDiff.read(buf),
+            FfiConverterTypeFfiProviderCatalogStatus.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogImportResult) = (
+            FfiConverterULong.allocationSize(value.`signedCatalogRevision`) +
+            FfiConverterULong.allocationSize(value.`activatedRevision`) +
+            FfiConverterTypeFfiProviderCatalogDiff.allocationSize(value.`diff`) +
+            FfiConverterTypeFfiProviderCatalogStatus.allocationSize(value.`status`)
+    )
+
+    override fun write(value: FfiProviderCatalogImportResult, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`signedCatalogRevision`, buf)
+            FfiConverterULong.write(value.`activatedRevision`, buf)
+            FfiConverterTypeFfiProviderCatalogDiff.write(value.`diff`, buf)
+            FfiConverterTypeFfiProviderCatalogStatus.write(value.`status`, buf)
+    }
+}
+
+
+
+data class FfiProviderCatalogImportReview (
+    var `planSchemaVersion`: kotlin.UInt, 
+    var `actionId`: kotlin.String, 
+    var `expectedStateVersion`: kotlin.ULong, 
+    var `expectedActiveRevision`: kotlin.ULong, 
+    var `expectedActiveSnapshotSha256`: kotlin.String, 
+    var `expectedHighestAcceptedRevision`: kotlin.ULong, 
+    var `envelopeByteCount`: kotlin.ULong, 
+    var `envelopeSha256`: kotlin.String, 
+    var `signingKeyId`: kotlin.String, 
+    var `payloadSha256`: kotlin.String, 
+    var `signedCatalogRevision`: kotlin.ULong, 
+    var `candidateRevision`: kotlin.ULong, 
+    var `candidateSnapshotSha256`: kotlin.String, 
+    var `preparedAt`: kotlin.String, 
+    var `expiresAt`: kotlin.String, 
+    var `diff`: FfiProviderCatalogDiff
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogImportReview: FfiConverterRustBuffer<FfiProviderCatalogImportReview> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogImportReview {
+        return FfiProviderCatalogImportReview(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiProviderCatalogDiff.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogImportReview) = (
+            FfiConverterUInt.allocationSize(value.`planSchemaVersion`) +
+            FfiConverterString.allocationSize(value.`actionId`) +
+            FfiConverterULong.allocationSize(value.`expectedStateVersion`) +
+            FfiConverterULong.allocationSize(value.`expectedActiveRevision`) +
+            FfiConverterString.allocationSize(value.`expectedActiveSnapshotSha256`) +
+            FfiConverterULong.allocationSize(value.`expectedHighestAcceptedRevision`) +
+            FfiConverterULong.allocationSize(value.`envelopeByteCount`) +
+            FfiConverterString.allocationSize(value.`envelopeSha256`) +
+            FfiConverterString.allocationSize(value.`signingKeyId`) +
+            FfiConverterString.allocationSize(value.`payloadSha256`) +
+            FfiConverterULong.allocationSize(value.`signedCatalogRevision`) +
+            FfiConverterULong.allocationSize(value.`candidateRevision`) +
+            FfiConverterString.allocationSize(value.`candidateSnapshotSha256`) +
+            FfiConverterString.allocationSize(value.`preparedAt`) +
+            FfiConverterString.allocationSize(value.`expiresAt`) +
+            FfiConverterTypeFfiProviderCatalogDiff.allocationSize(value.`diff`)
+    )
+
+    override fun write(value: FfiProviderCatalogImportReview, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`planSchemaVersion`, buf)
+            FfiConverterString.write(value.`actionId`, buf)
+            FfiConverterULong.write(value.`expectedStateVersion`, buf)
+            FfiConverterULong.write(value.`expectedActiveRevision`, buf)
+            FfiConverterString.write(value.`expectedActiveSnapshotSha256`, buf)
+            FfiConverterULong.write(value.`expectedHighestAcceptedRevision`, buf)
+            FfiConverterULong.write(value.`envelopeByteCount`, buf)
+            FfiConverterString.write(value.`envelopeSha256`, buf)
+            FfiConverterString.write(value.`signingKeyId`, buf)
+            FfiConverterString.write(value.`payloadSha256`, buf)
+            FfiConverterULong.write(value.`signedCatalogRevision`, buf)
+            FfiConverterULong.write(value.`candidateRevision`, buf)
+            FfiConverterString.write(value.`candidateSnapshotSha256`, buf)
+            FfiConverterString.write(value.`preparedAt`, buf)
+            FfiConverterString.write(value.`expiresAt`, buf)
+            FfiConverterTypeFfiProviderCatalogDiff.write(value.`diff`, buf)
+    }
+}
+
+
+
+/**
+ * Secret-free review entry for one model-metadata catalog change.
+ */
+data class FfiProviderCatalogModelDiffEntry (
+    var `modelEntryId`: kotlin.String, 
+    var `providerTemplateId`: kotlin.String, 
+    var `previousMetadataVersion`: kotlin.UInt?, 
+    var `nextMetadataVersion`: kotlin.UInt?, 
+    var `previousSha256`: kotlin.String?, 
+    var `nextSha256`: kotlin.String?, 
+    var `changedSections`: List<FfiProviderCatalogModelChangedSection>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogModelDiffEntry: FfiConverterRustBuffer<FfiProviderCatalogModelDiffEntry> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogModelDiffEntry {
+        return FfiProviderCatalogModelDiffEntry(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceTypeFfiProviderCatalogModelChangedSection.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogModelDiffEntry) = (
+            FfiConverterString.allocationSize(value.`modelEntryId`) +
+            FfiConverterString.allocationSize(value.`providerTemplateId`) +
+            FfiConverterOptionalUInt.allocationSize(value.`previousMetadataVersion`) +
+            FfiConverterOptionalUInt.allocationSize(value.`nextMetadataVersion`) +
+            FfiConverterOptionalString.allocationSize(value.`previousSha256`) +
+            FfiConverterOptionalString.allocationSize(value.`nextSha256`) +
+            FfiConverterSequenceTypeFfiProviderCatalogModelChangedSection.allocationSize(value.`changedSections`)
+    )
+
+    override fun write(value: FfiProviderCatalogModelDiffEntry, buf: ByteBuffer) {
+            FfiConverterString.write(value.`modelEntryId`, buf)
+            FfiConverterString.write(value.`providerTemplateId`, buf)
+            FfiConverterOptionalUInt.write(value.`previousMetadataVersion`, buf)
+            FfiConverterOptionalUInt.write(value.`nextMetadataVersion`, buf)
+            FfiConverterOptionalString.write(value.`previousSha256`, buf)
+            FfiConverterOptionalString.write(value.`nextSha256`, buf)
+            FfiConverterSequenceTypeFfiProviderCatalogModelChangedSection.write(value.`changedSections`, buf)
+    }
+}
+
+
+
+data class FfiProviderCatalogRevision (
+    var `revision`: kotlin.ULong, 
+    var `capturedAt`: kotlin.String, 
+    var `snapshotSha256`: kotlin.String, 
+    var `signedRevisions`: List<kotlin.ULong>, 
+    var `active`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogRevision: FfiConverterRustBuffer<FfiProviderCatalogRevision> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogRevision {
+        return FfiProviderCatalogRevision(
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceULong.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogRevision) = (
+            FfiConverterULong.allocationSize(value.`revision`) +
+            FfiConverterString.allocationSize(value.`capturedAt`) +
+            FfiConverterString.allocationSize(value.`snapshotSha256`) +
+            FfiConverterSequenceULong.allocationSize(value.`signedRevisions`) +
+            FfiConverterBoolean.allocationSize(value.`active`)
+    )
+
+    override fun write(value: FfiProviderCatalogRevision, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`revision`, buf)
+            FfiConverterString.write(value.`capturedAt`, buf)
+            FfiConverterString.write(value.`snapshotSha256`, buf)
+            FfiConverterSequenceULong.write(value.`signedRevisions`, buf)
+            FfiConverterBoolean.write(value.`active`, buf)
+    }
+}
+
+
+
+data class FfiProviderCatalogRollbackPlan (
+    var `planSchemaVersion`: kotlin.UInt, 
+    var `actionId`: kotlin.String, 
+    var `expectedStateVersion`: kotlin.ULong, 
+    var `planSha256`: kotlin.String, 
+    var `fromRevision`: kotlin.ULong, 
+    var `toRevision`: kotlin.ULong, 
+    var `createdAt`: kotlin.String, 
+    var `expiresAt`: kotlin.String, 
+    var `diff`: FfiProviderCatalogDiff, 
+    /**
+     * Canonical opaque plan returned unchanged to the activation method.
+     */
+    var `planJson`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogRollbackPlan: FfiConverterRustBuffer<FfiProviderCatalogRollbackPlan> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogRollbackPlan {
+        return FfiProviderCatalogRollbackPlan(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiProviderCatalogDiff.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogRollbackPlan) = (
+            FfiConverterUInt.allocationSize(value.`planSchemaVersion`) +
+            FfiConverterString.allocationSize(value.`actionId`) +
+            FfiConverterULong.allocationSize(value.`expectedStateVersion`) +
+            FfiConverterString.allocationSize(value.`planSha256`) +
+            FfiConverterULong.allocationSize(value.`fromRevision`) +
+            FfiConverterULong.allocationSize(value.`toRevision`) +
+            FfiConverterString.allocationSize(value.`createdAt`) +
+            FfiConverterString.allocationSize(value.`expiresAt`) +
+            FfiConverterTypeFfiProviderCatalogDiff.allocationSize(value.`diff`) +
+            FfiConverterString.allocationSize(value.`planJson`)
+    )
+
+    override fun write(value: FfiProviderCatalogRollbackPlan, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`planSchemaVersion`, buf)
+            FfiConverterString.write(value.`actionId`, buf)
+            FfiConverterULong.write(value.`expectedStateVersion`, buf)
+            FfiConverterString.write(value.`planSha256`, buf)
+            FfiConverterULong.write(value.`fromRevision`, buf)
+            FfiConverterULong.write(value.`toRevision`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+            FfiConverterString.write(value.`expiresAt`, buf)
+            FfiConverterTypeFfiProviderCatalogDiff.write(value.`diff`, buf)
+            FfiConverterString.write(value.`planJson`, buf)
+    }
+}
+
+
+
+data class FfiProviderCatalogRollbackResult (
+    var `fromRevision`: kotlin.ULong, 
+    var `activatedRevision`: kotlin.ULong, 
+    var `status`: FfiProviderCatalogStatus
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogRollbackResult: FfiConverterRustBuffer<FfiProviderCatalogRollbackResult> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogRollbackResult {
+        return FfiProviderCatalogRollbackResult(
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypeFfiProviderCatalogStatus.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogRollbackResult) = (
+            FfiConverterULong.allocationSize(value.`fromRevision`) +
+            FfiConverterULong.allocationSize(value.`activatedRevision`) +
+            FfiConverterTypeFfiProviderCatalogStatus.allocationSize(value.`status`)
+    )
+
+    override fun write(value: FfiProviderCatalogRollbackResult, buf: ByteBuffer) {
+            FfiConverterULong.write(value.`fromRevision`, buf)
+            FfiConverterULong.write(value.`activatedRevision`, buf)
+            FfiConverterTypeFfiProviderCatalogStatus.write(value.`status`, buf)
+    }
+}
+
+
+
+data class FfiProviderCatalogStatus (
+    var `statusSchemaVersion`: kotlin.UInt, 
+    var `stateVersion`: kotlin.ULong, 
+    var `activeRevision`: kotlin.ULong, 
+    var `activeSnapshotSha256`: kotlin.String, 
+    var `bundledBaselineSha256`: kotlin.String, 
+    var `snapshotCount`: kotlin.UInt, 
+    var `signedUpdateCount`: kotlin.UInt, 
+    var `highestAcceptedRevision`: kotlin.ULong, 
+    var `latestIssuedAt`: kotlin.String?, 
+    var `activeSignedRevisions`: List<kotlin.ULong>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogStatus: FfiConverterRustBuffer<FfiProviderCatalogStatus> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogStatus {
+        return FfiProviderCatalogStatus(
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceULong.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogStatus) = (
+            FfiConverterUInt.allocationSize(value.`statusSchemaVersion`) +
+            FfiConverterULong.allocationSize(value.`stateVersion`) +
+            FfiConverterULong.allocationSize(value.`activeRevision`) +
+            FfiConverterString.allocationSize(value.`activeSnapshotSha256`) +
+            FfiConverterString.allocationSize(value.`bundledBaselineSha256`) +
+            FfiConverterUInt.allocationSize(value.`snapshotCount`) +
+            FfiConverterUInt.allocationSize(value.`signedUpdateCount`) +
+            FfiConverterULong.allocationSize(value.`highestAcceptedRevision`) +
+            FfiConverterOptionalString.allocationSize(value.`latestIssuedAt`) +
+            FfiConverterSequenceULong.allocationSize(value.`activeSignedRevisions`)
+    )
+
+    override fun write(value: FfiProviderCatalogStatus, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`statusSchemaVersion`, buf)
+            FfiConverterULong.write(value.`stateVersion`, buf)
+            FfiConverterULong.write(value.`activeRevision`, buf)
+            FfiConverterString.write(value.`activeSnapshotSha256`, buf)
+            FfiConverterString.write(value.`bundledBaselineSha256`, buf)
+            FfiConverterUInt.write(value.`snapshotCount`, buf)
+            FfiConverterUInt.write(value.`signedUpdateCount`, buf)
+            FfiConverterULong.write(value.`highestAcceptedRevision`, buf)
+            FfiConverterOptionalString.write(value.`latestIssuedAt`, buf)
+            FfiConverterSequenceULong.write(value.`activeSignedRevisions`, buf)
+    }
+}
+
+
+
+/**
+ * Secret-free review entry for one provider-template catalog change.
+ *
+ * The containing diff bucket identifies whether this entry is added, changed,
+ * or removed. Catalog payloads, request headers, and credentials are never
+ * exposed through this record.
+ */
+data class FfiProviderCatalogTemplateDiffEntry (
+    var `providerTemplateId`: kotlin.String, 
+    var `previousManifestVersion`: kotlin.UInt?, 
+    var `nextManifestVersion`: kotlin.UInt?, 
+    var `previousSha256`: kotlin.String?, 
+    var `nextSha256`: kotlin.String?, 
+    var `changedSections`: List<FfiProviderCatalogTemplateChangedSection>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogTemplateDiffEntry: FfiConverterRustBuffer<FfiProviderCatalogTemplateDiffEntry> {
+    override fun read(buf: ByteBuffer): FfiProviderCatalogTemplateDiffEntry {
+        return FfiProviderCatalogTemplateDiffEntry(
+            FfiConverterString.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateChangedSection.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogTemplateDiffEntry) = (
+            FfiConverterString.allocationSize(value.`providerTemplateId`) +
+            FfiConverterOptionalUInt.allocationSize(value.`previousManifestVersion`) +
+            FfiConverterOptionalUInt.allocationSize(value.`nextManifestVersion`) +
+            FfiConverterOptionalString.allocationSize(value.`previousSha256`) +
+            FfiConverterOptionalString.allocationSize(value.`nextSha256`) +
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateChangedSection.allocationSize(value.`changedSections`)
+    )
+
+    override fun write(value: FfiProviderCatalogTemplateDiffEntry, buf: ByteBuffer) {
+            FfiConverterString.write(value.`providerTemplateId`, buf)
+            FfiConverterOptionalUInt.write(value.`previousManifestVersion`, buf)
+            FfiConverterOptionalUInt.write(value.`nextManifestVersion`, buf)
+            FfiConverterOptionalString.write(value.`previousSha256`, buf)
+            FfiConverterOptionalString.write(value.`nextSha256`, buf)
+            FfiConverterSequenceTypeFfiProviderCatalogTemplateChangedSection.write(value.`changedSections`, buf)
+    }
+}
+
+
+
+data class FfiProviderConnection (
+    var `id`: kotlin.String, 
+    var `templateId`: kotlin.String, 
+    var `templateVersion`: kotlin.UInt, 
+    var `displayName`: kotlin.String, 
+    var `apiOrigin`: kotlin.String, 
+    var `apiBasePath`: kotlin.String?, 
+    var `networkMode`: FfiProviderNetworkMode, 
+    var `localNetworkApproval`: FfiProviderLocalNetworkApproval?, 
+    var `values`: List<FfiConnectionConfigEntry>, 
+    /**
+     * Whether the native vault contains the credential under this exact
+     * connection `id`. No arbitrary credential-reference string is accepted.
+     */
+    var `credentialSlotReady`: kotlin.Boolean, 
+    var `credentialScope`: FfiCredentialScope?, 
+    var `approvedCredentialOrigins`: List<kotlin.String>, 
+    var `timeoutSeconds`: kotlin.UInt, 
+    var `status`: kotlin.String, 
+    var `createdAt`: kotlin.String, 
+    var `updatedAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderConnection: FfiConverterRustBuffer<FfiProviderConnection> {
+    override fun read(buf: ByteBuffer): FfiProviderConnection {
+        return FfiProviderConnection(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeFfiProviderNetworkMode.read(buf),
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.read(buf),
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalTypeFfiCredentialScope.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderConnection) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`templateId`) +
+            FfiConverterUInt.allocationSize(value.`templateVersion`) +
+            FfiConverterString.allocationSize(value.`displayName`) +
+            FfiConverterString.allocationSize(value.`apiOrigin`) +
+            FfiConverterOptionalString.allocationSize(value.`apiBasePath`) +
+            FfiConverterTypeFfiProviderNetworkMode.allocationSize(value.`networkMode`) +
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.allocationSize(value.`localNetworkApproval`) +
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.allocationSize(value.`values`) +
+            FfiConverterBoolean.allocationSize(value.`credentialSlotReady`) +
+            FfiConverterOptionalTypeFfiCredentialScope.allocationSize(value.`credentialScope`) +
+            FfiConverterSequenceString.allocationSize(value.`approvedCredentialOrigins`) +
+            FfiConverterUInt.allocationSize(value.`timeoutSeconds`) +
+            FfiConverterString.allocationSize(value.`status`) +
+            FfiConverterString.allocationSize(value.`createdAt`) +
+            FfiConverterString.allocationSize(value.`updatedAt`)
+    )
+
+    override fun write(value: FfiProviderConnection, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`templateId`, buf)
+            FfiConverterUInt.write(value.`templateVersion`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+            FfiConverterString.write(value.`apiOrigin`, buf)
+            FfiConverterOptionalString.write(value.`apiBasePath`, buf)
+            FfiConverterTypeFfiProviderNetworkMode.write(value.`networkMode`, buf)
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.write(value.`localNetworkApproval`, buf)
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.write(value.`values`, buf)
+            FfiConverterBoolean.write(value.`credentialSlotReady`, buf)
+            FfiConverterOptionalTypeFfiCredentialScope.write(value.`credentialScope`, buf)
+            FfiConverterSequenceString.write(value.`approvedCredentialOrigins`, buf)
+            FfiConverterUInt.write(value.`timeoutSeconds`, buf)
+            FfiConverterString.write(value.`status`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+            FfiConverterString.write(value.`updatedAt`, buf)
+    }
+}
+
+
+
+data class FfiProviderConnectionDraft (
+    var `id`: kotlin.String, 
+    var `templateId`: kotlin.String, 
+    var `templateVersion`: kotlin.UInt, 
+    var `displayName`: kotlin.String, 
+    var `apiOrigin`: kotlin.String, 
+    var `apiBasePath`: kotlin.String?, 
+    var `networkMode`: FfiProviderNetworkMode, 
+    var `localNetworkApproval`: FfiProviderLocalNetworkApproval?, 
+    var `values`: List<FfiConnectionConfigEntry>, 
+    var `approvedCredentialOrigin`: kotlin.String?, 
+    var `timeoutSeconds`: kotlin.UInt
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderConnectionDraft: FfiConverterRustBuffer<FfiProviderConnectionDraft> {
+    override fun read(buf: ByteBuffer): FfiProviderConnectionDraft {
+        return FfiProviderConnectionDraft(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeFfiProviderNetworkMode.read(buf),
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.read(buf),
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterUInt.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderConnectionDraft) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`templateId`) +
+            FfiConverterUInt.allocationSize(value.`templateVersion`) +
+            FfiConverterString.allocationSize(value.`displayName`) +
+            FfiConverterString.allocationSize(value.`apiOrigin`) +
+            FfiConverterOptionalString.allocationSize(value.`apiBasePath`) +
+            FfiConverterTypeFfiProviderNetworkMode.allocationSize(value.`networkMode`) +
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.allocationSize(value.`localNetworkApproval`) +
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.allocationSize(value.`values`) +
+            FfiConverterOptionalString.allocationSize(value.`approvedCredentialOrigin`) +
+            FfiConverterUInt.allocationSize(value.`timeoutSeconds`)
+    )
+
+    override fun write(value: FfiProviderConnectionDraft, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`templateId`, buf)
+            FfiConverterUInt.write(value.`templateVersion`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+            FfiConverterString.write(value.`apiOrigin`, buf)
+            FfiConverterOptionalString.write(value.`apiBasePath`, buf)
+            FfiConverterTypeFfiProviderNetworkMode.write(value.`networkMode`, buf)
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.write(value.`localNetworkApproval`, buf)
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.write(value.`values`, buf)
+            FfiConverterOptionalString.write(value.`approvedCredentialOrigin`, buf)
+            FfiConverterUInt.write(value.`timeoutSeconds`, buf)
+    }
+}
+
+
+
+/**
+ * One-shot cURL inspection result.
+ *
+ * Credential bytes deliberately have no field in this record. When
+ * `credential_handoff_id` is present, native must immediately call
+ * `take_provider_curl_credential` once and store the returned bytes in its OS
+ * credential vault.
+ */
+data class FfiProviderCurlInspection (
+    var `inspectionSchemaVersion`: kotlin.UInt, 
+    var `sanitizedSiteUrl`: kotlin.String, 
+    var `apiOrigin`: kotlin.String, 
+    var `method`: kotlin.String, 
+    var `path`: kotlin.String, 
+    var `headerNames`: List<kotlin.String>, 
+    var `authBindingHint`: FfiAuthBinding?, 
+    var `apiFamilyHint`: kotlin.String?, 
+    var `modelHint`: kotlin.String?, 
+    var `streamHint`: kotlin.Boolean?, 
+    var `redactedCurl`: kotlin.String, 
+    var `credentialHandoffId`: kotlin.String?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCurlInspection: FfiConverterRustBuffer<FfiProviderCurlInspection> {
+    override fun read(buf: ByteBuffer): FfiProviderCurlInspection {
+        return FfiProviderCurlInspection(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalTypeFfiAuthBinding.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalBoolean.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderCurlInspection) = (
+            FfiConverterUInt.allocationSize(value.`inspectionSchemaVersion`) +
+            FfiConverterString.allocationSize(value.`sanitizedSiteUrl`) +
+            FfiConverterString.allocationSize(value.`apiOrigin`) +
+            FfiConverterString.allocationSize(value.`method`) +
+            FfiConverterString.allocationSize(value.`path`) +
+            FfiConverterSequenceString.allocationSize(value.`headerNames`) +
+            FfiConverterOptionalTypeFfiAuthBinding.allocationSize(value.`authBindingHint`) +
+            FfiConverterOptionalString.allocationSize(value.`apiFamilyHint`) +
+            FfiConverterOptionalString.allocationSize(value.`modelHint`) +
+            FfiConverterOptionalBoolean.allocationSize(value.`streamHint`) +
+            FfiConverterString.allocationSize(value.`redactedCurl`) +
+            FfiConverterOptionalString.allocationSize(value.`credentialHandoffId`)
+    )
+
+    override fun write(value: FfiProviderCurlInspection, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`inspectionSchemaVersion`, buf)
+            FfiConverterString.write(value.`sanitizedSiteUrl`, buf)
+            FfiConverterString.write(value.`apiOrigin`, buf)
+            FfiConverterString.write(value.`method`, buf)
+            FfiConverterString.write(value.`path`, buf)
+            FfiConverterSequenceString.write(value.`headerNames`, buf)
+            FfiConverterOptionalTypeFfiAuthBinding.write(value.`authBindingHint`, buf)
+            FfiConverterOptionalString.write(value.`apiFamilyHint`, buf)
+            FfiConverterOptionalString.write(value.`modelHint`, buf)
+            FfiConverterOptionalBoolean.write(value.`streamHint`, buf)
+            FfiConverterString.write(value.`redactedCurl`, buf)
+            FfiConverterOptionalString.write(value.`credentialHandoffId`, buf)
+    }
+}
+
+
+
+/**
+ * A canonical action envelope prepared by Rust.
+ *
+ * Native clients echo this record unchanged. `request_sha256` binds the
+ * action ID and compare-and-swap revision to the exact typed action payload.
+ */
+data class FfiProviderDiscoveryActionEnvelope (
+    var `actionId`: kotlin.String, 
+    var `expectedRevision`: kotlin.ULong, 
+    var `requestSha256`: kotlin.String, 
+    var `action`: FfiProviderDiscoveryAction
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderDiscoveryActionEnvelope: FfiConverterRustBuffer<FfiProviderDiscoveryActionEnvelope> {
+    override fun read(buf: ByteBuffer): FfiProviderDiscoveryActionEnvelope {
+        return FfiProviderDiscoveryActionEnvelope(
+            FfiConverterString.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiProviderDiscoveryAction.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderDiscoveryActionEnvelope) = (
+            FfiConverterString.allocationSize(value.`actionId`) +
+            FfiConverterULong.allocationSize(value.`expectedRevision`) +
+            FfiConverterString.allocationSize(value.`requestSha256`) +
+            FfiConverterTypeFfiProviderDiscoveryAction.allocationSize(value.`action`)
+    )
+
+    override fun write(value: FfiProviderDiscoveryActionEnvelope, buf: ByteBuffer) {
+            FfiConverterString.write(value.`actionId`, buf)
+            FfiConverterULong.write(value.`expectedRevision`, buf)
+            FfiConverterString.write(value.`requestSha256`, buf)
+            FfiConverterTypeFfiProviderDiscoveryAction.write(value.`action`, buf)
+    }
+}
+
+
+
+data class FfiProviderDiscoveryConnectionOptions (
+    var `values`: List<FfiConnectionConfigEntry>, 
+    var `apiBasePath`: kotlin.String?, 
+    var `timeoutSeconds`: kotlin.UInt, 
+    var `networkMode`: FfiProviderNetworkMode, 
+    var `localNetworkApproval`: FfiProviderLocalNetworkApproval?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderDiscoveryConnectionOptions: FfiConverterRustBuffer<FfiProviderDiscoveryConnectionOptions> {
+    override fun read(buf: ByteBuffer): FfiProviderDiscoveryConnectionOptions {
+        return FfiProviderDiscoveryConnectionOptions(
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterTypeFfiProviderNetworkMode.read(buf),
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderDiscoveryConnectionOptions) = (
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.allocationSize(value.`values`) +
+            FfiConverterOptionalString.allocationSize(value.`apiBasePath`) +
+            FfiConverterUInt.allocationSize(value.`timeoutSeconds`) +
+            FfiConverterTypeFfiProviderNetworkMode.allocationSize(value.`networkMode`) +
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.allocationSize(value.`localNetworkApproval`)
+    )
+
+    override fun write(value: FfiProviderDiscoveryConnectionOptions, buf: ByteBuffer) {
+            FfiConverterSequenceTypeFfiConnectionConfigEntry.write(value.`values`, buf)
+            FfiConverterOptionalString.write(value.`apiBasePath`, buf)
+            FfiConverterUInt.write(value.`timeoutSeconds`, buf)
+            FfiConverterTypeFfiProviderNetworkMode.write(value.`networkMode`, buf)
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.write(value.`localNetworkApproval`, buf)
+    }
+}
+
+
+
+/**
+ * Persistable provider-discovery input.
+ *
+ * Raw cURL text and credential material intentionally have no field in this
+ * record. They are accepted, when needed, as separate request-scoped scalar
+ * arguments on the relevant methods.
+ */
+data class FfiProviderDiscoveryInput (
+    /**
+     * Native-generated immutable identity used for both the Core connection
+     * graph and the OS credential-store key.
+     */
+    var `connectionId`: kotlin.String, 
+    var `displayName`: kotlin.String, 
+    /**
+     * Optional for known-provider and cURL-only discovery. Core derives the
+     * sanitized origin before it creates the durable session.
+     */
+    var `siteUrl`: kotlin.String?, 
+    var `docsUrl`: kotlin.String?, 
+    /**
+     * Whether native has already stored credential material in the OS vault
+     * under the exact `connection_id` slot. The opaque Core reference is
+     * derived from `connection_id`; native cannot inject another reference.
+     */
+    var `credentialSlotReady`: kotlin.Boolean, 
+    var `preferredAssistantModelRouteId`: kotlin.String?, 
+    var `connectionOptions`: FfiProviderDiscoveryConnectionOptions, 
+    var `suppliedEvidenceIds`: List<kotlin.String>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderDiscoveryInput: FfiConverterRustBuffer<FfiProviderDiscoveryInput> {
+    override fun read(buf: ByteBuffer): FfiProviderDiscoveryInput {
+        return FfiProviderDiscoveryInput(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterTypeFfiProviderDiscoveryConnectionOptions.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderDiscoveryInput) = (
+            FfiConverterString.allocationSize(value.`connectionId`) +
+            FfiConverterString.allocationSize(value.`displayName`) +
+            FfiConverterOptionalString.allocationSize(value.`siteUrl`) +
+            FfiConverterOptionalString.allocationSize(value.`docsUrl`) +
+            FfiConverterBoolean.allocationSize(value.`credentialSlotReady`) +
+            FfiConverterOptionalString.allocationSize(value.`preferredAssistantModelRouteId`) +
+            FfiConverterTypeFfiProviderDiscoveryConnectionOptions.allocationSize(value.`connectionOptions`) +
+            FfiConverterSequenceString.allocationSize(value.`suppliedEvidenceIds`)
+    )
+
+    override fun write(value: FfiProviderDiscoveryInput, buf: ByteBuffer) {
+            FfiConverterString.write(value.`connectionId`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+            FfiConverterOptionalString.write(value.`siteUrl`, buf)
+            FfiConverterOptionalString.write(value.`docsUrl`, buf)
+            FfiConverterBoolean.write(value.`credentialSlotReady`, buf)
+            FfiConverterOptionalString.write(value.`preferredAssistantModelRouteId`, buf)
+            FfiConverterTypeFfiProviderDiscoveryConnectionOptions.write(value.`connectionOptions`, buf)
+            FfiConverterSequenceString.write(value.`suppliedEvidenceIds`, buf)
+    }
+}
+
+
+
+/**
+ * Aggregate, redacted view used by every native setup wizard.
+ */
+data class FfiProviderDiscoverySnapshot (
+    var `snapshotSchemaVersion`: kotlin.UInt, 
+    var `sessionId`: kotlin.String, 
+    /**
+     * Immutable identity selected before the session was created. Native uses
+     * this after process restart to reopen or remove the correct vault slot.
+     */
+    var `pendingConnectionId`: kotlin.String, 
+    var `pendingDisplayName`: kotlin.String, 
+    /**
+     * Exact secret-free connection policy persisted at begin. Native uses it
+     * after restart for supplemental inspection and must not substitute
+     * process defaults.
+     */
+    var `connectionOptions`: FfiProviderDiscoveryConnectionOptions, 
+    /**
+     * Exact opaque OS-vault slot, present only when this flow expects a
+     * credential. It is always identical to `pending_connection_id`.
+     */
+    var `credentialSlotId`: kotlin.String?, 
+    var `credentialSlotExpected`: kotlin.Boolean, 
+    var `revision`: kotlin.ULong, 
+    var `state`: FfiDiscoveryState, 
+    var `nextEventSequence`: kotlin.ULong, 
+    var `steps`: List<FfiDiscoveryStep>, 
+    var `actionRequired`: FfiDiscoveryActionRequired?, 
+    var `activeOperationId`: kotlin.String?, 
+    var `recoveryOperation`: FfiDiscoveryOperationKind?, 
+    var `unknownOperation`: FfiDiscoveryOperationKind?, 
+    var `manifestSha256`: kotlin.String?, 
+    var `commitPlanSha256`: kotlin.String?, 
+    var `commitAttemptId`: kotlin.String?, 
+    var `committedConnectionId`: kotlin.String?, 
+    var `cancellationPending`: kotlin.Boolean, 
+    var `failure`: FfiDiscoveryFailure?, 
+    var `candidates`: List<FfiDiscoveryCandidate>, 
+    var `evidence`: List<FfiDiscoveryEvidence>, 
+    var `approvals`: List<FfiDiscoveryApproval>, 
+    var `review`: FfiDiscoveryReview?, 
+    var `approvalProposal`: FfiDiscoveryApprovalProposal?, 
+    var `reviewProposal`: FfiDiscoveryReviewProposal?, 
+    /**
+     * Exact durable setup-assistant boundary. Native clients must render this
+     * action directly and must not infer it from `state` or draft JSON.
+     */
+    var `assistantResumeBoundary`: FfiDiscoveryAssistantResumeBoundary?, 
+    var `createdAt`: kotlin.String, 
+    var `updatedAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderDiscoverySnapshot: FfiConverterRustBuffer<FfiProviderDiscoverySnapshot> {
+    override fun read(buf: ByteBuffer): FfiProviderDiscoverySnapshot {
+        return FfiProviderDiscoverySnapshot(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiProviderDiscoveryConnectionOptions.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterTypeFfiDiscoveryState.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryStep.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryActionRequired.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryOperationKind.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryOperationKind.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryFailure.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryCandidate.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryEvidence.read(buf),
+            FfiConverterSequenceTypeFfiDiscoveryApproval.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryReview.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryApprovalProposal.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryReviewProposal.read(buf),
+            FfiConverterOptionalTypeFfiDiscoveryAssistantResumeBoundary.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderDiscoverySnapshot) = (
+            FfiConverterUInt.allocationSize(value.`snapshotSchemaVersion`) +
+            FfiConverterString.allocationSize(value.`sessionId`) +
+            FfiConverterString.allocationSize(value.`pendingConnectionId`) +
+            FfiConverterString.allocationSize(value.`pendingDisplayName`) +
+            FfiConverterTypeFfiProviderDiscoveryConnectionOptions.allocationSize(value.`connectionOptions`) +
+            FfiConverterOptionalString.allocationSize(value.`credentialSlotId`) +
+            FfiConverterBoolean.allocationSize(value.`credentialSlotExpected`) +
+            FfiConverterULong.allocationSize(value.`revision`) +
+            FfiConverterTypeFfiDiscoveryState.allocationSize(value.`state`) +
+            FfiConverterULong.allocationSize(value.`nextEventSequence`) +
+            FfiConverterSequenceTypeFfiDiscoveryStep.allocationSize(value.`steps`) +
+            FfiConverterOptionalTypeFfiDiscoveryActionRequired.allocationSize(value.`actionRequired`) +
+            FfiConverterOptionalString.allocationSize(value.`activeOperationId`) +
+            FfiConverterOptionalTypeFfiDiscoveryOperationKind.allocationSize(value.`recoveryOperation`) +
+            FfiConverterOptionalTypeFfiDiscoveryOperationKind.allocationSize(value.`unknownOperation`) +
+            FfiConverterOptionalString.allocationSize(value.`manifestSha256`) +
+            FfiConverterOptionalString.allocationSize(value.`commitPlanSha256`) +
+            FfiConverterOptionalString.allocationSize(value.`commitAttemptId`) +
+            FfiConverterOptionalString.allocationSize(value.`committedConnectionId`) +
+            FfiConverterBoolean.allocationSize(value.`cancellationPending`) +
+            FfiConverterOptionalTypeFfiDiscoveryFailure.allocationSize(value.`failure`) +
+            FfiConverterSequenceTypeFfiDiscoveryCandidate.allocationSize(value.`candidates`) +
+            FfiConverterSequenceTypeFfiDiscoveryEvidence.allocationSize(value.`evidence`) +
+            FfiConverterSequenceTypeFfiDiscoveryApproval.allocationSize(value.`approvals`) +
+            FfiConverterOptionalTypeFfiDiscoveryReview.allocationSize(value.`review`) +
+            FfiConverterOptionalTypeFfiDiscoveryApprovalProposal.allocationSize(value.`approvalProposal`) +
+            FfiConverterOptionalTypeFfiDiscoveryReviewProposal.allocationSize(value.`reviewProposal`) +
+            FfiConverterOptionalTypeFfiDiscoveryAssistantResumeBoundary.allocationSize(value.`assistantResumeBoundary`) +
+            FfiConverterString.allocationSize(value.`createdAt`) +
+            FfiConverterString.allocationSize(value.`updatedAt`)
+    )
+
+    override fun write(value: FfiProviderDiscoverySnapshot, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`snapshotSchemaVersion`, buf)
+            FfiConverterString.write(value.`sessionId`, buf)
+            FfiConverterString.write(value.`pendingConnectionId`, buf)
+            FfiConverterString.write(value.`pendingDisplayName`, buf)
+            FfiConverterTypeFfiProviderDiscoveryConnectionOptions.write(value.`connectionOptions`, buf)
+            FfiConverterOptionalString.write(value.`credentialSlotId`, buf)
+            FfiConverterBoolean.write(value.`credentialSlotExpected`, buf)
+            FfiConverterULong.write(value.`revision`, buf)
+            FfiConverterTypeFfiDiscoveryState.write(value.`state`, buf)
+            FfiConverterULong.write(value.`nextEventSequence`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryStep.write(value.`steps`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryActionRequired.write(value.`actionRequired`, buf)
+            FfiConverterOptionalString.write(value.`activeOperationId`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryOperationKind.write(value.`recoveryOperation`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryOperationKind.write(value.`unknownOperation`, buf)
+            FfiConverterOptionalString.write(value.`manifestSha256`, buf)
+            FfiConverterOptionalString.write(value.`commitPlanSha256`, buf)
+            FfiConverterOptionalString.write(value.`commitAttemptId`, buf)
+            FfiConverterOptionalString.write(value.`committedConnectionId`, buf)
+            FfiConverterBoolean.write(value.`cancellationPending`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryFailure.write(value.`failure`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryCandidate.write(value.`candidates`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryEvidence.write(value.`evidence`, buf)
+            FfiConverterSequenceTypeFfiDiscoveryApproval.write(value.`approvals`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryReview.write(value.`review`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryApprovalProposal.write(value.`approvalProposal`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryReviewProposal.write(value.`reviewProposal`, buf)
+            FfiConverterOptionalTypeFfiDiscoveryAssistantResumeBoundary.write(value.`assistantResumeBoundary`, buf)
+            FfiConverterString.write(value.`createdAt`, buf)
+            FfiConverterString.write(value.`updatedAt`, buf)
+    }
+}
+
+
+
+data class FfiProviderLocalNetworkApproval (
+    var `origin`: kotlin.String, 
+    var `addresses`: List<kotlin.String>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderLocalNetworkApproval: FfiConverterRustBuffer<FfiProviderLocalNetworkApproval> {
+    override fun read(buf: ByteBuffer): FfiProviderLocalNetworkApproval {
+        return FfiProviderLocalNetworkApproval(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderLocalNetworkApproval) = (
+            FfiConverterString.allocationSize(value.`origin`) +
+            FfiConverterSequenceString.allocationSize(value.`addresses`)
+    )
+
+    override fun write(value: FfiProviderLocalNetworkApproval, buf: ByteBuffer) {
+            FfiConverterString.write(value.`origin`, buf)
+            FfiConverterSequenceString.write(value.`addresses`, buf)
+    }
+}
+
+
+
+data class FfiProviderModelRefreshProvenance (
+    var `source`: kotlin.String, 
+    var `apiFamily`: kotlin.String, 
+    var `apiOrigin`: kotlin.String, 
+    var `endpointPath`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderModelRefreshProvenance: FfiConverterRustBuffer<FfiProviderModelRefreshProvenance> {
+    override fun read(buf: ByteBuffer): FfiProviderModelRefreshProvenance {
+        return FfiProviderModelRefreshProvenance(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderModelRefreshProvenance) = (
+            FfiConverterString.allocationSize(value.`source`) +
+            FfiConverterString.allocationSize(value.`apiFamily`) +
+            FfiConverterString.allocationSize(value.`apiOrigin`) +
+            FfiConverterString.allocationSize(value.`endpointPath`)
+    )
+
+    override fun write(value: FfiProviderModelRefreshProvenance, buf: ByteBuffer) {
+            FfiConverterString.write(value.`source`, buf)
+            FfiConverterString.write(value.`apiFamily`, buf)
+            FfiConverterString.write(value.`apiOrigin`, buf)
+            FfiConverterString.write(value.`endpointPath`, buf)
+    }
+}
+
+
+
+data class FfiProviderModelRefreshResult (
+    var `connectionId`: kotlin.String, 
+    var `modelRoutes`: List<FfiModelRoute>, 
+    var `newlySeenModelRouteIds`: List<kotlin.String>, 
+    var `missingModelRouteIds`: List<kotlin.String>, 
+    var `createdGenerationPresetIds`: List<kotlin.String>, 
+    var `routesRequiringPresetConfiguration`: List<kotlin.String>, 
+    var `provenance`: FfiProviderModelRefreshProvenance, 
+    var `pagesFetched`: kotlin.UInt, 
+    var `responseBytes`: kotlin.ULong, 
+    var `observedAt`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderModelRefreshResult: FfiConverterRustBuffer<FfiProviderModelRefreshResult> {
+    override fun read(buf: ByteBuffer): FfiProviderModelRefreshResult {
+        return FfiProviderModelRefreshResult(
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeFfiModelRoute.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterTypeFfiProviderModelRefreshProvenance.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterULong.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderModelRefreshResult) = (
+            FfiConverterString.allocationSize(value.`connectionId`) +
+            FfiConverterSequenceTypeFfiModelRoute.allocationSize(value.`modelRoutes`) +
+            FfiConverterSequenceString.allocationSize(value.`newlySeenModelRouteIds`) +
+            FfiConverterSequenceString.allocationSize(value.`missingModelRouteIds`) +
+            FfiConverterSequenceString.allocationSize(value.`createdGenerationPresetIds`) +
+            FfiConverterSequenceString.allocationSize(value.`routesRequiringPresetConfiguration`) +
+            FfiConverterTypeFfiProviderModelRefreshProvenance.allocationSize(value.`provenance`) +
+            FfiConverterUInt.allocationSize(value.`pagesFetched`) +
+            FfiConverterULong.allocationSize(value.`responseBytes`) +
+            FfiConverterString.allocationSize(value.`observedAt`)
+    )
+
+    override fun write(value: FfiProviderModelRefreshResult, buf: ByteBuffer) {
+            FfiConverterString.write(value.`connectionId`, buf)
+            FfiConverterSequenceTypeFfiModelRoute.write(value.`modelRoutes`, buf)
+            FfiConverterSequenceString.write(value.`newlySeenModelRouteIds`, buf)
+            FfiConverterSequenceString.write(value.`missingModelRouteIds`, buf)
+            FfiConverterSequenceString.write(value.`createdGenerationPresetIds`, buf)
+            FfiConverterSequenceString.write(value.`routesRequiringPresetConfiguration`, buf)
+            FfiConverterTypeFfiProviderModelRefreshProvenance.write(value.`provenance`, buf)
+            FfiConverterUInt.write(value.`pagesFetched`, buf)
+            FfiConverterULong.write(value.`responseBytes`, buf)
+            FfiConverterString.write(value.`observedAt`, buf)
+    }
+}
+
+
+
+data class FfiProviderNetworkPolicy (
+    var `networkMode`: FfiProviderNetworkMode, 
+    var `localNetworkApproval`: FfiProviderLocalNetworkApproval?
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderNetworkPolicy: FfiConverterRustBuffer<FfiProviderNetworkPolicy> {
+    override fun read(buf: ByteBuffer): FfiProviderNetworkPolicy {
+        return FfiProviderNetworkPolicy(
+            FfiConverterTypeFfiProviderNetworkMode.read(buf),
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderNetworkPolicy) = (
+            FfiConverterTypeFfiProviderNetworkMode.allocationSize(value.`networkMode`) +
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.allocationSize(value.`localNetworkApproval`)
+    )
+
+    override fun write(value: FfiProviderNetworkPolicy, buf: ByteBuffer) {
+            FfiConverterTypeFfiProviderNetworkMode.write(value.`networkMode`, buf)
+            FfiConverterOptionalTypeFfiProviderLocalNetworkApproval.write(value.`localNetworkApproval`, buf)
+    }
+}
+
+
+
+data class FfiProviderParameterMapping (
+    var `target`: FfiProviderParameterTarget, 
+    var `fieldName`: kotlin.String
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderParameterMapping: FfiConverterRustBuffer<FfiProviderParameterMapping> {
+    override fun read(buf: ByteBuffer): FfiProviderParameterMapping {
+        return FfiProviderParameterMapping(
+            FfiConverterTypeFfiProviderParameterTarget.read(buf),
+            FfiConverterString.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderParameterMapping) = (
+            FfiConverterTypeFfiProviderParameterTarget.allocationSize(value.`target`) +
+            FfiConverterString.allocationSize(value.`fieldName`)
+    )
+
+    override fun write(value: FfiProviderParameterMapping, buf: ByteBuffer) {
+            FfiConverterTypeFfiProviderParameterTarget.write(value.`target`, buf)
+            FfiConverterString.write(value.`fieldName`, buf)
+    }
+}
+
+
+
 data class FfiProviderProfile (
     var `id`: kotlin.String, 
     var `displayName`: kotlin.String, 
@@ -2927,6 +8607,262 @@ public object FfiConverterTypeFfiProviderProfile: FfiConverterRustBuffer<FfiProv
 
 
 
+data class FfiProviderTemplate (
+    var `id`: kotlin.String, 
+    var `displayName`: kotlin.String, 
+    var `manifestVersion`: kotlin.UInt, 
+    var `source`: kotlin.String, 
+    var `apiFamily`: kotlin.String, 
+    var `defaultNetworkMode`: FfiProviderNetworkMode, 
+    var `defaultApiOrigin`: kotlin.String?, 
+    var `requiresCredential`: kotlin.Boolean, 
+    var `supportsModelListing`: kotlin.Boolean, 
+    var `authBinding`: FfiAuthBinding, 
+    var `connectionFields`: List<FfiConnectionFieldSpec>, 
+    var `parameters`: List<FfiParameterSpec>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderTemplate: FfiConverterRustBuffer<FfiProviderTemplate> {
+    override fun read(buf: ByteBuffer): FfiProviderTemplate {
+        return FfiProviderTemplate(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiProviderNetworkMode.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterTypeFfiAuthBinding.read(buf),
+            FfiConverterSequenceTypeFfiConnectionFieldSpec.read(buf),
+            FfiConverterSequenceTypeFfiParameterSpec.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiProviderTemplate) = (
+            FfiConverterString.allocationSize(value.`id`) +
+            FfiConverterString.allocationSize(value.`displayName`) +
+            FfiConverterUInt.allocationSize(value.`manifestVersion`) +
+            FfiConverterString.allocationSize(value.`source`) +
+            FfiConverterString.allocationSize(value.`apiFamily`) +
+            FfiConverterTypeFfiProviderNetworkMode.allocationSize(value.`defaultNetworkMode`) +
+            FfiConverterOptionalString.allocationSize(value.`defaultApiOrigin`) +
+            FfiConverterBoolean.allocationSize(value.`requiresCredential`) +
+            FfiConverterBoolean.allocationSize(value.`supportsModelListing`) +
+            FfiConverterTypeFfiAuthBinding.allocationSize(value.`authBinding`) +
+            FfiConverterSequenceTypeFfiConnectionFieldSpec.allocationSize(value.`connectionFields`) +
+            FfiConverterSequenceTypeFfiParameterSpec.allocationSize(value.`parameters`)
+    )
+
+    override fun write(value: FfiProviderTemplate, buf: ByteBuffer) {
+            FfiConverterString.write(value.`id`, buf)
+            FfiConverterString.write(value.`displayName`, buf)
+            FfiConverterUInt.write(value.`manifestVersion`, buf)
+            FfiConverterString.write(value.`source`, buf)
+            FfiConverterString.write(value.`apiFamily`, buf)
+            FfiConverterTypeFfiProviderNetworkMode.write(value.`defaultNetworkMode`, buf)
+            FfiConverterOptionalString.write(value.`defaultApiOrigin`, buf)
+            FfiConverterBoolean.write(value.`requiresCredential`, buf)
+            FfiConverterBoolean.write(value.`supportsModelListing`, buf)
+            FfiConverterTypeFfiAuthBinding.write(value.`authBinding`, buf)
+            FfiConverterSequenceTypeFfiConnectionFieldSpec.write(value.`connectionFields`, buf)
+            FfiConverterSequenceTypeFfiParameterSpec.write(value.`parameters`, buf)
+    }
+}
+
+
+
+data class FfiReasoningControl (
+    var `state`: kotlin.String, 
+    var `mode`: kotlin.String, 
+    var `effort`: kotlin.String?, 
+    var `budgetTokens`: kotlin.UInt?, 
+    var `summary`: kotlin.String, 
+    var `preserveOpaqueState`: kotlin.Boolean, 
+    var `allowedModes`: List<kotlin.String>, 
+    var `allowedEfforts`: List<kotlin.String>, 
+    var `allowedSummaries`: List<kotlin.String>, 
+    var `minimumBudgetTokens`: kotlin.UInt?, 
+    var `maximumBudgetTokens`: kotlin.UInt?, 
+    var `effortField`: kotlin.String, 
+    var `budgetField`: kotlin.String, 
+    var `summaryField`: kotlin.String, 
+    var `issues`: List<FfiParameterIssue>
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiReasoningControl: FfiConverterRustBuffer<FfiReasoningControl> {
+    override fun read(buf: ByteBuffer): FfiReasoningControl {
+        return FfiReasoningControl(
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterOptionalString.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterOptionalUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceTypeFfiParameterIssue.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiReasoningControl) = (
+            FfiConverterString.allocationSize(value.`state`) +
+            FfiConverterString.allocationSize(value.`mode`) +
+            FfiConverterOptionalString.allocationSize(value.`effort`) +
+            FfiConverterOptionalUInt.allocationSize(value.`budgetTokens`) +
+            FfiConverterString.allocationSize(value.`summary`) +
+            FfiConverterBoolean.allocationSize(value.`preserveOpaqueState`) +
+            FfiConverterSequenceString.allocationSize(value.`allowedModes`) +
+            FfiConverterSequenceString.allocationSize(value.`allowedEfforts`) +
+            FfiConverterSequenceString.allocationSize(value.`allowedSummaries`) +
+            FfiConverterOptionalUInt.allocationSize(value.`minimumBudgetTokens`) +
+            FfiConverterOptionalUInt.allocationSize(value.`maximumBudgetTokens`) +
+            FfiConverterString.allocationSize(value.`effortField`) +
+            FfiConverterString.allocationSize(value.`budgetField`) +
+            FfiConverterString.allocationSize(value.`summaryField`) +
+            FfiConverterSequenceTypeFfiParameterIssue.allocationSize(value.`issues`)
+    )
+
+    override fun write(value: FfiReasoningControl, buf: ByteBuffer) {
+            FfiConverterString.write(value.`state`, buf)
+            FfiConverterString.write(value.`mode`, buf)
+            FfiConverterOptionalString.write(value.`effort`, buf)
+            FfiConverterOptionalUInt.write(value.`budgetTokens`, buf)
+            FfiConverterString.write(value.`summary`, buf)
+            FfiConverterBoolean.write(value.`preserveOpaqueState`, buf)
+            FfiConverterSequenceString.write(value.`allowedModes`, buf)
+            FfiConverterSequenceString.write(value.`allowedEfforts`, buf)
+            FfiConverterSequenceString.write(value.`allowedSummaries`, buf)
+            FfiConverterOptionalUInt.write(value.`minimumBudgetTokens`, buf)
+            FfiConverterOptionalUInt.write(value.`maximumBudgetTokens`, buf)
+            FfiConverterString.write(value.`effortField`, buf)
+            FfiConverterString.write(value.`budgetField`, buf)
+            FfiConverterString.write(value.`summaryField`, buf)
+            FfiConverterSequenceTypeFfiParameterIssue.write(value.`issues`, buf)
+    }
+}
+
+
+
+data class FfiRequestBodyField (
+    var `name`: kotlin.String, 
+    var `shape`: FfiRequestBodyShape
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiRequestBodyField: FfiConverterRustBuffer<FfiRequestBodyField> {
+    override fun read(buf: ByteBuffer): FfiRequestBodyField {
+        return FfiRequestBodyField(
+            FfiConverterString.read(buf),
+            FfiConverterTypeFfiRequestBodyShape.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiRequestBodyField) = (
+            FfiConverterString.allocationSize(value.`name`) +
+            FfiConverterTypeFfiRequestBodyShape.allocationSize(value.`shape`)
+    )
+
+    override fun write(value: FfiRequestBodyField, buf: ByteBuffer) {
+            FfiConverterString.write(value.`name`, buf)
+            FfiConverterTypeFfiRequestBodyShape.write(value.`shape`, buf)
+    }
+}
+
+
+
+data class FfiRequestPreview (
+    var `redactionVersion`: kotlin.UInt, 
+    var `method`: kotlin.String, 
+    var `origin`: kotlin.String, 
+    var `path`: kotlin.String, 
+    var `headerNames`: List<kotlin.String>, 
+    var `queryParameterNames`: List<kotlin.String>, 
+    var `bodyShape`: FfiRequestBodyShape?, 
+    var `bodyTruncated`: kotlin.Boolean, 
+    var `includesPrivateMessage`: kotlin.Boolean, 
+    var `includesCredentialValue`: kotlin.Boolean, 
+    var `includesOpaqueReasoningState`: kotlin.Boolean
+) {
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiRequestPreview: FfiConverterRustBuffer<FfiRequestPreview> {
+    override fun read(buf: ByteBuffer): FfiRequestPreview {
+        return FfiRequestPreview(
+            FfiConverterUInt.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterSequenceString.read(buf),
+            FfiConverterOptionalTypeFfiRequestBodyShape.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+            FfiConverterBoolean.read(buf),
+        )
+    }
+
+    override fun allocationSize(value: FfiRequestPreview) = (
+            FfiConverterUInt.allocationSize(value.`redactionVersion`) +
+            FfiConverterString.allocationSize(value.`method`) +
+            FfiConverterString.allocationSize(value.`origin`) +
+            FfiConverterString.allocationSize(value.`path`) +
+            FfiConverterSequenceString.allocationSize(value.`headerNames`) +
+            FfiConverterSequenceString.allocationSize(value.`queryParameterNames`) +
+            FfiConverterOptionalTypeFfiRequestBodyShape.allocationSize(value.`bodyShape`) +
+            FfiConverterBoolean.allocationSize(value.`bodyTruncated`) +
+            FfiConverterBoolean.allocationSize(value.`includesPrivateMessage`) +
+            FfiConverterBoolean.allocationSize(value.`includesCredentialValue`) +
+            FfiConverterBoolean.allocationSize(value.`includesOpaqueReasoningState`)
+    )
+
+    override fun write(value: FfiRequestPreview, buf: ByteBuffer) {
+            FfiConverterUInt.write(value.`redactionVersion`, buf)
+            FfiConverterString.write(value.`method`, buf)
+            FfiConverterString.write(value.`origin`, buf)
+            FfiConverterString.write(value.`path`, buf)
+            FfiConverterSequenceString.write(value.`headerNames`, buf)
+            FfiConverterSequenceString.write(value.`queryParameterNames`, buf)
+            FfiConverterOptionalTypeFfiRequestBodyShape.write(value.`bodyShape`, buf)
+            FfiConverterBoolean.write(value.`bodyTruncated`, buf)
+            FfiConverterBoolean.write(value.`includesPrivateMessage`, buf)
+            FfiConverterBoolean.write(value.`includesCredentialValue`, buf)
+            FfiConverterBoolean.write(value.`includesOpaqueReasoningState`, buf)
+    }
+}
+
+
+
 data class FfiVersionInfo (
     var `coreVersion`: kotlin.String, 
     var `coreApiVersion`: kotlin.UInt, 
@@ -2964,6 +8900,1990 @@ public object FfiConverterTypeFfiVersionInfo: FfiConverterRustBuffer<FfiVersionI
             FfiConverterUInt.write(value.`chatEventVersion`, buf)
     }
 }
+
+
+
+sealed class FfiAuthBinding {
+    
+    object None : FfiAuthBinding()
+    
+    
+    object BearerHeader : FfiAuthBinding()
+    
+    
+    data class HeaderApiKey(
+        val `headerName`: kotlin.String) : FfiAuthBinding() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiAuthBinding : FfiConverterRustBuffer<FfiAuthBinding>{
+    override fun read(buf: ByteBuffer): FfiAuthBinding {
+        return when(buf.getInt()) {
+            1 -> FfiAuthBinding.None
+            2 -> FfiAuthBinding.BearerHeader
+            3 -> FfiAuthBinding.HeaderApiKey(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiAuthBinding) = when(value) {
+        is FfiAuthBinding.None -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiAuthBinding.BearerHeader -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiAuthBinding.HeaderApiKey -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`headerName`)
+            )
+        }
+    }
+
+    override fun write(value: FfiAuthBinding, buf: ByteBuffer) {
+        when(value) {
+            is FfiAuthBinding.None -> {
+                buf.putInt(1)
+                Unit
+            }
+            is FfiAuthBinding.BearerHeader -> {
+                buf.putInt(2)
+                Unit
+            }
+            is FfiAuthBinding.HeaderApiKey -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`headerName`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+sealed class FfiConnectionConfigValue {
+    
+    data class Text(
+        val `value`: kotlin.String) : FfiConnectionConfigValue() {
+        companion object
+    }
+    
+    data class Integer(
+        val `value`: kotlin.Long) : FfiConnectionConfigValue() {
+        companion object
+    }
+    
+    data class Boolean(
+        val `value`: kotlin.Boolean) : FfiConnectionConfigValue() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiConnectionConfigValue : FfiConverterRustBuffer<FfiConnectionConfigValue>{
+    override fun read(buf: ByteBuffer): FfiConnectionConfigValue {
+        return when(buf.getInt()) {
+            1 -> FfiConnectionConfigValue.Text(
+                FfiConverterString.read(buf),
+                )
+            2 -> FfiConnectionConfigValue.Integer(
+                FfiConverterLong.read(buf),
+                )
+            3 -> FfiConnectionConfigValue.Boolean(
+                FfiConverterBoolean.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiConnectionConfigValue) = when(value) {
+        is FfiConnectionConfigValue.Text -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`value`)
+            )
+        }
+        is FfiConnectionConfigValue.Integer -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterLong.allocationSize(value.`value`)
+            )
+        }
+        is FfiConnectionConfigValue.Boolean -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterBoolean.allocationSize(value.`value`)
+            )
+        }
+    }
+
+    override fun write(value: FfiConnectionConfigValue, buf: ByteBuffer) {
+        when(value) {
+            is FfiConnectionConfigValue.Text -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`value`, buf)
+                Unit
+            }
+            is FfiConnectionConfigValue.Integer -> {
+                buf.putInt(2)
+                FfiConverterLong.write(value.`value`, buf)
+                Unit
+            }
+            is FfiConnectionConfigValue.Boolean -> {
+                buf.putInt(3)
+                FfiConverterBoolean.write(value.`value`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiConnectionFieldType {
+    
+    TEXT,
+    INTEGER,
+    BOOLEAN,
+    CREDENTIAL;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiConnectionFieldType: FfiConverterRustBuffer<FfiConnectionFieldType> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiConnectionFieldType.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiConnectionFieldType) = 4UL
+
+    override fun write(value: FfiConnectionFieldType, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiCredentialRedirectPolicy {
+    
+    DENY,
+    FOLLOW_WITHOUT_CREDENTIAL;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiCredentialRedirectPolicy: FfiConverterRustBuffer<FfiCredentialRedirectPolicy> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiCredentialRedirectPolicy.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiCredentialRedirectPolicy) = 4UL
+
+    override fun write(value: FfiCredentialRedirectPolicy, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiDiscoveryActionRequired {
+    
+    object SelectTemplate : FfiDiscoveryActionRequired()
+    
+    
+    object SupplyMoreEvidence : FfiDiscoveryActionRequired()
+    
+    
+    object ApproveAssistant : FfiDiscoveryActionRequired()
+    
+    
+    object ApproveCredentialOrigin : FfiDiscoveryActionRequired()
+    
+    
+    object ApproveProbes : FfiDiscoveryActionRequired()
+    
+    
+    object Review : FfiDiscoveryActionRequired()
+    
+    
+    data class RestartInterrupted(
+        val `operation`: FfiDiscoveryOperationKind) : FfiDiscoveryActionRequired() {
+        companion object
+    }
+    
+    data class ReconcileUnknownOutcome(
+        val `operation`: FfiDiscoveryOperationKind) : FfiDiscoveryActionRequired() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryActionRequired : FfiConverterRustBuffer<FfiDiscoveryActionRequired>{
+    override fun read(buf: ByteBuffer): FfiDiscoveryActionRequired {
+        return when(buf.getInt()) {
+            1 -> FfiDiscoveryActionRequired.SelectTemplate
+            2 -> FfiDiscoveryActionRequired.SupplyMoreEvidence
+            3 -> FfiDiscoveryActionRequired.ApproveAssistant
+            4 -> FfiDiscoveryActionRequired.ApproveCredentialOrigin
+            5 -> FfiDiscoveryActionRequired.ApproveProbes
+            6 -> FfiDiscoveryActionRequired.Review
+            7 -> FfiDiscoveryActionRequired.RestartInterrupted(
+                FfiConverterTypeFfiDiscoveryOperationKind.read(buf),
+                )
+            8 -> FfiDiscoveryActionRequired.ReconcileUnknownOutcome(
+                FfiConverterTypeFfiDiscoveryOperationKind.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiDiscoveryActionRequired) = when(value) {
+        is FfiDiscoveryActionRequired.SelectTemplate -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryActionRequired.SupplyMoreEvidence -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryActionRequired.ApproveAssistant -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryActionRequired.ApproveCredentialOrigin -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryActionRequired.ApproveProbes -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryActionRequired.Review -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryActionRequired.RestartInterrupted -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeFfiDiscoveryOperationKind.allocationSize(value.`operation`)
+            )
+        }
+        is FfiDiscoveryActionRequired.ReconcileUnknownOutcome -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeFfiDiscoveryOperationKind.allocationSize(value.`operation`)
+            )
+        }
+    }
+
+    override fun write(value: FfiDiscoveryActionRequired, buf: ByteBuffer) {
+        when(value) {
+            is FfiDiscoveryActionRequired.SelectTemplate -> {
+                buf.putInt(1)
+                Unit
+            }
+            is FfiDiscoveryActionRequired.SupplyMoreEvidence -> {
+                buf.putInt(2)
+                Unit
+            }
+            is FfiDiscoveryActionRequired.ApproveAssistant -> {
+                buf.putInt(3)
+                Unit
+            }
+            is FfiDiscoveryActionRequired.ApproveCredentialOrigin -> {
+                buf.putInt(4)
+                Unit
+            }
+            is FfiDiscoveryActionRequired.ApproveProbes -> {
+                buf.putInt(5)
+                Unit
+            }
+            is FfiDiscoveryActionRequired.Review -> {
+                buf.putInt(6)
+                Unit
+            }
+            is FfiDiscoveryActionRequired.RestartInterrupted -> {
+                buf.putInt(7)
+                FfiConverterTypeFfiDiscoveryOperationKind.write(value.`operation`, buf)
+                Unit
+            }
+            is FfiDiscoveryActionRequired.ReconcileUnknownOutcome -> {
+                buf.putInt(8)
+                FfiConverterTypeFfiDiscoveryOperationKind.write(value.`operation`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryApprovalDecision {
+    
+    APPROVED,
+    REJECTED;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryApprovalDecision: FfiConverterRustBuffer<FfiDiscoveryApprovalDecision> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryApprovalDecision.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryApprovalDecision) = 4UL
+
+    override fun write(value: FfiDiscoveryApprovalDecision, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiDiscoveryApprovalGrant {
+    
+    data class TemplateSelection(
+        val `candidateId`: kotlin.String) : FfiDiscoveryApprovalGrant() {
+        companion object
+    }
+    
+    data class AssistantConsent(
+        val `assistantModelRouteId`: kotlin.String, 
+        val `evidenceIds`: List<kotlin.String>, 
+        val `allowedDocumentOrigins`: List<kotlin.String>, 
+        val `maxCalls`: kotlin.UInt, 
+        val `maxInputTokens`: kotlin.UInt, 
+        val `maxOutputTokens`: kotlin.UInt, 
+        val `maxToolCalls`: kotlin.UInt, 
+        val `maxRetries`: kotlin.UInt, 
+        val `maxCostMicroUnits`: kotlin.ULong) : FfiDiscoveryApprovalGrant() {
+        companion object
+    }
+    
+    data class CredentialOrigin(
+        val `origin`: kotlin.String, 
+        val `authBinding`: FfiAuthBinding, 
+        val `manifestSha256`: kotlin.String) : FfiDiscoveryApprovalGrant() {
+        companion object
+    }
+    
+    data class CapabilityProbe(
+        val `modelRouteIds`: List<kotlin.String>, 
+        val `budget`: FfiDiscoveryProbeBudget) : FfiDiscoveryApprovalGrant() {
+        companion object
+    }
+    
+    data class Review(
+        val `reviewSha256`: kotlin.String, 
+        val `graphSha256`: kotlin.String) : FfiDiscoveryApprovalGrant() {
+        companion object
+    }
+    
+    data class UnknownOutcomeResolution(
+        val `operation`: FfiDiscoveryOperationKind, 
+        val `resolution`: FfiDiscoveryUnknownOutcomeResolution) : FfiDiscoveryApprovalGrant() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryApprovalGrant : FfiConverterRustBuffer<FfiDiscoveryApprovalGrant>{
+    override fun read(buf: ByteBuffer): FfiDiscoveryApprovalGrant {
+        return when(buf.getInt()) {
+            1 -> FfiDiscoveryApprovalGrant.TemplateSelection(
+                FfiConverterString.read(buf),
+                )
+            2 -> FfiDiscoveryApprovalGrant.AssistantConsent(
+                FfiConverterString.read(buf),
+                FfiConverterSequenceString.read(buf),
+                FfiConverterSequenceString.read(buf),
+                FfiConverterUInt.read(buf),
+                FfiConverterUInt.read(buf),
+                FfiConverterUInt.read(buf),
+                FfiConverterUInt.read(buf),
+                FfiConverterUInt.read(buf),
+                FfiConverterULong.read(buf),
+                )
+            3 -> FfiDiscoveryApprovalGrant.CredentialOrigin(
+                FfiConverterString.read(buf),
+                FfiConverterTypeFfiAuthBinding.read(buf),
+                FfiConverterString.read(buf),
+                )
+            4 -> FfiDiscoveryApprovalGrant.CapabilityProbe(
+                FfiConverterSequenceString.read(buf),
+                FfiConverterTypeFfiDiscoveryProbeBudget.read(buf),
+                )
+            5 -> FfiDiscoveryApprovalGrant.Review(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            6 -> FfiDiscoveryApprovalGrant.UnknownOutcomeResolution(
+                FfiConverterTypeFfiDiscoveryOperationKind.read(buf),
+                FfiConverterTypeFfiDiscoveryUnknownOutcomeResolution.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiDiscoveryApprovalGrant) = when(value) {
+        is FfiDiscoveryApprovalGrant.TemplateSelection -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`candidateId`)
+            )
+        }
+        is FfiDiscoveryApprovalGrant.AssistantConsent -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`assistantModelRouteId`)
+                + FfiConverterSequenceString.allocationSize(value.`evidenceIds`)
+                + FfiConverterSequenceString.allocationSize(value.`allowedDocumentOrigins`)
+                + FfiConverterUInt.allocationSize(value.`maxCalls`)
+                + FfiConverterUInt.allocationSize(value.`maxInputTokens`)
+                + FfiConverterUInt.allocationSize(value.`maxOutputTokens`)
+                + FfiConverterUInt.allocationSize(value.`maxToolCalls`)
+                + FfiConverterUInt.allocationSize(value.`maxRetries`)
+                + FfiConverterULong.allocationSize(value.`maxCostMicroUnits`)
+            )
+        }
+        is FfiDiscoveryApprovalGrant.CredentialOrigin -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`origin`)
+                + FfiConverterTypeFfiAuthBinding.allocationSize(value.`authBinding`)
+                + FfiConverterString.allocationSize(value.`manifestSha256`)
+            )
+        }
+        is FfiDiscoveryApprovalGrant.CapabilityProbe -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterSequenceString.allocationSize(value.`modelRouteIds`)
+                + FfiConverterTypeFfiDiscoveryProbeBudget.allocationSize(value.`budget`)
+            )
+        }
+        is FfiDiscoveryApprovalGrant.Review -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`reviewSha256`)
+                + FfiConverterString.allocationSize(value.`graphSha256`)
+            )
+        }
+        is FfiDiscoveryApprovalGrant.UnknownOutcomeResolution -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeFfiDiscoveryOperationKind.allocationSize(value.`operation`)
+                + FfiConverterTypeFfiDiscoveryUnknownOutcomeResolution.allocationSize(value.`resolution`)
+            )
+        }
+    }
+
+    override fun write(value: FfiDiscoveryApprovalGrant, buf: ByteBuffer) {
+        when(value) {
+            is FfiDiscoveryApprovalGrant.TemplateSelection -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`candidateId`, buf)
+                Unit
+            }
+            is FfiDiscoveryApprovalGrant.AssistantConsent -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`assistantModelRouteId`, buf)
+                FfiConverterSequenceString.write(value.`evidenceIds`, buf)
+                FfiConverterSequenceString.write(value.`allowedDocumentOrigins`, buf)
+                FfiConverterUInt.write(value.`maxCalls`, buf)
+                FfiConverterUInt.write(value.`maxInputTokens`, buf)
+                FfiConverterUInt.write(value.`maxOutputTokens`, buf)
+                FfiConverterUInt.write(value.`maxToolCalls`, buf)
+                FfiConverterUInt.write(value.`maxRetries`, buf)
+                FfiConverterULong.write(value.`maxCostMicroUnits`, buf)
+                Unit
+            }
+            is FfiDiscoveryApprovalGrant.CredentialOrigin -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`origin`, buf)
+                FfiConverterTypeFfiAuthBinding.write(value.`authBinding`, buf)
+                FfiConverterString.write(value.`manifestSha256`, buf)
+                Unit
+            }
+            is FfiDiscoveryApprovalGrant.CapabilityProbe -> {
+                buf.putInt(4)
+                FfiConverterSequenceString.write(value.`modelRouteIds`, buf)
+                FfiConverterTypeFfiDiscoveryProbeBudget.write(value.`budget`, buf)
+                Unit
+            }
+            is FfiDiscoveryApprovalGrant.Review -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`reviewSha256`, buf)
+                FfiConverterString.write(value.`graphSha256`, buf)
+                Unit
+            }
+            is FfiDiscoveryApprovalGrant.UnknownOutcomeResolution -> {
+                buf.putInt(6)
+                FfiConverterTypeFfiDiscoveryOperationKind.write(value.`operation`, buf)
+                FfiConverterTypeFfiDiscoveryUnknownOutcomeResolution.write(value.`resolution`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryAssistantApiFamily {
+    
+    OPEN_AI_RESPONSES,
+    OPEN_AI_CHAT_COMPLETIONS,
+    ANTHROPIC_MESSAGES,
+    GEMINI_GENERATE_CONTENT,
+    OLLAMA_NATIVE;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantApiFamily: FfiConverterRustBuffer<FfiDiscoveryAssistantApiFamily> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryAssistantApiFamily.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantApiFamily) = 4UL
+
+    override fun write(value: FfiDiscoveryAssistantApiFamily, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryAssistantCheckpoint {
+    
+    READY,
+    AWAITING_ASSISTANT,
+    AWAITING_TOOL_RESULT,
+    AWAITING_MORE_EVIDENCE,
+    AWAITING_RETRY_CONSENT,
+    DRAFT_READY;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantCheckpoint: FfiConverterRustBuffer<FfiDiscoveryAssistantCheckpoint> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryAssistantCheckpoint.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantCheckpoint) = 4UL
+
+    override fun write(value: FfiDiscoveryAssistantCheckpoint, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryAssistantConfidenceLevel {
+    
+    UNKNOWN,
+    LOW,
+    MEDIUM,
+    HIGH;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantConfidenceLevel: FfiConverterRustBuffer<FfiDiscoveryAssistantConfidenceLevel> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryAssistantConfidenceLevel.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantConfidenceLevel) = 4UL
+
+    override fun write(value: FfiDiscoveryAssistantConfidenceLevel, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiDiscoveryAssistantConflictDisposition {
+    
+    object Unresolved : FfiDiscoveryAssistantConflictDisposition()
+    
+    
+    data class Resolved(
+        val `selectedEvidenceId`: kotlin.String, 
+        val `rationale`: kotlin.String) : FfiDiscoveryAssistantConflictDisposition() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantConflictDisposition : FfiConverterRustBuffer<FfiDiscoveryAssistantConflictDisposition>{
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantConflictDisposition {
+        return when(buf.getInt()) {
+            1 -> FfiDiscoveryAssistantConflictDisposition.Unresolved
+            2 -> FfiDiscoveryAssistantConflictDisposition.Resolved(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantConflictDisposition) = when(value) {
+        is FfiDiscoveryAssistantConflictDisposition.Unresolved -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryAssistantConflictDisposition.Resolved -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`selectedEvidenceId`)
+                + FfiConverterString.allocationSize(value.`rationale`)
+            )
+        }
+    }
+
+    override fun write(value: FfiDiscoveryAssistantConflictDisposition, buf: ByteBuffer) {
+        when(value) {
+            is FfiDiscoveryAssistantConflictDisposition.Unresolved -> {
+                buf.putInt(1)
+                Unit
+            }
+            is FfiDiscoveryAssistantConflictDisposition.Resolved -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`selectedEvidenceId`, buf)
+                FfiConverterString.write(value.`rationale`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryAssistantDecoder {
+    
+    OPEN_AI_JSON_V1,
+    OPEN_AI_SSE_V1,
+    ANTHROPIC_JSON_V1,
+    ANTHROPIC_SSE_V1,
+    GEMINI_JSON_V1,
+    GEMINI_SSE_V1,
+    OLLAMA_JSON_V1,
+    OLLAMA_JSONL_V1;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantDecoder: FfiConverterRustBuffer<FfiDiscoveryAssistantDecoder> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryAssistantDecoder.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantDecoder) = 4UL
+
+    override fun write(value: FfiDiscoveryAssistantDecoder, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiDiscoveryAssistantDraftField {
+    
+    object ApiFamily : FfiDiscoveryAssistantDraftField()
+    
+    
+    object DefaultApiOrigin : FfiDiscoveryAssistantDraftField()
+    
+    
+    object Auth : FfiDiscoveryAssistantDraftField()
+    
+    
+    object GenerateEndpoint : FfiDiscoveryAssistantDraftField()
+    
+    
+    object ModelsEndpoint : FfiDiscoveryAssistantDraftField()
+    
+    
+    object ResponseDecoder : FfiDiscoveryAssistantDraftField()
+    
+    
+    object StreamingDecoder : FfiDiscoveryAssistantDraftField()
+    
+    
+    data class Parameter(
+        val `parameterId`: kotlin.String) : FfiDiscoveryAssistantDraftField() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantDraftField : FfiConverterRustBuffer<FfiDiscoveryAssistantDraftField>{
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantDraftField {
+        return when(buf.getInt()) {
+            1 -> FfiDiscoveryAssistantDraftField.ApiFamily
+            2 -> FfiDiscoveryAssistantDraftField.DefaultApiOrigin
+            3 -> FfiDiscoveryAssistantDraftField.Auth
+            4 -> FfiDiscoveryAssistantDraftField.GenerateEndpoint
+            5 -> FfiDiscoveryAssistantDraftField.ModelsEndpoint
+            6 -> FfiDiscoveryAssistantDraftField.ResponseDecoder
+            7 -> FfiDiscoveryAssistantDraftField.StreamingDecoder
+            8 -> FfiDiscoveryAssistantDraftField.Parameter(
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantDraftField) = when(value) {
+        is FfiDiscoveryAssistantDraftField.ApiFamily -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryAssistantDraftField.DefaultApiOrigin -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryAssistantDraftField.Auth -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryAssistantDraftField.GenerateEndpoint -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryAssistantDraftField.ModelsEndpoint -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryAssistantDraftField.ResponseDecoder -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryAssistantDraftField.StreamingDecoder -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryAssistantDraftField.Parameter -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`parameterId`)
+            )
+        }
+    }
+
+    override fun write(value: FfiDiscoveryAssistantDraftField, buf: ByteBuffer) {
+        when(value) {
+            is FfiDiscoveryAssistantDraftField.ApiFamily -> {
+                buf.putInt(1)
+                Unit
+            }
+            is FfiDiscoveryAssistantDraftField.DefaultApiOrigin -> {
+                buf.putInt(2)
+                Unit
+            }
+            is FfiDiscoveryAssistantDraftField.Auth -> {
+                buf.putInt(3)
+                Unit
+            }
+            is FfiDiscoveryAssistantDraftField.GenerateEndpoint -> {
+                buf.putInt(4)
+                Unit
+            }
+            is FfiDiscoveryAssistantDraftField.ModelsEndpoint -> {
+                buf.putInt(5)
+                Unit
+            }
+            is FfiDiscoveryAssistantDraftField.ResponseDecoder -> {
+                buf.putInt(6)
+                Unit
+            }
+            is FfiDiscoveryAssistantDraftField.StreamingDecoder -> {
+                buf.putInt(7)
+                Unit
+            }
+            is FfiDiscoveryAssistantDraftField.Parameter -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`parameterId`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryAssistantDraftPersistence {
+    
+    BLOCKED_UNTIL_CHECKS_PASS;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantDraftPersistence: FfiConverterRustBuffer<FfiDiscoveryAssistantDraftPersistence> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryAssistantDraftPersistence.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantDraftPersistence) = 4UL
+
+    override fun write(value: FfiDiscoveryAssistantDraftPersistence, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryAssistantDraftReviewCheck {
+    
+    MANIFEST_VALIDATION,
+    URL_POLICY_VALIDATION,
+    CREDENTIAL_ORIGIN_APPROVAL,
+    USER_REVIEW;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantDraftReviewCheck: FfiConverterRustBuffer<FfiDiscoveryAssistantDraftReviewCheck> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryAssistantDraftReviewCheck.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantDraftReviewCheck) = 4UL
+
+    override fun write(value: FfiDiscoveryAssistantDraftReviewCheck, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiDiscoveryAssistantHostAction {
+    
+    data class RequestMoreEvidence(
+        val `sessionId`: kotlin.String, 
+        val `questions`: List<FfiDiscoveryAssistantQuestion>) : FfiDiscoveryAssistantHostAction() {
+        companion object
+    }
+    
+    data class ReviewDraft(
+        val `review`: FfiDiscoveryAssistantDraftReview) : FfiDiscoveryAssistantHostAction() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantHostAction : FfiConverterRustBuffer<FfiDiscoveryAssistantHostAction>{
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantHostAction {
+        return when(buf.getInt()) {
+            1 -> FfiDiscoveryAssistantHostAction.RequestMoreEvidence(
+                FfiConverterString.read(buf),
+                FfiConverterSequenceTypeFfiDiscoveryAssistantQuestion.read(buf),
+                )
+            2 -> FfiDiscoveryAssistantHostAction.ReviewDraft(
+                FfiConverterTypeFfiDiscoveryAssistantDraftReview.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantHostAction) = when(value) {
+        is FfiDiscoveryAssistantHostAction.RequestMoreEvidence -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`sessionId`)
+                + FfiConverterSequenceTypeFfiDiscoveryAssistantQuestion.allocationSize(value.`questions`)
+            )
+        }
+        is FfiDiscoveryAssistantHostAction.ReviewDraft -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeFfiDiscoveryAssistantDraftReview.allocationSize(value.`review`)
+            )
+        }
+    }
+
+    override fun write(value: FfiDiscoveryAssistantHostAction, buf: ByteBuffer) {
+        when(value) {
+            is FfiDiscoveryAssistantHostAction.RequestMoreEvidence -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`sessionId`, buf)
+                FfiConverterSequenceTypeFfiDiscoveryAssistantQuestion.write(value.`questions`, buf)
+                Unit
+            }
+            is FfiDiscoveryAssistantHostAction.ReviewDraft -> {
+                buf.putInt(2)
+                FfiConverterTypeFfiDiscoveryAssistantDraftReview.write(value.`review`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryAssistantHttpMethod {
+    
+    GET,
+    POST;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantHttpMethod: FfiConverterRustBuffer<FfiDiscoveryAssistantHttpMethod> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryAssistantHttpMethod.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantHttpMethod) = 4UL
+
+    override fun write(value: FfiDiscoveryAssistantHttpMethod, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryAssistantManifestSourceKind {
+    
+    OFFICIAL_SITE,
+    OFFICIAL_DOCUMENTATION,
+    SIGNED_CATALOG,
+    USER_SUPPLIED;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantManifestSourceKind: FfiConverterRustBuffer<FfiDiscoveryAssistantManifestSourceKind> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryAssistantManifestSourceKind.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantManifestSourceKind) = 4UL
+
+    override fun write(value: FfiDiscoveryAssistantManifestSourceKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryAssistantResumeAction {
+    
+    APPROVE_CONSENT,
+    RUN_ASSISTANT,
+    WAIT_FOR_ASSISTANT_OUTCOME,
+    RESUME_CORE_HOST_ACTION,
+    SUPPLY_MORE_EVIDENCE,
+    APPROVE_RETRY,
+    REVIEW_DRAFT,
+    RESTART_INTERRUPTED,
+    RESOLVE_UNKNOWN_OUTCOME;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryAssistantResumeAction: FfiConverterRustBuffer<FfiDiscoveryAssistantResumeAction> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryAssistantResumeAction.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantResumeAction) = 4UL
+
+    override fun write(value: FfiDiscoveryAssistantResumeAction, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiDiscoveryCandidateSummary {
+    
+    data class ProviderTemplate(
+        val `templateId`: kotlin.String, 
+        val `templateVersion`: kotlin.UInt) : FfiDiscoveryCandidateSummary() {
+        companion object
+    }
+    
+    data class ApiOrigin(
+        val `origin`: kotlin.String) : FfiDiscoveryCandidateSummary() {
+        companion object
+    }
+    
+    data class OfficialDocument(
+        val `contentSha256`: kotlin.String) : FfiDiscoveryCandidateSummary() {
+        companion object
+    }
+    
+    data class ModelRoute(
+        val `modelId`: kotlin.String) : FfiDiscoveryCandidateSummary() {
+        companion object
+    }
+    
+    data class ManifestDraft(
+        val `schemaVersion`: kotlin.UInt, 
+        val `manifestSha256`: kotlin.String) : FfiDiscoveryCandidateSummary() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryCandidateSummary : FfiConverterRustBuffer<FfiDiscoveryCandidateSummary>{
+    override fun read(buf: ByteBuffer): FfiDiscoveryCandidateSummary {
+        return when(buf.getInt()) {
+            1 -> FfiDiscoveryCandidateSummary.ProviderTemplate(
+                FfiConverterString.read(buf),
+                FfiConverterUInt.read(buf),
+                )
+            2 -> FfiDiscoveryCandidateSummary.ApiOrigin(
+                FfiConverterString.read(buf),
+                )
+            3 -> FfiDiscoveryCandidateSummary.OfficialDocument(
+                FfiConverterString.read(buf),
+                )
+            4 -> FfiDiscoveryCandidateSummary.ModelRoute(
+                FfiConverterString.read(buf),
+                )
+            5 -> FfiDiscoveryCandidateSummary.ManifestDraft(
+                FfiConverterUInt.read(buf),
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiDiscoveryCandidateSummary) = when(value) {
+        is FfiDiscoveryCandidateSummary.ProviderTemplate -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`templateId`)
+                + FfiConverterUInt.allocationSize(value.`templateVersion`)
+            )
+        }
+        is FfiDiscoveryCandidateSummary.ApiOrigin -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`origin`)
+            )
+        }
+        is FfiDiscoveryCandidateSummary.OfficialDocument -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`contentSha256`)
+            )
+        }
+        is FfiDiscoveryCandidateSummary.ModelRoute -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`modelId`)
+            )
+        }
+        is FfiDiscoveryCandidateSummary.ManifestDraft -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterUInt.allocationSize(value.`schemaVersion`)
+                + FfiConverterString.allocationSize(value.`manifestSha256`)
+            )
+        }
+    }
+
+    override fun write(value: FfiDiscoveryCandidateSummary, buf: ByteBuffer) {
+        when(value) {
+            is FfiDiscoveryCandidateSummary.ProviderTemplate -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`templateId`, buf)
+                FfiConverterUInt.write(value.`templateVersion`, buf)
+                Unit
+            }
+            is FfiDiscoveryCandidateSummary.ApiOrigin -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`origin`, buf)
+                Unit
+            }
+            is FfiDiscoveryCandidateSummary.OfficialDocument -> {
+                buf.putInt(3)
+                FfiConverterString.write(value.`contentSha256`, buf)
+                Unit
+            }
+            is FfiDiscoveryCandidateSummary.ModelRoute -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`modelId`, buf)
+                Unit
+            }
+            is FfiDiscoveryCandidateSummary.ManifestDraft -> {
+                buf.putInt(5)
+                FfiConverterUInt.write(value.`schemaVersion`, buf)
+                FfiConverterString.write(value.`manifestSha256`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryCompensationKind {
+    
+    REMOVE_CREDENTIAL_SLOT,
+    REMOVE_CONNECTION_GRAPH,
+    RESTORE_PREVIOUS_SELECTION;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryCompensationKind: FfiConverterRustBuffer<FfiDiscoveryCompensationKind> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryCompensationKind.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryCompensationKind) = 4UL
+
+    override fun write(value: FfiDiscoveryCompensationKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryCompensationStatus {
+    
+    PENDING,
+    IN_PROGRESS,
+    COMPLETED,
+    FAILED,
+    OUTCOME_UNKNOWN;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryCompensationStatus: FfiConverterRustBuffer<FfiDiscoveryCompensationStatus> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryCompensationStatus.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryCompensationStatus) = 4UL
+
+    override fun write(value: FfiDiscoveryCompensationStatus, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiDiscoveryCompensationTarget {
+    
+    data class RemoveCredentialSlot(
+        val `connectionId`: kotlin.String, 
+        val `credentialRef`: kotlin.String) : FfiDiscoveryCompensationTarget() {
+        companion object
+    }
+    
+    data class RemoveConnectionGraph(
+        val `connectionId`: kotlin.String) : FfiDiscoveryCompensationTarget() {
+        companion object
+    }
+    
+    data class RestorePreviousSelection(
+        val `previousSelection`: FfiDiscoveryPreviousSelection) : FfiDiscoveryCompensationTarget() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryCompensationTarget : FfiConverterRustBuffer<FfiDiscoveryCompensationTarget>{
+    override fun read(buf: ByteBuffer): FfiDiscoveryCompensationTarget {
+        return when(buf.getInt()) {
+            1 -> FfiDiscoveryCompensationTarget.RemoveCredentialSlot(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            2 -> FfiDiscoveryCompensationTarget.RemoveConnectionGraph(
+                FfiConverterString.read(buf),
+                )
+            3 -> FfiDiscoveryCompensationTarget.RestorePreviousSelection(
+                FfiConverterTypeFfiDiscoveryPreviousSelection.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiDiscoveryCompensationTarget) = when(value) {
+        is FfiDiscoveryCompensationTarget.RemoveCredentialSlot -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`connectionId`)
+                + FfiConverterString.allocationSize(value.`credentialRef`)
+            )
+        }
+        is FfiDiscoveryCompensationTarget.RemoveConnectionGraph -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`connectionId`)
+            )
+        }
+        is FfiDiscoveryCompensationTarget.RestorePreviousSelection -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeFfiDiscoveryPreviousSelection.allocationSize(value.`previousSelection`)
+            )
+        }
+    }
+
+    override fun write(value: FfiDiscoveryCompensationTarget, buf: ByteBuffer) {
+        when(value) {
+            is FfiDiscoveryCompensationTarget.RemoveCredentialSlot -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`connectionId`, buf)
+                FfiConverterString.write(value.`credentialRef`, buf)
+                Unit
+            }
+            is FfiDiscoveryCompensationTarget.RemoveConnectionGraph -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`connectionId`, buf)
+                Unit
+            }
+            is FfiDiscoveryCompensationTarget.RestorePreviousSelection -> {
+                buf.putInt(3)
+                FfiConverterTypeFfiDiscoveryPreviousSelection.write(value.`previousSelection`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryEvidenceKind {
+    
+    HTML_DOCUMENT,
+    JSON_DOCUMENT,
+    YAML_DOCUMENT,
+    XML_DOCUMENT,
+    PLAIN_TEXT_DOCUMENT,
+    JSON_SCHEMA,
+    OPEN_API;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryEvidenceKind: FfiConverterRustBuffer<FfiDiscoveryEvidenceKind> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryEvidenceKind.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryEvidenceKind) = 4UL
+
+    override fun write(value: FfiDiscoveryEvidenceKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryOperationKind {
+    
+    RESOLVE_KNOWN_PROVIDER,
+    FETCH_DOCUMENTS,
+    EXTRACT_EVIDENCE,
+    BUILD_DETERMINISTIC_MANIFEST_DRAFT,
+    BUILD_ASSISTANT_MANIFEST_DRAFT,
+    VALIDATE_MANIFEST,
+    LIST_MODELS,
+    PROBE_CAPABILITIES,
+    ATOMIC_COMMIT,
+    COMPENSATION;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryOperationKind: FfiConverterRustBuffer<FfiDiscoveryOperationKind> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryOperationKind.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryOperationKind) = 4UL
+
+    override fun write(value: FfiDiscoveryOperationKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiDiscoveryPreviousSelection {
+    
+    object None : FfiDiscoveryPreviousSelection()
+    
+    
+    data class RouteAndPreset(
+        val `modelRouteId`: kotlin.String, 
+        val `generationPresetId`: kotlin.String) : FfiDiscoveryPreviousSelection() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryPreviousSelection : FfiConverterRustBuffer<FfiDiscoveryPreviousSelection>{
+    override fun read(buf: ByteBuffer): FfiDiscoveryPreviousSelection {
+        return when(buf.getInt()) {
+            1 -> FfiDiscoveryPreviousSelection.None
+            2 -> FfiDiscoveryPreviousSelection.RouteAndPreset(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiDiscoveryPreviousSelection) = when(value) {
+        is FfiDiscoveryPreviousSelection.None -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryPreviousSelection.RouteAndPreset -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`modelRouteId`)
+                + FfiConverterString.allocationSize(value.`generationPresetId`)
+            )
+        }
+    }
+
+    override fun write(value: FfiDiscoveryPreviousSelection, buf: ByteBuffer) {
+        when(value) {
+            is FfiDiscoveryPreviousSelection.None -> {
+                buf.putInt(1)
+                Unit
+            }
+            is FfiDiscoveryPreviousSelection.RouteAndPreset -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`modelRouteId`, buf)
+                FfiConverterString.write(value.`generationPresetId`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryProgressPhase {
+    
+    PROVIDER_CANDIDATES,
+    DOCUMENTS,
+    EVIDENCE,
+    MODELS,
+    PROBES;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryProgressPhase: FfiConverterRustBuffer<FfiDiscoveryProgressPhase> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryProgressPhase.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryProgressPhase) = 4UL
+
+    override fun write(value: FfiDiscoveryProgressPhase, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryReviewChangeKind {
+    
+    ADD,
+    UPDATE,
+    DEPRECATE,
+    PRESERVE_MISSING;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryReviewChangeKind: FfiConverterRustBuffer<FfiDiscoveryReviewChangeKind> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryReviewChangeKind.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryReviewChangeKind) = 4UL
+
+    override fun write(value: FfiDiscoveryReviewChangeKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryReviewTargetKind {
+    
+    PROVIDER_TEMPLATE,
+    PROVIDER_CONNECTION,
+    MODEL_ROUTE;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryReviewTargetKind: FfiConverterRustBuffer<FfiDiscoveryReviewTargetKind> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryReviewTargetKind.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryReviewTargetKind) = 4UL
+
+    override fun write(value: FfiDiscoveryReviewTargetKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryState {
+    
+    DRAFT,
+    RESOLVING_KNOWN_PROVIDER,
+    AWAITING_TEMPLATE_SELECTION,
+    FETCHING_DOCUMENTS,
+    EXTRACTING_EVIDENCE,
+    AWAITING_MORE_EVIDENCE,
+    AWAITING_ASSISTANT_CONSENT,
+    BUILDING_DETERMINISTIC_MANIFEST_DRAFT,
+    BUILDING_ASSISTANT_MANIFEST_DRAFT,
+    VALIDATING_MANIFEST,
+    AWAITING_CREDENTIAL_ORIGIN_APPROVAL,
+    LISTING_MODELS,
+    AWAITING_PROBE_CONSENT,
+    PROBING_CAPABILITIES,
+    AWAITING_REVIEW,
+    COMMITTING,
+    COMPENSATING,
+    READY,
+    FAILED,
+    CANCELLED,
+    INTERRUPTED,
+    UNKNOWN_OUTCOME;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryState: FfiConverterRustBuffer<FfiDiscoveryState> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryState.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryState) = 4UL
+
+    override fun write(value: FfiDiscoveryState, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryStepState {
+    
+    COMPLETED,
+    CURRENT,
+    PENDING;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryStepState: FfiConverterRustBuffer<FfiDiscoveryStepState> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryStepState.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryStepState) = 4UL
+
+    override fun write(value: FfiDiscoveryStepState, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiDiscoveryUnknownOutcomeResolution {
+    
+    object ConfirmedNoEffect : FfiDiscoveryUnknownOutcomeResolution()
+    
+    
+    data class ConfirmedCommitCompleted(
+        val `connectionId`: kotlin.String) : FfiDiscoveryUnknownOutcomeResolution() {
+        companion object
+    }
+    
+    object ConfirmedCompensated : FfiDiscoveryUnknownOutcomeResolution()
+    
+    
+    object ManuallyReconciledAsFailed : FfiDiscoveryUnknownOutcomeResolution()
+    
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryUnknownOutcomeResolution : FfiConverterRustBuffer<FfiDiscoveryUnknownOutcomeResolution>{
+    override fun read(buf: ByteBuffer): FfiDiscoveryUnknownOutcomeResolution {
+        return when(buf.getInt()) {
+            1 -> FfiDiscoveryUnknownOutcomeResolution.ConfirmedNoEffect
+            2 -> FfiDiscoveryUnknownOutcomeResolution.ConfirmedCommitCompleted(
+                FfiConverterString.read(buf),
+                )
+            3 -> FfiDiscoveryUnknownOutcomeResolution.ConfirmedCompensated
+            4 -> FfiDiscoveryUnknownOutcomeResolution.ManuallyReconciledAsFailed
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiDiscoveryUnknownOutcomeResolution) = when(value) {
+        is FfiDiscoveryUnknownOutcomeResolution.ConfirmedNoEffect -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryUnknownOutcomeResolution.ConfirmedCommitCompleted -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`connectionId`)
+            )
+        }
+        is FfiDiscoveryUnknownOutcomeResolution.ConfirmedCompensated -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiDiscoveryUnknownOutcomeResolution.ManuallyReconciledAsFailed -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: FfiDiscoveryUnknownOutcomeResolution, buf: ByteBuffer) {
+        when(value) {
+            is FfiDiscoveryUnknownOutcomeResolution.ConfirmedNoEffect -> {
+                buf.putInt(1)
+                Unit
+            }
+            is FfiDiscoveryUnknownOutcomeResolution.ConfirmedCommitCompleted -> {
+                buf.putInt(2)
+                FfiConverterString.write(value.`connectionId`, buf)
+                Unit
+            }
+            is FfiDiscoveryUnknownOutcomeResolution.ConfirmedCompensated -> {
+                buf.putInt(3)
+                Unit
+            }
+            is FfiDiscoveryUnknownOutcomeResolution.ManuallyReconciledAsFailed -> {
+                buf.putInt(4)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiDiscoveryWarning {
+    
+    ASSISTANT_DECLINED,
+    PROBES_SKIPPED,
+    COMPENSATION_REQUIRED,
+    EXPLICIT_RESTART_REQUIRED,
+    UNKNOWN_EXTERNAL_OUTCOME;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiDiscoveryWarning: FfiConverterRustBuffer<FfiDiscoveryWarning> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiDiscoveryWarning.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryWarning) = 4UL
+
+    override fun write(value: FfiDiscoveryWarning, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
 
 
 
@@ -3042,6 +10962,1196 @@ public object FfiConverterTypeFfiError : FfiConverterRustBuffer<FfiException> {
 
 
 
+enum class FfiParameterConditionOperator {
+    
+    EQUALS,
+    NOT_EQUALS;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterConditionOperator: FfiConverterRustBuffer<FfiParameterConditionOperator> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiParameterConditionOperator.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiParameterConditionOperator) = 4UL
+
+    override fun write(value: FfiParameterConditionOperator, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiParameterConflictKind {
+    
+    MUTUALLY_EXCLUSIVE,
+    REQUIRES;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterConflictKind: FfiConverterRustBuffer<FfiParameterConflictKind> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiParameterConflictKind.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiParameterConflictKind) = 4UL
+
+    override fun write(value: FfiParameterConflictKind, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiParameterDefaultMode {
+    
+    PROVIDER_DEFAULT,
+    EXPLICIT_REQUIRED;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterDefaultMode: FfiConverterRustBuffer<FfiParameterDefaultMode> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiParameterDefaultMode.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiParameterDefaultMode) = 4UL
+
+    override fun write(value: FfiParameterDefaultMode, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiParameterLiteral {
+    
+    data class Boolean(
+        val `value`: kotlin.Boolean) : FfiParameterLiteral() {
+        companion object
+    }
+    
+    data class Integer(
+        val `value`: kotlin.Long) : FfiParameterLiteral() {
+        companion object
+    }
+    
+    data class Number(
+        val `value`: kotlin.Double) : FfiParameterLiteral() {
+        companion object
+    }
+    
+    data class String(
+        val `value`: kotlin.String) : FfiParameterLiteral() {
+        companion object
+    }
+    
+    data class Enum(
+        val `value`: kotlin.String) : FfiParameterLiteral() {
+        companion object
+    }
+    
+    data class StringList(
+        val `values`: List<kotlin.String>) : FfiParameterLiteral() {
+        companion object
+    }
+    
+    data class JsonSchema(
+        val `value`: kotlin.String) : FfiParameterLiteral() {
+        companion object
+    }
+    
+    data class StopSequenceList(
+        val `values`: List<kotlin.String>) : FfiParameterLiteral() {
+        companion object
+    }
+    
+    data class ToolPolicy(
+        val `value`: FfiToolPolicy) : FfiParameterLiteral() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterLiteral : FfiConverterRustBuffer<FfiParameterLiteral>{
+    override fun read(buf: ByteBuffer): FfiParameterLiteral {
+        return when(buf.getInt()) {
+            1 -> FfiParameterLiteral.Boolean(
+                FfiConverterBoolean.read(buf),
+                )
+            2 -> FfiParameterLiteral.Integer(
+                FfiConverterLong.read(buf),
+                )
+            3 -> FfiParameterLiteral.Number(
+                FfiConverterDouble.read(buf),
+                )
+            4 -> FfiParameterLiteral.String(
+                FfiConverterString.read(buf),
+                )
+            5 -> FfiParameterLiteral.Enum(
+                FfiConverterString.read(buf),
+                )
+            6 -> FfiParameterLiteral.StringList(
+                FfiConverterSequenceString.read(buf),
+                )
+            7 -> FfiParameterLiteral.JsonSchema(
+                FfiConverterString.read(buf),
+                )
+            8 -> FfiParameterLiteral.StopSequenceList(
+                FfiConverterSequenceString.read(buf),
+                )
+            9 -> FfiParameterLiteral.ToolPolicy(
+                FfiConverterTypeFfiToolPolicy.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiParameterLiteral) = when(value) {
+        is FfiParameterLiteral.Boolean -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterBoolean.allocationSize(value.`value`)
+            )
+        }
+        is FfiParameterLiteral.Integer -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterLong.allocationSize(value.`value`)
+            )
+        }
+        is FfiParameterLiteral.Number -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterDouble.allocationSize(value.`value`)
+            )
+        }
+        is FfiParameterLiteral.String -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`value`)
+            )
+        }
+        is FfiParameterLiteral.Enum -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`value`)
+            )
+        }
+        is FfiParameterLiteral.StringList -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterSequenceString.allocationSize(value.`values`)
+            )
+        }
+        is FfiParameterLiteral.JsonSchema -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`value`)
+            )
+        }
+        is FfiParameterLiteral.StopSequenceList -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterSequenceString.allocationSize(value.`values`)
+            )
+        }
+        is FfiParameterLiteral.ToolPolicy -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeFfiToolPolicy.allocationSize(value.`value`)
+            )
+        }
+    }
+
+    override fun write(value: FfiParameterLiteral, buf: ByteBuffer) {
+        when(value) {
+            is FfiParameterLiteral.Boolean -> {
+                buf.putInt(1)
+                FfiConverterBoolean.write(value.`value`, buf)
+                Unit
+            }
+            is FfiParameterLiteral.Integer -> {
+                buf.putInt(2)
+                FfiConverterLong.write(value.`value`, buf)
+                Unit
+            }
+            is FfiParameterLiteral.Number -> {
+                buf.putInt(3)
+                FfiConverterDouble.write(value.`value`, buf)
+                Unit
+            }
+            is FfiParameterLiteral.String -> {
+                buf.putInt(4)
+                FfiConverterString.write(value.`value`, buf)
+                Unit
+            }
+            is FfiParameterLiteral.Enum -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`value`, buf)
+                Unit
+            }
+            is FfiParameterLiteral.StringList -> {
+                buf.putInt(6)
+                FfiConverterSequenceString.write(value.`values`, buf)
+                Unit
+            }
+            is FfiParameterLiteral.JsonSchema -> {
+                buf.putInt(7)
+                FfiConverterString.write(value.`value`, buf)
+                Unit
+            }
+            is FfiParameterLiteral.StopSequenceList -> {
+                buf.putInt(8)
+                FfiConverterSequenceString.write(value.`values`, buf)
+                Unit
+            }
+            is FfiParameterLiteral.ToolPolicy -> {
+                buf.putInt(9)
+                FfiConverterTypeFfiToolPolicy.write(value.`value`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiParameterType {
+    
+    BOOLEAN,
+    INTEGER,
+    NUMBER,
+    STRING,
+    ENUM,
+    STRING_LIST,
+    JSON_SCHEMA,
+    STOP_SEQUENCE_LIST,
+    TOOL_POLICY;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterType: FfiConverterRustBuffer<FfiParameterType> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiParameterType.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiParameterType) = 4UL
+
+    override fun write(value: FfiParameterType, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiParameterValueState {
+    
+    object InheritProviderDefault : FfiParameterValueState()
+    
+    
+    data class Explicit(
+        val `value`: FfiParameterLiteral) : FfiParameterValueState() {
+        companion object
+    }
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiParameterValueState : FfiConverterRustBuffer<FfiParameterValueState>{
+    override fun read(buf: ByteBuffer): FfiParameterValueState {
+        return when(buf.getInt()) {
+            1 -> FfiParameterValueState.InheritProviderDefault
+            2 -> FfiParameterValueState.Explicit(
+                FfiConverterTypeFfiParameterLiteral.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiParameterValueState) = when(value) {
+        is FfiParameterValueState.InheritProviderDefault -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiParameterValueState.Explicit -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterTypeFfiParameterLiteral.allocationSize(value.`value`)
+            )
+        }
+    }
+
+    override fun write(value: FfiParameterValueState, buf: ByteBuffer) {
+        when(value) {
+            is FfiParameterValueState.InheritProviderDefault -> {
+                buf.putInt(1)
+                Unit
+            }
+            is FfiParameterValueState.Explicit -> {
+                buf.putInt(2)
+                FfiConverterTypeFfiParameterLiteral.write(value.`value`, buf)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiProviderCatalogModelChangedSection {
+    
+    MATCH,
+    API_FAMILY,
+    METADATA_VERSION,
+    CAPABILITIES,
+    PARAMETERS,
+    LIFECYCLE,
+    SOURCES,
+    FRESHNESS;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogModelChangedSection: FfiConverterRustBuffer<FfiProviderCatalogModelChangedSection> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiProviderCatalogModelChangedSection.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogModelChangedSection) = 4UL
+
+    override fun write(value: FfiProviderCatalogModelChangedSection, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiProviderCatalogTemplateChangedSection {
+    
+    DISPLAY_NAME,
+    MANIFEST_VERSION,
+    CONNECTION_FIELDS,
+    API_FAMILY,
+    SOURCES,
+    ORIGIN,
+    AUTHENTICATION,
+    ENDPOINTS,
+    DECODERS,
+    PARAMETERS,
+    FRESHNESS;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderCatalogTemplateChangedSection: FfiConverterRustBuffer<FfiProviderCatalogTemplateChangedSection> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiProviderCatalogTemplateChangedSection.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiProviderCatalogTemplateChangedSection) = 4UL
+
+    override fun write(value: FfiProviderCatalogTemplateChangedSection, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+/**
+ * Public, user-driven discovery actions only.
+ *
+ * Internal network/assistant completion actions deliberately have no binding
+ * representation and therefore cannot be injected by a native client.
+ */
+sealed class FfiProviderDiscoveryAction {
+    
+    data class SelectTemplate(
+        val `candidateId`: kotlin.String) : FfiProviderDiscoveryAction() {
+        companion object
+    }
+    
+    object ContinueWithoutTemplate : FfiProviderDiscoveryAction()
+    
+    
+    data class SupplyMoreEvidence(
+        val `evidenceIds`: List<kotlin.String>) : FfiProviderDiscoveryAction() {
+        companion object
+    }
+    
+    object RequestAssistant : FfiProviderDiscoveryAction()
+    
+    
+    data class ApproveAssistant(
+        val `approvalId`: kotlin.String, 
+        val `approvalGrantSha256`: kotlin.String) : FfiProviderDiscoveryAction() {
+        companion object
+    }
+    
+    object DeclineAssistant : FfiProviderDiscoveryAction()
+    
+    
+    data class ApproveCredentialOrigin(
+        val `approvalId`: kotlin.String) : FfiProviderDiscoveryAction() {
+        companion object
+    }
+    
+    data class ApproveProbes(
+        val `approvalId`: kotlin.String, 
+        val `approvalGrantSha256`: kotlin.String) : FfiProviderDiscoveryAction() {
+        companion object
+    }
+    
+    object SkipProbes : FfiProviderDiscoveryAction()
+    
+    
+    data class ApproveReview(
+        val `approvalId`: kotlin.String, 
+        val `commitAttemptId`: kotlin.String, 
+        val `commitPlanSha256`: kotlin.String, 
+        val `graphSha256`: kotlin.String) : FfiProviderDiscoveryAction() {
+        companion object
+    }
+    
+    object ResumeCompensation : FfiProviderDiscoveryAction()
+    
+    
+    object RestartInterrupted : FfiProviderDiscoveryAction()
+    
+    
+    data class ResolveUnknownOutcome(
+        val `approvalId`: kotlin.String, 
+        val `resolution`: FfiDiscoveryUnknownOutcomeResolution) : FfiProviderDiscoveryAction() {
+        companion object
+    }
+    
+    object Cancel : FfiProviderDiscoveryAction()
+    
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderDiscoveryAction : FfiConverterRustBuffer<FfiProviderDiscoveryAction>{
+    override fun read(buf: ByteBuffer): FfiProviderDiscoveryAction {
+        return when(buf.getInt()) {
+            1 -> FfiProviderDiscoveryAction.SelectTemplate(
+                FfiConverterString.read(buf),
+                )
+            2 -> FfiProviderDiscoveryAction.ContinueWithoutTemplate
+            3 -> FfiProviderDiscoveryAction.SupplyMoreEvidence(
+                FfiConverterSequenceString.read(buf),
+                )
+            4 -> FfiProviderDiscoveryAction.RequestAssistant
+            5 -> FfiProviderDiscoveryAction.ApproveAssistant(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            6 -> FfiProviderDiscoveryAction.DeclineAssistant
+            7 -> FfiProviderDiscoveryAction.ApproveCredentialOrigin(
+                FfiConverterString.read(buf),
+                )
+            8 -> FfiProviderDiscoveryAction.ApproveProbes(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            9 -> FfiProviderDiscoveryAction.SkipProbes
+            10 -> FfiProviderDiscoveryAction.ApproveReview(
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                FfiConverterString.read(buf),
+                )
+            11 -> FfiProviderDiscoveryAction.ResumeCompensation
+            12 -> FfiProviderDiscoveryAction.RestartInterrupted
+            13 -> FfiProviderDiscoveryAction.ResolveUnknownOutcome(
+                FfiConverterString.read(buf),
+                FfiConverterTypeFfiDiscoveryUnknownOutcomeResolution.read(buf),
+                )
+            14 -> FfiProviderDiscoveryAction.Cancel
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiProviderDiscoveryAction) = when(value) {
+        is FfiProviderDiscoveryAction.SelectTemplate -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`candidateId`)
+            )
+        }
+        is FfiProviderDiscoveryAction.ContinueWithoutTemplate -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiProviderDiscoveryAction.SupplyMoreEvidence -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterSequenceString.allocationSize(value.`evidenceIds`)
+            )
+        }
+        is FfiProviderDiscoveryAction.RequestAssistant -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiProviderDiscoveryAction.ApproveAssistant -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`approvalId`)
+                + FfiConverterString.allocationSize(value.`approvalGrantSha256`)
+            )
+        }
+        is FfiProviderDiscoveryAction.DeclineAssistant -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiProviderDiscoveryAction.ApproveCredentialOrigin -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`approvalId`)
+            )
+        }
+        is FfiProviderDiscoveryAction.ApproveProbes -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`approvalId`)
+                + FfiConverterString.allocationSize(value.`approvalGrantSha256`)
+            )
+        }
+        is FfiProviderDiscoveryAction.SkipProbes -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiProviderDiscoveryAction.ApproveReview -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`approvalId`)
+                + FfiConverterString.allocationSize(value.`commitAttemptId`)
+                + FfiConverterString.allocationSize(value.`commitPlanSha256`)
+                + FfiConverterString.allocationSize(value.`graphSha256`)
+            )
+        }
+        is FfiProviderDiscoveryAction.ResumeCompensation -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiProviderDiscoveryAction.RestartInterrupted -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiProviderDiscoveryAction.ResolveUnknownOutcome -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`approvalId`)
+                + FfiConverterTypeFfiDiscoveryUnknownOutcomeResolution.allocationSize(value.`resolution`)
+            )
+        }
+        is FfiProviderDiscoveryAction.Cancel -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: FfiProviderDiscoveryAction, buf: ByteBuffer) {
+        when(value) {
+            is FfiProviderDiscoveryAction.SelectTemplate -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`candidateId`, buf)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.ContinueWithoutTemplate -> {
+                buf.putInt(2)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.SupplyMoreEvidence -> {
+                buf.putInt(3)
+                FfiConverterSequenceString.write(value.`evidenceIds`, buf)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.RequestAssistant -> {
+                buf.putInt(4)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.ApproveAssistant -> {
+                buf.putInt(5)
+                FfiConverterString.write(value.`approvalId`, buf)
+                FfiConverterString.write(value.`approvalGrantSha256`, buf)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.DeclineAssistant -> {
+                buf.putInt(6)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.ApproveCredentialOrigin -> {
+                buf.putInt(7)
+                FfiConverterString.write(value.`approvalId`, buf)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.ApproveProbes -> {
+                buf.putInt(8)
+                FfiConverterString.write(value.`approvalId`, buf)
+                FfiConverterString.write(value.`approvalGrantSha256`, buf)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.SkipProbes -> {
+                buf.putInt(9)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.ApproveReview -> {
+                buf.putInt(10)
+                FfiConverterString.write(value.`approvalId`, buf)
+                FfiConverterString.write(value.`commitAttemptId`, buf)
+                FfiConverterString.write(value.`commitPlanSha256`, buf)
+                FfiConverterString.write(value.`graphSha256`, buf)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.ResumeCompensation -> {
+                buf.putInt(11)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.RestartInterrupted -> {
+                buf.putInt(12)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.ResolveUnknownOutcome -> {
+                buf.putInt(13)
+                FfiConverterString.write(value.`approvalId`, buf)
+                FfiConverterTypeFfiDiscoveryUnknownOutcomeResolution.write(value.`resolution`, buf)
+                Unit
+            }
+            is FfiProviderDiscoveryAction.Cancel -> {
+                buf.putInt(14)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+sealed class FfiProviderDiscoverySource {
+    
+    data class KnownProvider(
+        val `templateId`: kotlin.String) : FfiProviderDiscoverySource() {
+        companion object
+    }
+    
+    object Site : FfiProviderDiscoverySource()
+    
+    
+    object Curl : FfiProviderDiscoverySource()
+    
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderDiscoverySource : FfiConverterRustBuffer<FfiProviderDiscoverySource>{
+    override fun read(buf: ByteBuffer): FfiProviderDiscoverySource {
+        return when(buf.getInt()) {
+            1 -> FfiProviderDiscoverySource.KnownProvider(
+                FfiConverterString.read(buf),
+                )
+            2 -> FfiProviderDiscoverySource.Site
+            3 -> FfiProviderDiscoverySource.Curl
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiProviderDiscoverySource) = when(value) {
+        is FfiProviderDiscoverySource.KnownProvider -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterString.allocationSize(value.`templateId`)
+            )
+        }
+        is FfiProviderDiscoverySource.Site -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiProviderDiscoverySource.Curl -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: FfiProviderDiscoverySource, buf: ByteBuffer) {
+        when(value) {
+            is FfiProviderDiscoverySource.KnownProvider -> {
+                buf.putInt(1)
+                FfiConverterString.write(value.`templateId`, buf)
+                Unit
+            }
+            is FfiProviderDiscoverySource.Site -> {
+                buf.putInt(2)
+                Unit
+            }
+            is FfiProviderDiscoverySource.Curl -> {
+                buf.putInt(3)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiProviderNetworkMode {
+    
+    PUBLIC,
+    LOCAL_LOOPBACK,
+    APPROVED_LOCAL_NETWORK;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderNetworkMode: FfiConverterRustBuffer<FfiProviderNetworkMode> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiProviderNetworkMode.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiProviderNetworkMode) = 4UL
+
+    override fun write(value: FfiProviderNetworkMode, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiProviderParameterTarget {
+    
+    REQUEST_BODY,
+    REQUEST_HEADER;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiProviderParameterTarget: FfiConverterRustBuffer<FfiProviderParameterTarget> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiProviderParameterTarget.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiProviderParameterTarget) = 4UL
+
+    override fun write(value: FfiProviderParameterTarget, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+sealed class FfiRequestBodyShape {
+    
+    object Null : FfiRequestBodyShape()
+    
+    
+    object Boolean : FfiRequestBodyShape()
+    
+    
+    object Number : FfiRequestBodyShape()
+    
+    
+    object String : FfiRequestBodyShape()
+    
+    
+    data class Array(
+        val `items`: List<FfiRequestBodyShape>, 
+        val `truncated`: kotlin.Boolean) : FfiRequestBodyShape() {
+        companion object
+    }
+    
+    data class Object(
+        val `fields`: List<FfiRequestBodyField>, 
+        val `truncated`: kotlin.Boolean) : FfiRequestBodyShape() {
+        companion object
+    }
+    
+    object Redacted : FfiRequestBodyShape()
+    
+    
+    object Truncated : FfiRequestBodyShape()
+    
+    
+
+    
+    companion object
+}
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiRequestBodyShape : FfiConverterRustBuffer<FfiRequestBodyShape>{
+    override fun read(buf: ByteBuffer): FfiRequestBodyShape {
+        return when(buf.getInt()) {
+            1 -> FfiRequestBodyShape.Null
+            2 -> FfiRequestBodyShape.Boolean
+            3 -> FfiRequestBodyShape.Number
+            4 -> FfiRequestBodyShape.String
+            5 -> FfiRequestBodyShape.Array(
+                FfiConverterSequenceTypeFfiRequestBodyShape.read(buf),
+                FfiConverterBoolean.read(buf),
+                )
+            6 -> FfiRequestBodyShape.Object(
+                FfiConverterSequenceTypeFfiRequestBodyField.read(buf),
+                FfiConverterBoolean.read(buf),
+                )
+            7 -> FfiRequestBodyShape.Redacted
+            8 -> FfiRequestBodyShape.Truncated
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
+        }
+    }
+
+    override fun allocationSize(value: FfiRequestBodyShape) = when(value) {
+        is FfiRequestBodyShape.Null -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiRequestBodyShape.Boolean -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiRequestBodyShape.Number -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiRequestBodyShape.String -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiRequestBodyShape.Array -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterSequenceTypeFfiRequestBodyShape.allocationSize(value.`items`)
+                + FfiConverterBoolean.allocationSize(value.`truncated`)
+            )
+        }
+        is FfiRequestBodyShape.Object -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+                + FfiConverterSequenceTypeFfiRequestBodyField.allocationSize(value.`fields`)
+                + FfiConverterBoolean.allocationSize(value.`truncated`)
+            )
+        }
+        is FfiRequestBodyShape.Redacted -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+        is FfiRequestBodyShape.Truncated -> {
+            // Add the size for the Int that specifies the variant plus the size needed for all fields
+            (
+                4UL
+            )
+        }
+    }
+
+    override fun write(value: FfiRequestBodyShape, buf: ByteBuffer) {
+        when(value) {
+            is FfiRequestBodyShape.Null -> {
+                buf.putInt(1)
+                Unit
+            }
+            is FfiRequestBodyShape.Boolean -> {
+                buf.putInt(2)
+                Unit
+            }
+            is FfiRequestBodyShape.Number -> {
+                buf.putInt(3)
+                Unit
+            }
+            is FfiRequestBodyShape.String -> {
+                buf.putInt(4)
+                Unit
+            }
+            is FfiRequestBodyShape.Array -> {
+                buf.putInt(5)
+                FfiConverterSequenceTypeFfiRequestBodyShape.write(value.`items`, buf)
+                FfiConverterBoolean.write(value.`truncated`, buf)
+                Unit
+            }
+            is FfiRequestBodyShape.Object -> {
+                buf.putInt(6)
+                FfiConverterSequenceTypeFfiRequestBodyField.write(value.`fields`, buf)
+                FfiConverterBoolean.write(value.`truncated`, buf)
+                Unit
+            }
+            is FfiRequestBodyShape.Redacted -> {
+                buf.putInt(7)
+                Unit
+            }
+            is FfiRequestBodyShape.Truncated -> {
+                buf.putInt(8)
+                Unit
+            }
+        }.let { /* this makes the `when` an expression, which ensures it is exhaustive */ }
+    }
+}
+
+
+
+
+
+
+enum class FfiToolPolicy {
+    
+    NONE,
+    AUTO,
+    REQUIRED;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiToolPolicy: FfiConverterRustBuffer<FfiToolPolicy> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiToolPolicy.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiToolPolicy) = 4UL
+
+    override fun write(value: FfiToolPolicy, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+enum class FfiUiParameterLevel {
+    
+    BASIC,
+    ADVANCED,
+    EXPERT,
+    HIDDEN_INTERNAL;
+    companion object
+}
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterTypeFfiUiParameterLevel: FfiConverterRustBuffer<FfiUiParameterLevel> {
+    override fun read(buf: ByteBuffer) = try {
+        
+        FfiUiParameterLevel.entries[buf.getInt() - 1]
+        
+    } catch (e: IndexOutOfBoundsException) {
+        throw RuntimeException("invalid enum value, something is very wrong!!", e)
+    }
+
+    override fun allocationSize(value: FfiUiParameterLevel) = 4UL
+
+    override fun write(value: FfiUiParameterLevel, buf: ByteBuffer) {
+        buf.putInt(value.ordinal + 1)
+    }
+}
+
+
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalUInt: FfiConverterRustBuffer<kotlin.UInt?> {
+    override fun read(buf: ByteBuffer): kotlin.UInt? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterUInt.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.UInt?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterUInt.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.UInt?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterUInt.write(value, buf)
+        }
+    }
+}
+
+
+
+
 /**
  * @suppress
  */
@@ -3067,6 +12177,70 @@ public object FfiConverterOptionalULong: FfiConverterRustBuffer<kotlin.ULong?> {
         } else {
             buf.put(1)
             FfiConverterULong.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalDouble: FfiConverterRustBuffer<kotlin.Double?> {
+    override fun read(buf: ByteBuffer): kotlin.Double? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterDouble.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Double?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterDouble.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Double?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterDouble.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalBoolean: FfiConverterRustBuffer<kotlin.Boolean?> {
+    override fun read(buf: ByteBuffer): kotlin.Boolean? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterBoolean.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.Boolean?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterBoolean.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.Boolean?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterBoolean.write(value, buf)
         }
     }
 }
@@ -3109,6 +12283,390 @@ public object FfiConverterOptionalString: FfiConverterRustBuffer<kotlin.String?>
 /**
  * @suppress
  */
+public object FfiConverterOptionalByteArray: FfiConverterRustBuffer<kotlin.ByteArray?> {
+    override fun read(buf: ByteBuffer): kotlin.ByteArray? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterByteArray.read(buf)
+    }
+
+    override fun allocationSize(value: kotlin.ByteArray?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterByteArray.allocationSize(value)
+        }
+    }
+
+    override fun write(value: kotlin.ByteArray?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterByteArray.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiCredentialScope: FfiConverterRustBuffer<FfiCredentialScope?> {
+    override fun read(buf: ByteBuffer): FfiCredentialScope? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiCredentialScope.read(buf)
+    }
+
+    override fun allocationSize(value: FfiCredentialScope?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiCredentialScope.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiCredentialScope?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiCredentialScope.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryApprovalProposal: FfiConverterRustBuffer<FfiDiscoveryApprovalProposal?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryApprovalProposal? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryApprovalProposal.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryApprovalProposal?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryApprovalProposal.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryApprovalProposal?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryApprovalProposal.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryAssistantDraftReview: FfiConverterRustBuffer<FfiDiscoveryAssistantDraftReview?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantDraftReview? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryAssistantDraftReview.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantDraftReview?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryAssistantDraftReview.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryAssistantDraftReview?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryAssistantDraftReview.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryAssistantEndpoint: FfiConverterRustBuffer<FfiDiscoveryAssistantEndpoint?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantEndpoint? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryAssistantEndpoint.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantEndpoint?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryAssistantEndpoint.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryAssistantEndpoint?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryAssistantEndpoint.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryAssistantResumeBoundary: FfiConverterRustBuffer<FfiDiscoveryAssistantResumeBoundary?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantResumeBoundary? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryAssistantResumeBoundary.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantResumeBoundary?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryAssistantResumeBoundary.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryAssistantResumeBoundary?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryAssistantResumeBoundary.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryFailure: FfiConverterRustBuffer<FfiDiscoveryFailure?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryFailure? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryFailure.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryFailure?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryFailure.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryFailure?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryFailure.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryProgress: FfiConverterRustBuffer<FfiDiscoveryProgress?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryProgress? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryProgress.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryProgress?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryProgress.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryProgress?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryProgress.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryReview: FfiConverterRustBuffer<FfiDiscoveryReview?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryReview? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryReview.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryReview?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryReview.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryReview?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryReview.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryReviewProposal: FfiConverterRustBuffer<FfiDiscoveryReviewProposal?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryReviewProposal? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryReviewProposal.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryReviewProposal?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryReviewProposal.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryReviewProposal?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryReviewProposal.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiEffectiveCapability: FfiConverterRustBuffer<FfiEffectiveCapability?> {
+    override fun read(buf: ByteBuffer): FfiEffectiveCapability? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiEffectiveCapability.read(buf)
+    }
+
+    override fun allocationSize(value: FfiEffectiveCapability?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiEffectiveCapability.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiEffectiveCapability?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiEffectiveCapability.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiGenerationTarget: FfiConverterRustBuffer<FfiGenerationTarget?> {
+    override fun read(buf: ByteBuffer): FfiGenerationTarget? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiGenerationTarget.read(buf)
+    }
+
+    override fun allocationSize(value: FfiGenerationTarget?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiGenerationTarget.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiGenerationTarget?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiGenerationTarget.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterOptionalTypeFfiImportImagePreview: FfiConverterRustBuffer<FfiImportImagePreview?> {
     override fun read(buf: ByteBuffer): FfiImportImagePreview? {
         if (buf.get().toInt() == 0) {
@@ -3141,6 +12699,450 @@ public object FfiConverterOptionalTypeFfiImportImagePreview: FfiConverterRustBuf
 /**
  * @suppress
  */
+public object FfiConverterOptionalTypeFfiModelSyncFailure: FfiConverterRustBuffer<FfiModelSyncFailure?> {
+    override fun read(buf: ByteBuffer): FfiModelSyncFailure? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiModelSyncFailure.read(buf)
+    }
+
+    override fun allocationSize(value: FfiModelSyncFailure?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiModelSyncFailure.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiModelSyncFailure?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiModelSyncFailure.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiModelSyncReview: FfiConverterRustBuffer<FfiModelSyncReview?> {
+    override fun read(buf: ByteBuffer): FfiModelSyncReview? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiModelSyncReview.read(buf)
+    }
+
+    override fun allocationSize(value: FfiModelSyncReview?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiModelSyncReview.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiModelSyncReview?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiModelSyncReview.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiParameterCondition: FfiConverterRustBuffer<FfiParameterCondition?> {
+    override fun read(buf: ByteBuffer): FfiParameterCondition? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiParameterCondition.read(buf)
+    }
+
+    override fun allocationSize(value: FfiParameterCondition?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiParameterCondition.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiParameterCondition?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiParameterCondition.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiProviderLocalNetworkApproval: FfiConverterRustBuffer<FfiProviderLocalNetworkApproval?> {
+    override fun read(buf: ByteBuffer): FfiProviderLocalNetworkApproval? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiProviderLocalNetworkApproval.read(buf)
+    }
+
+    override fun allocationSize(value: FfiProviderLocalNetworkApproval?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiProviderLocalNetworkApproval.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiProviderLocalNetworkApproval?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiProviderLocalNetworkApproval.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiRequestPreview: FfiConverterRustBuffer<FfiRequestPreview?> {
+    override fun read(buf: ByteBuffer): FfiRequestPreview? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiRequestPreview.read(buf)
+    }
+
+    override fun allocationSize(value: FfiRequestPreview?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiRequestPreview.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiRequestPreview?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiRequestPreview.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiAuthBinding: FfiConverterRustBuffer<FfiAuthBinding?> {
+    override fun read(buf: ByteBuffer): FfiAuthBinding? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiAuthBinding.read(buf)
+    }
+
+    override fun allocationSize(value: FfiAuthBinding?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiAuthBinding.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiAuthBinding?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiAuthBinding.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryActionRequired: FfiConverterRustBuffer<FfiDiscoveryActionRequired?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryActionRequired? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryActionRequired.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryActionRequired?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryActionRequired.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryActionRequired?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryActionRequired.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryAssistantCheckpoint: FfiConverterRustBuffer<FfiDiscoveryAssistantCheckpoint?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantCheckpoint? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryAssistantCheckpoint.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantCheckpoint?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryAssistantCheckpoint.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryAssistantCheckpoint?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryAssistantCheckpoint.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryAssistantDecoder: FfiConverterRustBuffer<FfiDiscoveryAssistantDecoder?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantDecoder? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryAssistantDecoder.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantDecoder?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryAssistantDecoder.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryAssistantDecoder?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryAssistantDecoder.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryAssistantDraftField: FfiConverterRustBuffer<FfiDiscoveryAssistantDraftField?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryAssistantDraftField? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryAssistantDraftField.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryAssistantDraftField?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryAssistantDraftField.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryAssistantDraftField?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryOperationKind: FfiConverterRustBuffer<FfiDiscoveryOperationKind?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryOperationKind? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryOperationKind.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryOperationKind?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryOperationKind.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryOperationKind?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryOperationKind.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiDiscoveryWarning: FfiConverterRustBuffer<FfiDiscoveryWarning?> {
+    override fun read(buf: ByteBuffer): FfiDiscoveryWarning? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiDiscoveryWarning.read(buf)
+    }
+
+    override fun allocationSize(value: FfiDiscoveryWarning?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiDiscoveryWarning.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiDiscoveryWarning?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiDiscoveryWarning.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterOptionalTypeFfiRequestBodyShape: FfiConverterRustBuffer<FfiRequestBodyShape?> {
+    override fun read(buf: ByteBuffer): FfiRequestBodyShape? {
+        if (buf.get().toInt() == 0) {
+            return null
+        }
+        return FfiConverterTypeFfiRequestBodyShape.read(buf)
+    }
+
+    override fun allocationSize(value: FfiRequestBodyShape?): ULong {
+        if (value == null) {
+            return 1UL
+        } else {
+            return 1UL + FfiConverterTypeFfiRequestBodyShape.allocationSize(value)
+        }
+    }
+
+    override fun write(value: FfiRequestBodyShape?, buf: ByteBuffer) {
+        if (value == null) {
+            buf.put(0)
+        } else {
+            buf.put(1)
+            FfiConverterTypeFfiRequestBodyShape.write(value, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceULong: FfiConverterRustBuffer<List<kotlin.ULong>> {
+    override fun read(buf: ByteBuffer): List<kotlin.ULong> {
+        val len = buf.getInt()
+        return List<kotlin.ULong>(len) {
+            FfiConverterULong.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<kotlin.ULong>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterULong.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<kotlin.ULong>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterULong.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.String>> {
     override fun read(buf: ByteBuffer): List<kotlin.String> {
         val len = buf.getInt()
@@ -3159,6 +13161,34 @@ public object FfiConverterSequenceString: FfiConverterRustBuffer<List<kotlin.Str
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterString.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiCapabilityObservation: FfiConverterRustBuffer<List<FfiCapabilityObservation>> {
+    override fun read(buf: ByteBuffer): List<FfiCapabilityObservation> {
+        val len = buf.getInt()
+        return List<FfiCapabilityObservation>(len) {
+            FfiConverterTypeFfiCapabilityObservation.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiCapabilityObservation>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiCapabilityObservation.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiCapabilityObservation>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiCapabilityObservation.write(it, buf)
         }
     }
 }
@@ -3225,6 +13255,62 @@ public object FfiConverterSequenceTypeFfiChatEvent: FfiConverterRustBuffer<List<
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeFfiConnectionConfigEntry: FfiConverterRustBuffer<List<FfiConnectionConfigEntry>> {
+    override fun read(buf: ByteBuffer): List<FfiConnectionConfigEntry> {
+        val len = buf.getInt()
+        return List<FfiConnectionConfigEntry>(len) {
+            FfiConverterTypeFfiConnectionConfigEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiConnectionConfigEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiConnectionConfigEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiConnectionConfigEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiConnectionConfigEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiConnectionFieldSpec: FfiConverterRustBuffer<List<FfiConnectionFieldSpec>> {
+    override fun read(buf: ByteBuffer): List<FfiConnectionFieldSpec> {
+        val len = buf.getInt()
+        return List<FfiConnectionFieldSpec>(len) {
+            FfiConverterTypeFfiConnectionFieldSpec.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiConnectionFieldSpec>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiConnectionFieldSpec.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiConnectionFieldSpec>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiConnectionFieldSpec.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeFfiConversation: FfiConverterRustBuffer<List<FfiConversation>> {
     override fun read(buf: ByteBuffer): List<FfiConversation> {
         val len = buf.getInt()
@@ -3271,6 +13357,398 @@ public object FfiConverterSequenceTypeFfiConversationBranch: FfiConverterRustBuf
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeFfiConversationBranch.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryApproval: FfiConverterRustBuffer<List<FfiDiscoveryApproval>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryApproval> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryApproval>(len) {
+            FfiConverterTypeFfiDiscoveryApproval.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryApproval>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryApproval.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryApproval>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryApproval.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryAssistantEvidenceConflict: FfiConverterRustBuffer<List<FfiDiscoveryAssistantEvidenceConflict>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryAssistantEvidenceConflict> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryAssistantEvidenceConflict>(len) {
+            FfiConverterTypeFfiDiscoveryAssistantEvidenceConflict.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryAssistantEvidenceConflict>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryAssistantEvidenceConflict.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryAssistantEvidenceConflict>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryAssistantEvidenceConflict.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryAssistantEvidenceMapping: FfiConverterRustBuffer<List<FfiDiscoveryAssistantEvidenceMapping>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryAssistantEvidenceMapping> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryAssistantEvidenceMapping>(len) {
+            FfiConverterTypeFfiDiscoveryAssistantEvidenceMapping.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryAssistantEvidenceMapping>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryAssistantEvidenceMapping.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryAssistantEvidenceMapping>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryAssistantEvidenceMapping.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryAssistantFieldConfidence: FfiConverterRustBuffer<List<FfiDiscoveryAssistantFieldConfidence>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryAssistantFieldConfidence> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryAssistantFieldConfidence>(len) {
+            FfiConverterTypeFfiDiscoveryAssistantFieldConfidence.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryAssistantFieldConfidence>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryAssistantFieldConfidence.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryAssistantFieldConfidence>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryAssistantFieldConfidence.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryAssistantManifestSource: FfiConverterRustBuffer<List<FfiDiscoveryAssistantManifestSource>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryAssistantManifestSource> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryAssistantManifestSource>(len) {
+            FfiConverterTypeFfiDiscoveryAssistantManifestSource.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryAssistantManifestSource>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryAssistantManifestSource.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryAssistantManifestSource>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryAssistantManifestSource.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryAssistantQuestion: FfiConverterRustBuffer<List<FfiDiscoveryAssistantQuestion>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryAssistantQuestion> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryAssistantQuestion>(len) {
+            FfiConverterTypeFfiDiscoveryAssistantQuestion.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryAssistantQuestion>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryAssistantQuestion.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryAssistantQuestion>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryAssistantQuestion.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryCandidate: FfiConverterRustBuffer<List<FfiDiscoveryCandidate>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryCandidate> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryCandidate>(len) {
+            FfiConverterTypeFfiDiscoveryCandidate.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryCandidate>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryCandidate.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryCandidate>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryCandidate.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryCompensationStep: FfiConverterRustBuffer<List<FfiDiscoveryCompensationStep>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryCompensationStep> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryCompensationStep>(len) {
+            FfiConverterTypeFfiDiscoveryCompensationStep.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryCompensationStep>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryCompensationStep.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryCompensationStep>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryCompensationStep.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryEvidence: FfiConverterRustBuffer<List<FfiDiscoveryEvidence>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryEvidence> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryEvidence>(len) {
+            FfiConverterTypeFfiDiscoveryEvidence.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryEvidence>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryEvidence.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryEvidence>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryEvidence.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryOutboxEvent: FfiConverterRustBuffer<List<FfiDiscoveryOutboxEvent>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryOutboxEvent> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryOutboxEvent>(len) {
+            FfiConverterTypeFfiDiscoveryOutboxEvent.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryOutboxEvent>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryOutboxEvent.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryOutboxEvent>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryOutboxEvent.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryRecoveryResult: FfiConverterRustBuffer<List<FfiDiscoveryRecoveryResult>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryRecoveryResult> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryRecoveryResult>(len) {
+            FfiConverterTypeFfiDiscoveryRecoveryResult.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryRecoveryResult>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryRecoveryResult.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryRecoveryResult>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryRecoveryResult.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryReviewChange: FfiConverterRustBuffer<List<FfiDiscoveryReviewChange>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryReviewChange> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryReviewChange>(len) {
+            FfiConverterTypeFfiDiscoveryReviewChange.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryReviewChange>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryReviewChange.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryReviewChange>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryReviewChange.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryStep: FfiConverterRustBuffer<List<FfiDiscoveryStep>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryStep> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryStep>(len) {
+            FfiConverterTypeFfiDiscoveryStep.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryStep>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryStep.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryStep>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryStep.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiGenerationPreset: FfiConverterRustBuffer<List<FfiGenerationPreset>> {
+    override fun read(buf: ByteBuffer): List<FfiGenerationPreset> {
+        val len = buf.getInt()
+        return List<FfiGenerationPreset>(len) {
+            FfiConverterTypeFfiGenerationPreset.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiGenerationPreset>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiGenerationPreset.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiGenerationPreset>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiGenerationPreset.write(it, buf)
         }
     }
 }
@@ -3337,6 +13815,398 @@ public object FfiConverterSequenceTypeFfiMessage: FfiConverterRustBuffer<List<Ff
 /**
  * @suppress
  */
+public object FfiConverterSequenceTypeFfiModelRoute: FfiConverterRustBuffer<List<FfiModelRoute>> {
+    override fun read(buf: ByteBuffer): List<FfiModelRoute> {
+        val len = buf.getInt()
+        return List<FfiModelRoute>(len) {
+            FfiConverterTypeFfiModelRoute.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiModelRoute>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiModelRoute.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiModelRoute>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiModelRoute.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiModelSyncEvent: FfiConverterRustBuffer<List<FfiModelSyncEvent>> {
+    override fun read(buf: ByteBuffer): List<FfiModelSyncEvent> {
+        val len = buf.getInt()
+        return List<FfiModelSyncEvent>(len) {
+            FfiConverterTypeFfiModelSyncEvent.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiModelSyncEvent>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiModelSyncEvent.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiModelSyncEvent>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiModelSyncEvent.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiModelSyncJob: FfiConverterRustBuffer<List<FfiModelSyncJob>> {
+    override fun read(buf: ByteBuffer): List<FfiModelSyncJob> {
+        val len = buf.getInt()
+        return List<FfiModelSyncJob>(len) {
+            FfiConverterTypeFfiModelSyncJob.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiModelSyncJob>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiModelSyncJob.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiModelSyncJob>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiModelSyncJob.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiParameterChoice: FfiConverterRustBuffer<List<FfiParameterChoice>> {
+    override fun read(buf: ByteBuffer): List<FfiParameterChoice> {
+        val len = buf.getInt()
+        return List<FfiParameterChoice>(len) {
+            FfiConverterTypeFfiParameterChoice.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiParameterChoice>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiParameterChoice.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiParameterChoice>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiParameterChoice.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiParameterConflict: FfiConverterRustBuffer<List<FfiParameterConflict>> {
+    override fun read(buf: ByteBuffer): List<FfiParameterConflict> {
+        val len = buf.getInt()
+        return List<FfiParameterConflict>(len) {
+            FfiConverterTypeFfiParameterConflict.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiParameterConflict>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiParameterConflict.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiParameterConflict>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiParameterConflict.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiParameterIssue: FfiConverterRustBuffer<List<FfiParameterIssue>> {
+    override fun read(buf: ByteBuffer): List<FfiParameterIssue> {
+        val len = buf.getInt()
+        return List<FfiParameterIssue>(len) {
+            FfiConverterTypeFfiParameterIssue.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiParameterIssue>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiParameterIssue.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiParameterIssue>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiParameterIssue.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiParameterSpec: FfiConverterRustBuffer<List<FfiParameterSpec>> {
+    override fun read(buf: ByteBuffer): List<FfiParameterSpec> {
+        val len = buf.getInt()
+        return List<FfiParameterSpec>(len) {
+            FfiConverterTypeFfiParameterSpec.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiParameterSpec>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiParameterSpec.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiParameterSpec>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiParameterSpec.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiParameterValue: FfiConverterRustBuffer<List<FfiParameterValue>> {
+    override fun read(buf: ByteBuffer): List<FfiParameterValue> {
+        val len = buf.getInt()
+        return List<FfiParameterValue>(len) {
+            FfiConverterTypeFfiParameterValue.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiParameterValue>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiParameterValue.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiParameterValue>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiParameterValue.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiProviderCatalogActivation: FfiConverterRustBuffer<List<FfiProviderCatalogActivation>> {
+    override fun read(buf: ByteBuffer): List<FfiProviderCatalogActivation> {
+        val len = buf.getInt()
+        return List<FfiProviderCatalogActivation>(len) {
+            FfiConverterTypeFfiProviderCatalogActivation.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiProviderCatalogActivation>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiProviderCatalogActivation.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiProviderCatalogActivation>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiProviderCatalogActivation.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiProviderCatalogModelDiffEntry: FfiConverterRustBuffer<List<FfiProviderCatalogModelDiffEntry>> {
+    override fun read(buf: ByteBuffer): List<FfiProviderCatalogModelDiffEntry> {
+        val len = buf.getInt()
+        return List<FfiProviderCatalogModelDiffEntry>(len) {
+            FfiConverterTypeFfiProviderCatalogModelDiffEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiProviderCatalogModelDiffEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiProviderCatalogModelDiffEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiProviderCatalogModelDiffEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiProviderCatalogModelDiffEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiProviderCatalogRevision: FfiConverterRustBuffer<List<FfiProviderCatalogRevision>> {
+    override fun read(buf: ByteBuffer): List<FfiProviderCatalogRevision> {
+        val len = buf.getInt()
+        return List<FfiProviderCatalogRevision>(len) {
+            FfiConverterTypeFfiProviderCatalogRevision.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiProviderCatalogRevision>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiProviderCatalogRevision.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiProviderCatalogRevision>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiProviderCatalogRevision.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiProviderCatalogTemplateDiffEntry: FfiConverterRustBuffer<List<FfiProviderCatalogTemplateDiffEntry>> {
+    override fun read(buf: ByteBuffer): List<FfiProviderCatalogTemplateDiffEntry> {
+        val len = buf.getInt()
+        return List<FfiProviderCatalogTemplateDiffEntry>(len) {
+            FfiConverterTypeFfiProviderCatalogTemplateDiffEntry.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiProviderCatalogTemplateDiffEntry>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiProviderCatalogTemplateDiffEntry.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiProviderCatalogTemplateDiffEntry>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiProviderCatalogTemplateDiffEntry.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiProviderConnection: FfiConverterRustBuffer<List<FfiProviderConnection>> {
+    override fun read(buf: ByteBuffer): List<FfiProviderConnection> {
+        val len = buf.getInt()
+        return List<FfiProviderConnection>(len) {
+            FfiConverterTypeFfiProviderConnection.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiProviderConnection>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiProviderConnection.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiProviderConnection>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiProviderConnection.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiProviderDiscoverySnapshot: FfiConverterRustBuffer<List<FfiProviderDiscoverySnapshot>> {
+    override fun read(buf: ByteBuffer): List<FfiProviderDiscoverySnapshot> {
+        val len = buf.getInt()
+        return List<FfiProviderDiscoverySnapshot>(len) {
+            FfiConverterTypeFfiProviderDiscoverySnapshot.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiProviderDiscoverySnapshot>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiProviderDiscoverySnapshot.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiProviderDiscoverySnapshot>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiProviderDiscoverySnapshot.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
 public object FfiConverterSequenceTypeFfiProviderProfile: FfiConverterRustBuffer<List<FfiProviderProfile>> {
     override fun read(buf: ByteBuffer): List<FfiProviderProfile> {
         val len = buf.getInt()
@@ -3355,6 +14225,202 @@ public object FfiConverterSequenceTypeFfiProviderProfile: FfiConverterRustBuffer
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeFfiProviderProfile.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiProviderTemplate: FfiConverterRustBuffer<List<FfiProviderTemplate>> {
+    override fun read(buf: ByteBuffer): List<FfiProviderTemplate> {
+        val len = buf.getInt()
+        return List<FfiProviderTemplate>(len) {
+            FfiConverterTypeFfiProviderTemplate.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiProviderTemplate>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiProviderTemplate.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiProviderTemplate>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiProviderTemplate.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiRequestBodyField: FfiConverterRustBuffer<List<FfiRequestBodyField>> {
+    override fun read(buf: ByteBuffer): List<FfiRequestBodyField> {
+        val len = buf.getInt()
+        return List<FfiRequestBodyField>(len) {
+            FfiConverterTypeFfiRequestBodyField.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiRequestBodyField>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiRequestBodyField.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiRequestBodyField>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiRequestBodyField.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryAssistantDraftField: FfiConverterRustBuffer<List<FfiDiscoveryAssistantDraftField>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryAssistantDraftField> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryAssistantDraftField>(len) {
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryAssistantDraftField>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryAssistantDraftField.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryAssistantDraftField>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryAssistantDraftField.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiDiscoveryAssistantDraftReviewCheck: FfiConverterRustBuffer<List<FfiDiscoveryAssistantDraftReviewCheck>> {
+    override fun read(buf: ByteBuffer): List<FfiDiscoveryAssistantDraftReviewCheck> {
+        val len = buf.getInt()
+        return List<FfiDiscoveryAssistantDraftReviewCheck>(len) {
+            FfiConverterTypeFfiDiscoveryAssistantDraftReviewCheck.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiDiscoveryAssistantDraftReviewCheck>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiDiscoveryAssistantDraftReviewCheck.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiDiscoveryAssistantDraftReviewCheck>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiDiscoveryAssistantDraftReviewCheck.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiProviderCatalogModelChangedSection: FfiConverterRustBuffer<List<FfiProviderCatalogModelChangedSection>> {
+    override fun read(buf: ByteBuffer): List<FfiProviderCatalogModelChangedSection> {
+        val len = buf.getInt()
+        return List<FfiProviderCatalogModelChangedSection>(len) {
+            FfiConverterTypeFfiProviderCatalogModelChangedSection.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiProviderCatalogModelChangedSection>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiProviderCatalogModelChangedSection.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiProviderCatalogModelChangedSection>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiProviderCatalogModelChangedSection.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiProviderCatalogTemplateChangedSection: FfiConverterRustBuffer<List<FfiProviderCatalogTemplateChangedSection>> {
+    override fun read(buf: ByteBuffer): List<FfiProviderCatalogTemplateChangedSection> {
+        val len = buf.getInt()
+        return List<FfiProviderCatalogTemplateChangedSection>(len) {
+            FfiConverterTypeFfiProviderCatalogTemplateChangedSection.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiProviderCatalogTemplateChangedSection>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiProviderCatalogTemplateChangedSection.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiProviderCatalogTemplateChangedSection>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiProviderCatalogTemplateChangedSection.write(it, buf)
+        }
+    }
+}
+
+
+
+
+/**
+ * @suppress
+ */
+public object FfiConverterSequenceTypeFfiRequestBodyShape: FfiConverterRustBuffer<List<FfiRequestBodyShape>> {
+    override fun read(buf: ByteBuffer): List<FfiRequestBodyShape> {
+        val len = buf.getInt()
+        return List<FfiRequestBodyShape>(len) {
+            FfiConverterTypeFfiRequestBodyShape.read(buf)
+        }
+    }
+
+    override fun allocationSize(value: List<FfiRequestBodyShape>): ULong {
+        val sizeForLength = 4UL
+        val sizeForItems = value.map { FfiConverterTypeFfiRequestBodyShape.allocationSize(it) }.sum()
+        return sizeForLength + sizeForItems
+    }
+
+    override fun write(value: List<FfiRequestBodyShape>, buf: ByteBuffer) {
+        buf.putInt(value.size)
+        value.iterator().forEach {
+            FfiConverterTypeFfiRequestBodyShape.write(it, buf)
         }
     }
 } fun `coreVersion`(): kotlin.String {

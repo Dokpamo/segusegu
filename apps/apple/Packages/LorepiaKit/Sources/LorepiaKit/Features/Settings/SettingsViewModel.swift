@@ -18,6 +18,7 @@ public final class SettingsViewModel: ObservableObject {
     @Published public private(set) var statusMessage: String?
 
     public let runtimeMode: CoreRuntimeMode
+    public let providerSetupViewModel: ProviderSetupViewModel
 
     public var isEditingStoredProfile: Bool {
         profiles.contains { $0.id == editingProfileID }
@@ -41,6 +42,18 @@ public final class SettingsViewModel: ObservableObject {
     }
 
     public var credentialStatusDescription: String {
+        if isEditingStoredProfile {
+            if normalizedCredentialDraft != nil {
+                return
+                    "기존 연결에는 새 API 키를 저장할 수 없습니다. 새 AI 연결을 만들어 별도의 연결, 모델 경로와 프리셋을 사용하세요."
+            }
+            if isCredentialStateKnown, hasStoredCredential {
+                return
+                    "API 키가 Keychain에 저장되어 있습니다. 입력 칸을 비워 두면 현재 키를 유지합니다. 다른 키는 새 AI 연결에 저장하세요."
+            }
+            return
+                "기존 연결의 API 키 상태는 변경하지 않습니다. 이 연결을 삭제하거나 새 AI 연결을 만드세요."
+        }
         if requiresCredentialRecovery {
             return normalizedCredentialDraft == nil
                 ? "이 프로필의 API 키 안전 상태를 복구해야 합니다. 키를 다시 입력하거나 저장된 키 삭제를 완료하세요."
@@ -95,6 +108,12 @@ public final class SettingsViewModel: ObservableObject {
         self.runtimeMode = runtimeMode
         self.providerConfigurationStore =
             providerConfigurationStore ?? ProviderConfigurationStore()
+        providerSetupViewModel = ProviderSetupViewModel(
+            client: client,
+            credentialStore: credentialStore,
+            runtimeMode: runtimeMode,
+            providerConfigurationStore: self.providerConfigurationStore
+        )
         providerConfigurationCancellable =
             self.providerConfigurationStore.$revision
                 .dropFirst()
@@ -317,6 +336,25 @@ public final class SettingsViewModel: ObservableObject {
         let targetID = editingProfileID
         let previousProfile = profiles.first { $0.id == targetID }
         let credentialToStore = normalizedCredentialDraft
+        if let previousProfile {
+            let immutableConfigurationChanged =
+                previousProfile.baseURL != normalizedURL
+                || previousProfile.model != normalizedModel
+                || previousProfile.timeoutSeconds != timeout
+            if credentialToStore != nil {
+                credentialDraft = ""
+                statusMessage = nil
+                errorMessage =
+                    "기존 연결의 API 키는 변경할 수 없습니다. 새 AI 연결을 만들어 새 연결 ID, 모델 경로와 프리셋을 사용하세요. 입력을 비워 두면 현재 키를 유지합니다."
+                return
+            }
+            if immutableConfigurationChanged {
+                statusMessage = nil
+                errorMessage =
+                    "기존 연결의 API 주소, 모델과 제한 시간은 변경할 수 없습니다. 새 AI 연결을 만들어 별도의 연결, 모델 경로와 프리셋을 사용하세요."
+                return
+            }
+        }
         let changesCredentialEndpoint =
             previousProfile?.baseURL != normalizedURL
             && credentialToStore != nil
@@ -334,7 +372,7 @@ public final class SettingsViewModel: ObservableObject {
         ), credentialToStore == nil {
             statusMessage = nil
             errorMessage =
-                "이 프로필을 복구하려면 API 키를 다시 입력하거나 저장된 키 삭제를 완료하세요."
+                "이 기존 연결에는 API 키를 다시 저장할 수 없습니다. 저장된 키 삭제를 완료하거나 새 AI 연결을 만드세요."
             return
         }
         if let previousProfile,

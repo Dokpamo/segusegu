@@ -783,9 +783,9 @@ public struct ChatView: View {
             isEditSaving: inlineEditSession?.isSaving ?? false,
             editSaveFailed: inlineEditSession?.saveFailed ?? false,
             mode: viewModel.mode,
-            providerProfiles: viewModel.providerProfiles,
-            selectedProviderProfileID:
-                viewModel.selectedProviderProfileID,
+            generationOptions: viewModel.generationOptions,
+            selectedGenerationTarget:
+                viewModel.selectedGenerationTarget,
             restingSafeAreaInset: restingSafeAreaInset,
             onSubmit: {
                 if inlineEditSession == nil {
@@ -815,9 +815,9 @@ public struct ChatView: View {
                     await viewModel.setMode(mode)
                 }
             },
-            onProviderProfileChange: { profileID in
+            onGenerationTargetChange: { targetID in
                 Task {
-                    await viewModel.selectProviderProfile(id: profileID)
+                    await viewModel.selectGenerationTarget(id: targetID)
                 }
             },
             onOpenConversationSettings: {
@@ -2505,15 +2505,15 @@ private struct ChatComposer: View {
     let isEditSaving: Bool
     let editSaveFailed: Bool
     let mode: ConversationMode
-    let providerProfiles: [ProviderProfile]
-    let selectedProviderProfileID: String?
+    let generationOptions: [ProviderGenerationOption]
+    let selectedGenerationTarget: ProviderGenerationTarget?
     let restingSafeAreaInset: CGFloat
     let onSubmit: () -> Void
     let onCancel: () -> Void
     let onCancelEdit: () -> Void
     let onToggleExpansion: () -> Void
     let onModeChange: (ConversationMode) -> Void
-    let onProviderProfileChange: (String) -> Void
+    let onGenerationTargetChange: (String) -> Void
     let onOpenConversationSettings: () -> Void
     let onOpenProviderSettings: () -> Void
 
@@ -2974,22 +2974,22 @@ private struct ChatComposer: View {
 #if os(iOS)
     private var modelMenuControl: some View {
         Menu {
-            if providerProfiles.isEmpty {
+            if generationOptions.isEmpty {
                 Button("설정된 프로바이더 없음", systemImage: "cpu") {}
                     .disabled(true)
             } else {
                 Picker(
                     "앱 전체 기본 모델",
-                    selection: providerProfileSelection
+                    selection: generationTargetSelection
                 ) {
-                    ForEach(providerProfiles) { profile in
+                    ForEach(generationOptions) { option in
                         Label(
-                            providerTitle(profile),
+                            providerTitle(option),
                             systemImage: "cpu"
                         )
-                            .tag(Optional(profile.id))
+                            .tag(Optional(option.id))
                             .accessibilityIdentifier(
-                                "chat-composer-model-option-\(profile.id)"
+                                "chat-composer-model-option-\(option.accessibilityID)"
                             )
                     }
                 }
@@ -3006,7 +3006,7 @@ private struct ChatComposer: View {
         } label: {
             HStack(spacing: 4) {
                 Text(
-                    selectedProviderProfile.map(providerTitle)
+                    selectedGenerationOption.map(providerTitle)
                         ?? "프로바이더 설정"
                 )
                     .lineLimit(1)
@@ -3025,7 +3025,7 @@ private struct ChatComposer: View {
         .buttonStyle(.plain)
         .accessibilityLabel("앱 전체 기본 모델")
         .accessibilityValue(
-            selectedProviderProfile.map(providerTitle)
+            selectedGenerationOption.map(providerTitle)
                 ?? "선택 안 됨"
         )
         .accessibilityHint("기본 모델을 선택하거나 프로바이더 설정을 엽니다")
@@ -3064,19 +3064,19 @@ private struct ChatComposer: View {
         .accessibilityIdentifier("chat-composer-mode")
     }
 
-    private var providerProfileSelection: Binding<String?> {
+    private var generationTargetSelection: Binding<String?> {
         Binding(
             get: {
-                selectedProviderProfileID
+                selectedGenerationOption?.id
             },
-            set: { profileID in
+            set: { targetID in
                 guard
-                    let profileID,
-                    profileID != selectedProviderProfileID
+                    let targetID,
+                    targetID != selectedGenerationOption?.id
                 else {
                     return
                 }
-                onProviderProfileChange(profileID)
+                onGenerationTargetChange(targetID)
             }
         )
     }
@@ -3096,17 +3096,19 @@ private struct ChatComposer: View {
     }
 #endif
 
-    private var selectedProviderProfile: ProviderProfile? {
-        guard let selectedProviderProfileID else {
+    private var selectedGenerationOption: ProviderGenerationOption? {
+        guard let selectedGenerationTarget else {
             return nil
         }
-        return providerProfiles.first {
-            $0.id == selectedProviderProfileID
+        return generationOptions.first {
+            $0.target == selectedGenerationTarget
         }
     }
 
-    private func providerTitle(_ profile: ProviderProfile) -> String {
-        "\(profile.displayName) · \(profile.model)"
+    private func providerTitle(
+        _ option: ProviderGenerationOption
+    ) -> String {
+        "\(option.connection.displayName) · \(option.route.title) · \(option.preset.displayName)"
     }
 
     private var isFocused: Bool {

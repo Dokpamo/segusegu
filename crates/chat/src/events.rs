@@ -1,8 +1,12 @@
 use chrono::{DateTime, Utc};
 use lorepia_domain::{
     ConversationBranchId, ConversationId, GenerationId, GenerationUsage, MessageId, MessageStatus,
+    ToolCallArgumentsDelta, ToolCallId, ToolName,
 };
 use serde::{Deserialize, Serialize};
+
+/// Current wire version for structured chat events.
+pub const CHAT_EVENT_VERSION: u32 = 4;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChatEvent {
@@ -22,6 +26,17 @@ pub enum ChatEventKind {
     GenerationStarted,
     ReasoningDelta(String),
     TextDelta(String),
+    ToolCallStarted {
+        id: ToolCallId,
+        name: ToolName,
+    },
+    ToolCallArgumentsDelta {
+        id: ToolCallId,
+        delta: ToolCallArgumentsDelta,
+    },
+    ToolCallCompleted {
+        id: ToolCallId,
+    },
     UsageUpdated(GenerationUsage),
     MessageCommitted {
         message_id: MessageId,
@@ -43,7 +58,7 @@ impl ChatEvent {
         kind: ChatEventKind,
     ) -> Self {
         Self {
-            event_version: 2,
+            event_version: CHAT_EVENT_VERSION,
             generation_id,
             conversation_id,
             branch_id: None,

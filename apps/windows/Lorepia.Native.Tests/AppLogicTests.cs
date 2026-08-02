@@ -73,7 +73,7 @@ public sealed class AppLogicTests
         ulong sequence) =>
         new()
         {
-            EventVersion = 1,
+            EventVersion = CoreClient.SupportedChatEventVersion,
             ConversationId = conversationId,
             GenerationId = generationId,
             Sequence = sequence,

@@ -4,6 +4,7 @@ Every native app supplies an app-owned root. Rust creates the same relative
 layout on every platform:
 
 ```text
+.lorepia-owner.lock
 db/lorepia.sqlite3
 sources/sha256/<prefix>/<digest>
 assets/sha256/<prefix>/<digest>
@@ -11,6 +12,14 @@ cache/
 staging/
 recovery/
 ```
+
+Opening storage canonicalizes the app-owned root, rejects a root or owner-lock
+symbolic link, and acquires a non-blocking OS-level exclusive owner lock before
+opening SQLite, migrating, recovering, or cleaning staging. The lock is held
+for the full `Storage` lifetime and released automatically on normal exit or
+process termination. A second process receives recoverable
+`storage_unavailable` and cannot run recovery against work owned by the first
+process.
 
 SQLite stores structured data and relative paths. Source and extracted asset
 files are logically immutable and deduplicated by SHA-256. Cache lifetime is
@@ -33,8 +42,42 @@ The schema stores characters, sources, assets, character-to-asset roles,
 conversation rooms, parent-linked messages, branches, per-room active
 branch/mode state, generation snapshots, non-secret provider profiles,
 application settings, and import jobs. A version-3 migration converts each
-legacy room's timestamp-ordered messages into one safe default lineage before
-creating its root branch and `chat` state. WAL and foreign keys are enabled.
+legacy room into one safe default lineage before creating its root branch and
+`chat` state. It first pairs each assistant with its persisted user parent,
+then orders whole turns with deterministic tie breakers. The legacy graph is
+validated before the destructive table replacement. WAL and foreign keys are
+enabled.
+
+Provider connection removal is an archive operation, not a physical delete.
+Archived connections disappear from active connection/profile reads and cannot
+be used for generation or model synchronization. The same connection identity
+cannot be reused. Archiving also clears an active selection atomically, while
+model routes, presets, completed-generation provenance, model-sync history, and
+provider-discovery audit rows remain intact across database reopen.
+
+Archiving fails with a recoverable `invalid_input` while that connection has
+any nonterminal model-sync job or provider-discovery session. The user must
+finish, cancel, or explicitly reconcile that durable work first. This keeps the
+connection visible through the same active list used to rediscover its work;
+terminal job and discovery history does not prevent a later archive and remains
+readable afterward.
+
+An approved LAN connection stores its typed exact-origin/address grant inside
+the secret-free connection config and in an immutable relational audit mirror.
+Storage rejects a missing or divergent mirror on open. Public and loopback
+connections cannot carry this grant, and an existing connection cannot change
+its API origin, network mode, or approved address set.
+
+Generation snapshots also store exact provider family/route/preset provenance,
+expanded usage counters, a bounded recognized usage-summary object, and may
+retain a bounded typed array of legacy provider-native opaque reasoning state.
+SQLite guards require the family to match the referenced route and prohibit
+opaque state on non-complete rows or without complete route and preset
+provenance. Hydration revalidates the typed JSON and its count and serialized
+byte limits, but storage validity is not replay authorization. The current Core
+keeps this schema dormant and never loads or newly persists opaque state for a
+connection with a `credential_ref` or a call carrying a non-empty raw
+credential.
 
 Branch publication uses an expected-head comparison in the same SQLite
 transaction that inserts the user message, pending assistant message, and
@@ -54,3 +97,18 @@ cross-resource commit. An inspection is removed from the in-memory review map
 when commit or discard claims it, so concurrent commit/commit and
 commit/discard races have one winner. A failed commit restores the review only
 after a database read proves that its character was not committed.
+
+## Diagnostics and redaction
+
+The Rust provider, discovery, and storage layers currently configure no
+production logger or log sink and emit no production log records. The
+redacted-logging unit-test item and the log leg of the credential-leak scan are
+therefore not applicable to the current implementation. This is an
+implementation fact, not permission to log raw state.
+
+Any future logging boundary must accept only a dedicated typed, bounded,
+secret-free redacted projection. It must not accept raw credentials, secret
+cURL input, provider response bodies, discovery drafts, event JSON, or database
+rows. Adding a production log sink also requires a project-owned credential
+canary test that captures that sink and verifies the same canary is absent from
+SQLite, returned errors, versioned events, and logs.

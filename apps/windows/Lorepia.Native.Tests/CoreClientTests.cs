@@ -3,13 +3,13 @@ namespace Lorepia.Native.Tests;
 public sealed class CoreClientTests
 {
     [Fact]
-    public void PublicContract_DeclaresAbiVersionThree()
+    public void PublicContract_DeclaresAbiVersionSeven()
     {
-        Assert.Equal(3u, CoreClient.SupportedAbiVersion);
+        Assert.Equal(7u, CoreClient.SupportedAbiVersion);
     }
 
     [Fact]
-    public void FrozenAbiTwoClient_RejectsAbiThreeBeforeCreatingCore()
+    public void FrozenAbiTwoClient_RejectsAbiSevenBeforeCreatingCore()
     {
         var api = new FakeNativeApi
         {
@@ -19,7 +19,7 @@ public sealed class CoreClientTests
         var exception = Assert.Throws<CoreInteropException>(
             () => FrozenAbiTwoClient.Open(api));
 
-        Assert.Contains("version 3", exception.Message);
+        Assert.Contains("version 7", exception.Message);
         Assert.Contains("expected 2", exception.Message);
         Assert.Equal(0, api.CreateCount);
         Assert.Equal(0, api.DestroyCount);
@@ -65,8 +65,11 @@ public sealed class CoreClientTests
     }
 
     [Theory]
-    [InlineData(2u)]
+    [InlineData(3u)]
     [InlineData(4u)]
+    [InlineData(5u)]
+    [InlineData(6u)]
+    [InlineData(8u)]
     public void Create_RejectsAbiMismatchBeforeCreatingCore(uint abiVersion)
     {
         var api = new FakeNativeApi
@@ -78,7 +81,7 @@ public sealed class CoreClientTests
             () => CoreClient.Open(api, CreateAbsoluteDataRoot()));
 
         Assert.Contains("Unsupported", exception.Message);
-        Assert.Contains("expected 3", exception.Message);
+        Assert.Contains("expected 7", exception.Message);
         Assert.Equal(0, api.CreateCount);
         Assert.Equal(0, api.DestroyCount);
     }
@@ -88,6 +91,19 @@ public sealed class CoreClientTests
     {
         var api = new FakeNativeApi();
         var client = CoreClient.Open(api, CreateAbsoluteDataRoot());
+        var candidate = new GenerationPreset
+        {
+            Id = "preset-1",
+            ModelRouteId = "route-1",
+            DisplayName = "Candidate",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow,
+        };
+        var catalogEnvelope =
+            System.Text.Encoding.UTF8.GetBytes("{}");
+        var catalogImportPlan =
+            client.PrepareSignedProviderCatalogImport(
+                catalogEnvelope);
         client.Dispose();
 
         var calls = new Action[]
@@ -108,10 +124,64 @@ public sealed class CoreClientTests
                 "hello",
                 "provider-1",
                 null),
+            () => _ = client.SendMessageWithTarget(
+                "conversation-1",
+                "hello",
+                new GenerationTarget
+                {
+                    ModelRouteId = "route-1",
+                    GenerationPresetId = "preset-1",
+                },
+                "connection-1",
+                null),
             () => client.CancelGeneration("generation-1"),
             () => _ = client.PollEvents(),
             () => _ = client.GetSettings(),
             () => client.UpdateSettings(new AppSettings()),
+            () => _ = client.ListProviderTemplates(),
+            () => _ = client.ListProviderConnections(),
+            () => client.DeleteProviderConnection("connection-1"),
+            () => _ = client.ListModelRoutes("connection-1"),
+            () => client.DeleteModelRoute("route-1"),
+            () => _ = client.ListCapabilityObservations("route-1"),
+            () => _ = client.GetEffectiveCapability(
+                "route-1",
+                CapabilityKey.Streaming),
+            () => _ = client.GetEffectiveParameterSpecs("route-1"),
+            () => client.DeleteUserCapabilityOverride(
+                "route-1",
+                "observation-1"),
+            () => _ = client.RefreshProviderModels("connection-1", null),
+            () => _ = client.StartProviderModelSync("connection-1", null),
+            () => _ = client.GetProviderModelSync("sync-1"),
+            () => _ = client.ListProviderModelSyncs("connection-1"),
+            () => _ = client.ApproveProviderModelSync(
+                "sync-1",
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            () => _ = client.CancelProviderModelSync("sync-1"),
+            () => _ = client.PollProviderModelSyncEvents(
+                "sync-1"),
+            () => _ = client.AckProviderModelSyncEvent(
+                "sync-1",
+                1),
+            () => _ = client.GetProviderCatalogStatus(),
+            () => _ = client.GetProviderCatalogHistory(),
+            () => _ = client.PrepareSignedProviderCatalogImport(
+                catalogEnvelope),
+            () => _ = client.ActivateSignedProviderCatalogImport(
+                catalogImportPlan,
+                catalogEnvelope),
+            () => _ = client.DiffProviderCatalogRevisions(1, 2),
+            () => _ = client.PrepareProviderCatalogRollback(1),
+            () => _ = client.ListGenerationPresets("route-1"),
+            () => client.ValidateGenerationPreset("route-1", "preset-1"),
+            () => client.ValidateGenerationPresetCandidate(candidate),
+            () => _ = client.RenderReasoningControlCandidate(candidate),
+            () => _ = client.RenderPromptCacheControlCandidate(candidate),
+            () => _ = client.PreviewProviderRequest("route-1", "preset-1"),
+            () => _ = client.PreviewProviderRequestCandidate(candidate),
+            () => client.DeleteGenerationPreset("preset-1"),
+            () => _ = client.SelectGenerationTarget(null),
             () => _ = client.ListProviderProfiles(),
             () => _ = client.UpsertProviderProfile(new ProviderProfile
             {

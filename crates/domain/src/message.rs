@@ -2,7 +2,10 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{ConversationBranchId, ConversationId, ConversationMode};
+use crate::{
+    ApiFamily, BoundedJson, ConversationBranchId, ConversationId, ConversationMode,
+    GenerationPresetId, ModelRouteId, OpaqueReasoningState,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct MessageId(pub String);
@@ -69,9 +72,31 @@ pub struct GenerationRecord {
     pub assistant_message_id: Option<MessageId>,
     pub mode: ConversationMode,
     pub model: String,
+    /// Stable provider-catalog provenance. Legacy profile generations keep
+    /// both fields unset.
+    #[serde(default)]
+    pub model_route_id: Option<ModelRouteId>,
+    #[serde(default)]
+    pub generation_preset_id: Option<GenerationPresetId>,
+    #[serde(default)]
+    pub provider_family: Option<ApiFamily>,
     pub status: GenerationStatus,
     pub input_tokens: Option<u64>,
+    #[serde(default)]
+    pub cached_read_tokens: Option<u64>,
+    #[serde(default)]
+    pub cached_write_tokens: Option<u64>,
     pub output_tokens: Option<u64>,
+    #[serde(default)]
+    pub reasoning_tokens: Option<u64>,
+    #[serde(default)]
+    pub tool_tokens: Option<u64>,
+    #[serde(default)]
+    pub provider_raw_summary: Option<BoundedJson>,
+    /// Internal-only provider continuity state. Storage hydrates this field
+    /// explicitly; generic DTO serialization must never expose it.
+    #[serde(default, skip_serializing, skip_deserializing)]
+    pub opaque_reasoning_state: Vec<OpaqueReasoningState>,
     pub error_code: Option<String>,
     pub started_at: DateTime<Utc>,
     pub finished_at: Option<DateTime<Utc>>,
@@ -126,5 +151,62 @@ impl Message {
             generation_id: Some(generation_id),
             created_at: Utc::now(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::Utc;
+
+    use super::{
+        ConversationBranchId, ConversationId, ConversationMode, GenerationId, GenerationRecord,
+        GenerationStatus, MessageId,
+    };
+    use crate::{OpaqueReasoningState, OpenAiResponsesReasoningItem};
+
+    #[test]
+    fn generation_record_generic_serialization_never_exposes_opaque_state() {
+        let item_id_canary = "generation-record-item-id-canary";
+        let data_canary = "generation-record-data-canary";
+        let record = GenerationRecord {
+            id: GenerationId::new(),
+            conversation_id: ConversationId::new(),
+            branch_id: ConversationBranchId::new(),
+            user_message_id: MessageId::new(),
+            assistant_message_id: Some(MessageId::new()),
+            mode: ConversationMode::Chat,
+            model: "model".to_owned(),
+            model_route_id: None,
+            generation_preset_id: None,
+            provider_family: None,
+            status: GenerationStatus::Complete,
+            input_tokens: None,
+            cached_read_tokens: None,
+            cached_write_tokens: None,
+            output_tokens: None,
+            reasoning_tokens: None,
+            tool_tokens: None,
+            provider_raw_summary: None,
+            opaque_reasoning_state: vec![OpaqueReasoningState::OpenAiResponses {
+                item: OpenAiResponsesReasoningItem::from_value(&serde_json::json!({
+                    "id": item_id_canary,
+                    "type": "reasoning",
+                    "summary": [],
+                    "encrypted_content": data_canary
+                }))
+                .expect("reasoning item"),
+            }],
+            error_code: None,
+            started_at: Utc::now(),
+            finished_at: Some(Utc::now()),
+        };
+
+        let debug = format!("{record:?}");
+        assert!(!debug.contains(item_id_canary));
+        assert!(!debug.contains(data_canary));
+        let encoded = serde_json::to_string(&record).expect("encode generation record");
+        assert!(!encoded.contains("opaque_reasoning_state"));
+        assert!(!encoded.contains(item_id_canary));
+        assert!(!encoded.contains(data_canary));
     }
 }

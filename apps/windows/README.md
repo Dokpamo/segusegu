@@ -38,48 +38,147 @@ operation. Character rows open or restore that character's chat.
 ### Chat
 
 Chat restores the newest local conversation or opens one after a Library
-selection. It loads persisted messages, provider profiles, and app settings
-through `CoreClient`.
+selection. It loads persisted messages, provider connections, model routes,
+generation presets, and app settings through `CoreClient`.
 
-Send retrieves the selected provider's secret from Windows PasswordVault,
-passes it only for that generation call, and then polls bounded event batches.
+Send retrieves the selected connection's secret from Windows PasswordVault,
+passes it separately from the selected model-route and generation-preset JSON
+only for that generation call, and then polls bounded event batches.
+Immediately before the secret-bearing native call, `CoreClient` revalidates
+that the route belongs to that connection and the preset belongs to that
+route; a mismatched or stale graph response fails before the credential
+crosses the ABI. Each page activation has a lifecycle epoch. Navigation away
+cancels that epoch, so a late load or accepted send cannot mutate the detached
+view model or restart its event poller.
 Only the exact missing-entry HRESULT is treated as an absent optional
 credential; other PasswordVault or COM failures are surfaced. The view model
 accepts events only when the conversation ID and generation ID match and the
 sequence is strictly increasing. A dropped-event count triggers a persisted
 message refresh. Commit, finish, failure, and cancellation also refresh
 persisted messages. A pending assistant generation is resumed after navigation
-or restart and can be cancelled explicitly.
+or restart and can be cancelled explicitly. Tool calls are displayed as inert
+proposals; the Windows app does not execute them.
 
 ### Provider settings
 
-Provider profile metadata is owned by Rust storage. The API credential is not
-included in that profile and is stored only in Windows PasswordVault under the
-profile ID. A blank credential field preserves the existing secret; users can
-remove it explicitly. Settings also choose the default provider and whether a
-failed or cancelled partial assistant response is preserved.
+Rust owns the `ProviderTemplate -> ProviderConnection -> ModelRoute ->
+GenerationPreset` graph. Windows renders the high-level contracts and never
+reads SQLite or parses provider manifests independently.
+
+An API credential is stored only in Windows PasswordVault with resource
+`LorePia.ProviderCredential` and the connection ID as its user name. It is
+never included in connection, route, preset, settings, catalog, log, or event
+JSON. A blank credential field preserves the existing secret; users can remove
+it explicitly. Vault and Core writes use compensating transactions, credential
+drafts are invalidated when selection or ID changes, and an existing
+connection cannot be silently retargeted to another template or credential
+origin. Connection updates send only the non-secret flattened ABI fields plus
+an exact `credential_slot_ready` result from PasswordVault; Windows never
+round-trips a caller-supplied credential reference, and Core derives the
+reference from the immutable connection ID.
+Because Windows has no Core-visible credential generation, a nonblank
+credential cannot replace an existing connection's slot: changing provider
+accounts requires a new generated connection ID, route, and preset so opaque
+reasoning state cannot cross accounts. A blank field still retains the current
+credential, and a rejected non-secret configuration edit never rewrites the
+vault.
+
+Provider setup supports a known template, official website, local server, or
+official cURL example. Core inspects cURL input first; Windows writes any
+returned credential only to the exact internally generated PasswordVault slot,
+clears the paste control, and gives discovery only the parseable redacted cURL.
+Website and cURL discovery receive safe generated display names, so an unknown
+provider can begin from its official URL or example plus a credential without a
+separate naming step.
+Fresh cURL evidence after restart reuses the schema-3 snapshot's persisted
+connection options, including its exact LAN origin and pinned addresses.
+Website and cURL setup may request assistant help only through the exact model
+route and generation preset already saved as the application default. Windows
+offers that pair only while the route is available, the preset still validates,
+and any required PasswordVault credential exists. If no executable default
+pair exists, the assistant request is disabled and fresh deterministic
+discovery still starts with a null preferred assistant route. A restored
+pre-grant snapshot does not expose that frozen input route, so Windows never
+substitutes a newer application default: the user must add deterministic
+evidence or cancel and restart. Once Core proposes the typed assistant grant,
+Windows restores only its exact route and shows the assistant
+connection/model/preset identity, allowed document origins, evidence IDs,
+call/token/tool/retry/cost ceilings, approval ID, and grant digest. A dedicated
+approve or decline click is required; the earlier request checkbox and generic
+Continue action cannot approve that grant.
+
+Durable discovery snapshots include a typed setup-assistant resume boundary.
+Windows reconstructs evidence questions and draft review after restart. A
+pending allowlisted Core host action can be resumed explicitly without
+exposing a raw tool call or making a model call. Interrupted, retryable, and
+unknown outcomes are never replayed automatically. Native credential
+compensation starts only an unattempted step bound to the pending connection
+ID and an equal opaque credential reference; an uncertain PasswordVault
+deletion is marked outcome-unknown and requires manual reconciliation.
+Discovery and model-sync responses are accepted only when their session or job,
+connection, and compensation attempt still match the requesting operation.
+Cancelling while discovery creation is in flight records
+the cancellation against that start epoch; when Core returns the exact session,
+Windows cancels it without activating the snapshot or starting a monitor.
+Leaving Settings also advances a page-lifecycle epoch. Late settings refresh
+or model-sync start results are discarded, cannot reapply detached state, and
+cannot recreate discovery or model-sync monitors after unload.
+
+Model listing runs as a durable Core model-sync job. Windows polls progress,
+stops at the exact review digest, and commits only that approved digest.
+Interrupted jobs are shown for recovery and are not automatically replayed.
+Missing models remain reviewable as temporarily missing. Route controls use
+Core's effective parameter specifications, while capability rows show source,
+freshness, alternatives, and conflicts.
+
+Generation presets preserve explicit provider-default states for dynamic
+parameters, reasoning, and prompt-cache controls. An unsaved candidate is
+validated by Core and rendered as a redacted request preview before
+persistence. The preview contains only method, origin, path, header names, and
+a scalar-free body shape; any private-message, credential, or opaque-reasoning
+leak flag fails closed. New drafts default opaque reasoning replay off.
+Credential-bearing connections always load, preview, and persist that setting
+as false; Windows disables the continuity control for those targets even if a
+stale stored preset or control response says true. Only an exact
+credential-free target can opt into the model-specific value returned by Core.
+Settings store an exact model-route and preset pair as the default chat target.
+Legacy provider-profile settings are read only for migration compatibility.
+
+Signed provider catalogs can be imported from a bounded local JSON file,
+reviewed through the ABI's categorized provider/model diff, and activated or
+rolled back only by returning the exact opaque `plan_json` retained from the
+state-bound prepared plan.
 
 ### C ABI contract
 
 `bindings/c-api/include/lorepia.h` at the repository root is the source of
-truth. `apps/windows/include/lorepia.h` is its checked-in mirror. ABI version 3
+truth. `apps/windows/include/lorepia.h` is its checked-in mirror. ABI version 7
 covers:
 
 - core create, destroy, version, health, and structured last error;
 - inspect, commit, and discard import plus character get and list;
-- conversation open and list plus message list;
-- send, cancel, and bounded event polling;
-- app settings get and update;
-- provider profile list, upsert, and delete.
+- conversation and branch operations plus message listing;
+- targeted send, cancel, and bounded event polling;
+- app settings get, update, and exact generation-target selection;
+- provider templates, connections, routes, capability evidence, effective
+  parameter specifications, and user overrides;
+- schema-3 durable provider discovery, exact event-version-2 outbox polling,
+  typed setup-assistant resume, and native credential compensation;
+- durable model synchronization and bounded progress events;
+- signed provider-catalog status, history, diff, import, and state-bound
+  rollback;
+- generation-preset CRUD, stored and candidate validation, and stored and
+  candidate redacted request previews.
 
 Fallible calls return status `0` on success. A non-empty `lorepia_buffer_t` is
 owned by .NET through `NativeBuffer` and is released exactly once with
 `lorepia_buffer_free`. A successful core pointer is owned by one
 `SafeCoreHandle` and released exactly once with `lorepia_core_destroy`.
 
-ABI version 3 is the first revision whose event batches may contain event
-schema version 2 branch and assistant-message routing metadata. `CoreClient`
-requires ABI version `3`, validates high-level inputs, uses strict
+ABI version 7 event batches use exact chat event version `4` and include branch
+and assistant-message routing, usage/cache details, and inert tool-call
+proposal events. `CoreClient` rejects older and future event versions, requires
+ABI version `7`, validates high-level inputs, uses strict
 UTF-8 decoding, and maps native error JSON to `CoreInteropException`
 properties: `Status`, `Code`, `Recoverable`, and `OperationId`.
 
@@ -89,8 +188,8 @@ The core configuration contains one absolute app-owned path:
 {"data_root":"%LOCALAPPDATA%\\LorePia"}
 ```
 
-No credential is written into that configuration, provider profile JSON,
-SQLite, or logs.
+No credential is written into that configuration, provider contract JSON,
+SQLite, logs, or event payloads.
 
 This repository intentionally has no open-source license. Its source, C header,
 and generated or compiled artifacts do not grant permission to copy,
@@ -165,7 +264,13 @@ observable-object base, and deterministic shell navigation model. Tests cover
 shell success, in-flight, failure, and property-change states; every navigation
 mapping; every high-level ABI operation; all chat event payload shapes;
 stale/wrong-generation filtering; exact staging limits; strict UTF-8;
-structured errors; and disposal waiting for an in-flight call.
+structured errors; disposal waiting for an in-flight call; PasswordVault
+compensation and selection races; exact model/preset targeting; durable
+model-sync review and two-job event isolation; discovery restart boundaries,
+fresh-evidence policy restoration, exact compensation, old/future event
+rejection; site-only setup defaults; signed-catalog exact-plan rollback;
+effective parameter controls; credential-account continuity; candidate
+validation; and leak-safe request previews.
 
 The Windows app build runs this suite again with
 `LOREPIA_RUN_LIVE_NATIVE_TESTS=1` and the exact newly built DLL. That live

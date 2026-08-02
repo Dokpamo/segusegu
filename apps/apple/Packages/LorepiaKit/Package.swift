@@ -1,19 +1,12 @@
 // swift-tools-version: 6.1
 
 import PackageDescription
-import Foundation
 
 let binaryPath = "Artifacts/LorepiaCore.xcframework"
-let hasGeneratedCore =
-    ProcessInfo.processInfo.environment["LOREPIA_SKIP_GENERATED"] != "1"
-        && FileManager.default.fileExists(
-            atPath: URL(fileURLWithPath: #filePath)
-                .deletingLastPathComponent()
-                .appendingPathComponent(binaryPath)
-                .path
-        )
+let usesGeneratedCore =
+    Context.environment["LOREPIA_SKIP_GENERATED"] != "1"
 
-let lorepiaKitTarget: Target = if hasGeneratedCore {
+let lorepiaKitTarget: Target = if usesGeneratedCore {
     .target(
         name: "LorepiaKit",
         dependencies: ["LorepiaCoreFFI"],
@@ -27,7 +20,7 @@ let lorepiaKitTarget: Target = if hasGeneratedCore {
 }
 
 var packageTargets: [Target] = [lorepiaKitTarget]
-if hasGeneratedCore {
+if usesGeneratedCore {
     packageTargets.append(
         .binaryTarget(name: "LorepiaCoreFFI", path: binaryPath)
     )
@@ -36,7 +29,7 @@ packageTargets.append(
     .testTarget(
         name: "LorepiaKitTests",
         dependencies: ["LorepiaKit"],
-        swiftSettings: hasGeneratedCore
+        swiftSettings: usesGeneratedCore
             ? [.define("LOREPIA_UNIFFI_GENERATED")]
             : []
     )
