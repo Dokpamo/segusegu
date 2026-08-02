@@ -79,6 +79,8 @@ jobs:
           xcodegen generate --spec apps/apple/project.yml --project apps/apple --quiet
           ./scripts/check-generated-tree.sh apple-project
       - name: Launch iOS and macOS smoke applications
+        env:
+          LOREPIA_IOS_CONSOLE_TIMEOUT_SECONDS: "120"
         run: |
           set -o pipefail
           ./scripts/test-apple-launch.sh 2>&1 | tee apple-launch.log
