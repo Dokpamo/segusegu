@@ -324,12 +324,16 @@ jobs:
           if [[ -e /dev/kvm ]]; then
             sudo chmod a+rw /dev/kvm
           fi
+          adb_path="$ANDROID_HOME/platform-tools/adb"
+          test -x "$adb_path"
+          "$adb_path" start-server
           test -x "$ANDROID_HOME/emulator/emulator"
           "$ANDROID_HOME/emulator/emulator" \
             -avd lorepia-tauri-ci \
             -no-window \
             -no-audio \
             -no-boot-anim \
+            -no-metrics \
             -no-snapshot-save \
             -gpu swiftshader_indirect \
             -camera-back none \
@@ -354,14 +358,18 @@ jobs:
             --config src-tauri/tauri.android.dev.conf.json \
             2>&1 | tee "$GITHUB_WORKSPACE/tauri-android-build.log"
 
-          timeout 180 adb wait-for-device
+          timeout 180 "$adb_path" wait-for-device
           booted=""
           for _ in {1..120}; do
             if ! kill -0 "$emulator_pid" >/dev/null 2>&1; then
               cat "$GITHUB_WORKSPACE/tauri-android-emulator.log"
               exit 1
             fi
-            booted="$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')"
+            booted="$(
+              "$adb_path" shell getprop sys.boot_completed 2>/dev/null |
+                tr -d '\r' ||
+                true
+            )"
             if [[ "$booted" == "1" ]]; then
               break
             fi
@@ -442,21 +450,25 @@ jobs:
             exit 1
           fi
 
-          adb install -r "$apk"
-          adb logcat -c
-          start_output="$(adb shell am start -W -n "$package_id/$activity")"
+          "$adb_path" install -r "$apk"
+          "$adb_path" logcat -c
+          start_output="$("$adb_path" shell am start -W -n "$package_id/$activity")"
           printf '%s\n' "$start_output"
           printf '%s\n' "$start_output" | grep -F "Status: ok"
           for _ in {1..10}; do
             sleep 1
-            process_id="$(adb shell pidof "$package_id" 2>/dev/null | tr -d '\r')"
+            process_id="$(
+              "$adb_path" shell pidof "$package_id" 2>/dev/null |
+                tr -d '\r' ||
+                true
+            )"
             if [[ -z "$process_id" ]]; then
-              adb logcat -d >"$GITHUB_WORKSPACE/tauri-android-logcat.log"
+              "$adb_path" logcat -d >"$GITHUB_WORKSPACE/tauri-android-logcat.log"
               cat "$GITHUB_WORKSPACE/tauri-android-logcat.log"
               exit 1
             fi
           done
-          adb logcat -d >"$GITHUB_WORKSPACE/tauri-android-logcat.log"
+          "$adb_path" logcat -d >"$GITHUB_WORKSPACE/tauri-android-logcat.log"
           echo "Android Tauri process remained alive for 10 seconds"
       - name: Verify generated Android and Tauri permission drift
         run: |
