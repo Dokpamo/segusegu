@@ -8700,6 +8700,7 @@ mod tests {
             thread::sleep(Duration::from_millis(10));
         }
 
+        wait_for_generation_registry_to_drain(&core);
         let events = std::iter::from_fn(|| events.try_recv().ok()).collect::<Vec<_>>();
         let committed = events
             .iter()
