@@ -1,5 +1,14 @@
 # LorePia Provider Discovery, Model Catalog, and AI Setup Assistant
 
+> **Architecture status (2026-08-02):** This document preserves `native UI`,
+> UniFFI, and C ABI wording from the frozen native baseline in which the design
+> was researched. The primary client boundary is now Svelte/TypeScript through
+> typed Tauri commands and Channels, `shell-api`, and first-party platform
+> plugins, as established by the
+> [Accepted Tauri ADR](decisions/ADR-0006-adopt-tauri-primary-client.md).
+> Domain, storage, provider, review, and security requirements remain applicable
+> unless that ADR or a later Accepted ADR explicitly supersedes them.
+
 - 상태: 설계 제안
 - 작성일: 2026-07-31
 - 대상 저장소: `Dokpamo/segusegu`
@@ -910,6 +919,20 @@ LLM system instruction에는 다음 원칙을 고정한다.
 model 또는 사용자가 붙여 넣은 cURL/document를 사용한다.
 
 어떤 assistant를 사용할지와 전송할 문서 domain을 사용자에게 표시한다.
+
+### 8.5 현재 Tauri 실행 게이트
+
+2026-08-03 현재 production Tauri adapter는 원격 setup assistant turn을
+실행하지 않는다. Renderer IPC는 discovery session ID만 전달하며 token 또는
+비용 estimate를 받지 않는다. 등록된 Tauri command도 `AppHandle`이나
+application state를 받지 않고 `assistant_pricing_unavailable`로 즉시
+fail-closed하므로 credential 조회, provider 생성, network 요청에 도달할 수
+없다. 수동 입력과 결정론적 discovery는 계속 사용할 수 있다.
+
+원격 실행을 다시 활성화하려면 Rust가 exact prepared request와 선택된
+provider/model route에 대해 보수적인 token·비용 reservation을 계산하고,
+실제 usage와 reconciliation해야 한다. 고정 estimate를 Rust로 옮기거나
+renderer가 계산한 estimate를 신뢰하는 것은 허용되지 않는다.
 
 ## 9. 보안 모델
 

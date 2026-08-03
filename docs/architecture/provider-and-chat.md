@@ -1,7 +1,8 @@
 # Provider and chat
 
 The chat crate constructs the final ordered message list from a character
-definition and persisted branch history. Native apps never rebuild the final
+definition and persisted branch history. Neither the Svelte frontend,
+`shell-api`, platform plugins, nor frozen native clients rebuild the final
 prompt.
 
 A character can own multiple conversation rooms. Every room has one selected
@@ -61,8 +62,10 @@ Ollama's native API. Provider connections persist a template/version, display
 name, canonical API origin and optional base path, typed provider-specific
 connection fields, timeout, network mode, credential reference and exact
 credential scope, and the last connection status. The API key itself remains
-only in the native OS credential vault. Model IDs and generation controls are
-separate route and preset records populated by the reviewed model-sync flow.
+only in the OS credential vault owned by the first-party platform integration.
+The frontend receives credential availability, never credential material.
+Model IDs and generation controls are separate route and preset records
+populated by the reviewed model-sync flow.
 
 Public connections require HTTPS. `local_loopback` accepts only loopback
 origins. `approved_local_network` requires a separately reviewed grant binding
@@ -81,8 +84,8 @@ OpenAI-compatible chat streams must report a supported `finish_reason` before
 Each request receives a generation ID and cancellation channel. Provider deltas
 are buffered through bounded channels, assigned a monotonic sequence, and
 published as versioned events. Every event carries the room ID plus the branch
-and pending assistant IDs, allowing a native client to reject a valid event
-that belongs to a different visible branch. The user message is committed
+and pending assistant IDs, allowing a client to reject a valid event that
+belongs to a different visible branch. The user message is committed
 before the request and a pending assistant row records in-flight work. After
 the provider finishes, the assistant row is committed before
 `message_committed` and the terminal generation event are published. When
@@ -141,16 +144,21 @@ cannot become the owner that destroys their own runtime. Request credentials
 and provider objects are released as soon as their generation finishes or is
 forced down.
 
-Native clients poll bounded event batches, reject stale sequence numbers, and
-refresh persisted messages whenever the binding reports dropped events.
+The Tauri mainline preserves the current `ChatEvent` version and variants.
+`shell-api` bridges high-rate items to an ordered Channel without presenting
+invented events as Core events. The frontend rejects stale or duplicate
+sequence numbers and refreshes persisted messages whenever lag or dropped
+events are reported. Closing the Channel disposes the subscription bridge; it
+does not cancel generation without an explicit cancel command. Frozen native
+clients continue bounded event polling for compatibility evidence.
+
 Provider profiles contain only non-secret endpoint and model settings.
 Credentials are supplied from an OS credential store for one request and never
-enter Rust persistence. Profile IDs, display names, base URLs, and model names
-also have finite byte and character limits enforced before SQLite writes:
-256/64, 512/128, 4,096/1,024, and 1,024/256 respectively.
+enter Rust persistence or frontend state. Profile IDs, display names, base URLs,
+and model names also have finite byte and character limits enforced before
+SQLite writes: 256/64, 512/128, 4,096/1,024, and 1,024/256 respectively.
 
 The implemented provider-discovery and model-catalog architecture is recorded in
 [Provider Discovery, Model Catalog, and AI Setup Assistant](provider-discovery-and-model-catalog.md).
 Its durable discovery, model-sync review, catalog, adapter, capability,
-parameter, credential, and native-UI contracts are normative for current
-behavior.
+parameter, credential, and UI contracts are normative for current behavior.

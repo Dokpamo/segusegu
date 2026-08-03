@@ -1,16 +1,27 @@
 # Import pipeline
 
 ```text
-OS picker -> native bounded staging -> Rust-owned snapshot -> inspect
-          -> review -> approve -> commit
+OS picker
+  -> platform-plugin bounded app-owned transport copy
+  -> opaque import ticket
+  -> shell-api validation and internal ticket resolution
+  -> Rust-owned snapshot
+  -> inspect -> structured review -> explicit commit or discard
 ```
 
-The native application owns the picker, its bounded stream copy, progress,
-cancellation, and partial-file cleanup. Rust makes a second bounded snapshot in
-its owned data root so the picker source cannot change between review and
-commit. Rust then verifies the file signature, format, archive paths, entry
-count, individual and total size, compression ratio, normalized collisions,
-symbolic links, metadata, and asset signatures.
+The first-party platform integration owns the picker, its bounded stream copy,
+progress, cancellation, and partial-file cleanup. The Svelte frontend receives
+only an opaque ticket and safe metadata; it does not receive the original or
+staged absolute path. `shell-api` resolves the ticket inside the trusted host
+boundary. Rust makes a second bounded snapshot in its owned data root so the
+picker source cannot change between review and commit. Rust then verifies the
+file signature, format, archive paths, entry count, individual and total size,
+compression ratio, normalized collisions, symbolic links, metadata, and asset
+signatures.
+
+The frozen native clients keep the same bounded transport and Rust-inspection
+contract for compatibility and old-to-new upgrade fixtures. They are not a
+second implementation target.
 An asset whose declared extension does not match its file signature remains
 visible in Import Review with a warning and a concrete blocked reason, but it
 cannot be committed and its contents are not extracted to asset staging.
@@ -35,7 +46,7 @@ sorted order. `name` and whichever of `description` or the `personality`
 fallback actually supplied the displayed description are excluded. The list is
 limited to 128 fields; each field name must be printable, non-empty, and at
 most 256 UTF-8 bytes or 128 Unicode scalars. Inputs beyond those limits are
-rejected instead of placing attacker-controlled unbounded labels in native UI.
+rejected instead of placing attacker-controlled unbounded labels in the UI.
 
 Inspection returns an ID and review DTO. Recognized, signature-checked CHARX
 assets are streamed to flat temporary files and hashed without loading whole

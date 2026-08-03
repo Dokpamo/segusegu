@@ -2,10 +2,20 @@
 
 ## Overview
 
-LorePia is a local-first native AI character chat application. The Android app
-is a single Kotlin and Jetpack Compose module. It owns Android UI, navigation,
-document picking, bounded staging copies, accessibility, and lifecycle. Rust
-owns content inspection, persistence, chat behavior, and provider orchestration.
+> **Migration status:** This directory is the frozen native Android
+> compatibility, behavioral-reference, and upgrade-test harness. New product
+> features belong to the Tauri mainline under `apps/lorepia`. This implementation
+> remains only until the documented parity, data, credential, accessibility,
+> IME, build, and upgrade gates pass.
+
+The frozen Android app is a single Kotlin and Jetpack Compose module. It owns
+the baseline Android UI, navigation, document picking, bounded staging copies,
+accessibility, and lifecycle. Rust owns content inspection, persistence, chat
+behavior, and provider orchestration.
+
+The behavior below documents the retained native baseline. A successful build
+or test in this directory is baseline evidence and does not by itself establish
+Tauri parity or production release readiness.
 
 The app opens one `LorepiaCore` per process and exposes the real core version,
 structured health report, character library, import workflow, persisted

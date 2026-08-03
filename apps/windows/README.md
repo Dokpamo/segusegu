@@ -2,7 +2,14 @@
 
 ## Overview
 
-The Windows client is a native WinUI 3 application over the Rust C ABI:
+> **Migration status:** This directory is the frozen native Windows
+> compatibility, behavioral-reference, and upgrade-test harness. New product
+> features belong to the Tauri mainline under `apps/lorepia`. This implementation
+> remains only until the documented parity, data, credential, accessibility,
+> IME, build, and upgrade gates pass.
+
+The retained Windows baseline is a native WinUI 3 application over the Rust C
+ABI:
 
 - `Lorepia.App` owns WinUI navigation, file selection, bounded transport
   staging, PasswordVault credentials, view models, and application lifetime.
@@ -17,6 +24,10 @@ The process creates exactly one `CoreClient` and therefore one
 into every view model and disposes it after the main window closes.
 `Lorepia.App` calls only the public high-level `CoreClient`; it never calls
 `NativeMethods`, parses content packages, or accesses SQLite.
+
+The behavior below documents the retained native baseline. A successful build
+or test in this directory is baseline evidence and does not by itself establish
+Tauri parity or production release readiness.
 
 ### Import and Library
 

@@ -7,8 +7,8 @@ mod provider_discovery;
 mod provider_discovery_deterministic;
 
 pub use app::{
-    Core, EffectiveCapability, ProviderModelRefreshProvenance, ProviderModelRefreshResult,
-    ProviderTemplateView,
+    ConnectionBoundCredential, Core, EffectiveCapability, ProviderModelRefreshProvenance,
+    ProviderModelRefreshResult, ProviderTemplateView,
 };
 pub use catalog::{
     PROVIDER_CATALOG_HISTORY_SCHEMA_VERSION, PROVIDER_CATALOG_IMPORT_PLAN_SCHEMA_VERSION,

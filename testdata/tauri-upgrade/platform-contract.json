@@ -1,0 +1,719 @@
+{
+  "contract_version": 1,
+  "contract_id": "lorepia-tauri-platform-continuity-v1",
+  "status": {
+    "value": "BLOCKED",
+    "as_of": "2026-08-02",
+    "executed": false,
+    "reason": "No signed native-to-Tauri continuity run has been executed.",
+    "blocking_conditions": [
+      "Android production signing certificate lineage is external to the repository.",
+      "Apple Team ID, distribution signing identity, provisioning, and effective default Keychain access group are external to the repository.",
+      "The native Windows baseline is unpackaged and has no package or installer upgrade identity to inherit.",
+      "Signed old-native and Tauri release artifacts plus disposable target hosts are required.",
+      "Core has no atomic persisted-generation status and sequence-watermark subscription or durable event outbox, so same-process reattachment can miss a terminal event.",
+      "Generation reattachment does not validate live conversation and branch ownership before consuming bounded adapter capacity."
+    ]
+  },
+  "data_classification": {
+    "synthetic_only": true,
+    "allowed": [
+      "project-owned testdata",
+      "runtime-generated disposable identifiers",
+      "runtime-generated disposable credentials",
+      "disposable local authenticated fixture servers",
+      "redacted logs",
+      "hashes and non-secret semantic manifests"
+    ],
+    "forbidden": [
+      "user databases",
+      "user content",
+      "production credentials",
+      "real API keys",
+      "raw authorization headers",
+      "raw credential values in committed files or evidence",
+      "production device snapshots"
+    ],
+    "credential_material": {
+      "generation": "runtime_ephemeral",
+      "storage": "platform credential store on a disposable target only",
+      "evidence": "availability state, boolean authenticated-match result, or one-way fingerprint only",
+      "must_not_enter_javascript": true
+    }
+  },
+  "baseline": {
+    "source_repository": "https://github.com/Dokpamo/segusegu",
+    "frozen_reference_repository": "https://github.com/Dokpamo/lorepia-native-reference",
+    "tag": "native-baseline-before-tauri-2026-08-02",
+    "annotated_tag_object": "9a4a3d5ee08c3457fed9842ccf4184272805e0d0",
+    "commit": "66e398fa6256f17b04c82569e6764a9e5332265c",
+    "migration_branch": "codex/tauri-mainline-migration",
+    "migration_start_date": "2026-08-02"
+  },
+  "contract_validation": {
+    "authorship": "hand_authored_declarative_contract",
+    "generated_by_xtask": false,
+    "executable_schema_validator_present": false,
+    "source_evidence_validator_in_ci": false,
+    "current_generated_tree_check": "allowed path names and clean Git status only"
+  },
+  "development_identity_policy": {
+    "tauri_development_identity_status": "CONFIGURED_NOT_CONTINUITY_PROVEN",
+    "exact_value_prescribed_by_this_contract": true,
+    "must_be_distinct_from_production": true,
+    "must_be_coinstallable_with_production": true,
+    "must_not_open_production_data_root": true,
+    "must_not_read_or_write_production_credentials": true,
+    "production_continuity_tests_must_use_production_identity": true,
+    "note": "The frozen native Debug and Release targets currently share their platform product identities. The recorded Android and iOS development simulator installs and launches still do not prove signed production continuity or production coinstallation."
+  },
+  "shared_core_storage": {
+    "open_existing_root_in_place": true,
+    "database_relative_path": "db/lorepia.sqlite3",
+    "sqlite_sidecar_relative_paths": [
+      "db/lorepia.sqlite3-wal",
+      "db/lorepia.sqlite3-shm"
+    ],
+    "schema_version": 11,
+    "core_staging_relative_path": "staging",
+    "preserved_relative_paths": [
+      "db",
+      "sources/sha256",
+      "assets/sha256",
+      "cache/thumbnails",
+      "cache/extracted",
+      "staging",
+      "recovery",
+      ".lorepia-owner.lock"
+    ],
+    "source_evidence": [
+      {
+        "path": "crates/storage/src/database.rs",
+        "lines": "35"
+      },
+      {
+        "path": "crates/storage/src/database.rs",
+        "lines": "132-162"
+      },
+      {
+        "path": "crates/storage/src/database.rs",
+        "lines": "175-181"
+      }
+    ]
+  },
+  "synthetic_seed_contract": {
+    "package_fixture": "testdata/packages/with-avatar.charx",
+    "must_create": [
+      "one imported character with a persisted source package",
+      "at least one persisted content-addressed asset",
+      "one provider connection targeting a disposable local fixture server",
+      "one model route",
+      "one generation preset",
+      "selected connection, route, and preset settings",
+      "one conversation",
+      "at least one conversation branch",
+      "synthetic user and assistant messages",
+      "one platform credential-store record"
+    ],
+    "runtime_captured_identifiers": [
+      "character_id",
+      "source_hash",
+      "asset_hashes",
+      "provider_connection_id",
+      "model_route_id",
+      "generation_preset_id",
+      "conversation_id",
+      "branch_id",
+      "message_ids"
+    ],
+    "local_authenticated_request": {
+      "network_scope": "disposable local fixture server only",
+      "credential": "runtime-generated and never committed",
+      "expected_authenticated_request_count": 1,
+      "evidence_must_redact_authorization": true,
+      "external_network_forbidden": true
+    }
+  },
+  "platforms": {
+    "android": {
+      "identity": {
+        "production": {
+          "kind": "application_id",
+          "value": "dev.lorepia.app",
+          "namespace": "dev.lorepia.app"
+        },
+        "native_baseline_debug": {
+          "kind": "application_id",
+          "value": "dev.lorepia.app",
+          "distinct_from_production": false
+        },
+        "tauri_development": {
+          "value": "dev.lorepia.app.dev",
+          "status": "SIMULATOR_INSTALLED_AND_LAUNCHED_NOT_CONTINUITY_PROVEN",
+          "must_be_distinct_from_production": true,
+          "derivation": "dev.lorepia.app with debugApplicationIdSuffix .dev"
+        },
+        "source_evidence": [
+          {
+            "path": "apps/android/app/build.gradle.kts",
+            "lines": "7-16"
+          },
+          {
+            "path": "apps/android/app/build.gradle.kts",
+            "lines": "25-33"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/tauri.dev.conf.json",
+            "lines": "3-4"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/tauri.android.dev.conf.json",
+            "lines": "3-7"
+          }
+        ]
+      },
+      "versioning": {
+        "native_baseline_build_number": 1,
+        "tauri_production_build_number": 2,
+        "monotonically_greater_than_native_baseline": true,
+        "status": "CONFIGURED_NOT_UPDATE_PROVEN",
+        "source_evidence": [
+          {
+            "path": "apps/android/app/build.gradle.kts",
+            "lines": "7-16"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/tauri.android.conf.json",
+            "lines": "3-8"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/gen/android/app/build.gradle.kts",
+            "lines": "20-26"
+          }
+        ]
+      },
+      "data": {
+        "core_root_resolver": "File(context.filesDir, \"lorepia-data\")",
+        "core_root_template": "context.filesDir/lorepia-data",
+        "native_transport_staging_resolver": "File(context.cacheDir, \"import-staging\")",
+        "native_transport_staging_template": "context.cacheDir/import-staging",
+        "core_staging_template": "context.filesDir/lorepia-data/staging",
+        "credential_ciphertext_root_resolver": "context.noBackupFilesDir.resolve(\"provider-credentials\")",
+        "credential_ciphertext_root_template": "context.noBackupFilesDir/provider-credentials",
+        "source_evidence": [
+          {
+            "path": "apps/android/app/src/main/kotlin/dev/lorepia/app/platform/paths/AppDirectories.kt",
+            "lines": "23-36"
+          },
+          {
+            "path": "apps/android/app/src/main/kotlin/dev/lorepia/app/platform/credentials/AndroidKeystoreCredentialStore.kt",
+            "lines": "21-31"
+          }
+        ]
+      },
+      "content_import": {
+        "picker_action": "android.intent.action.OPEN_DOCUMENT",
+        "selected_uri_access": "read-only activity-result grant",
+        "transport_copy_root": "context.cacheDir/import-staging",
+        "character_import_file_provider_required": false,
+        "generated_file_provider": {
+          "required_for": "explicit WebView camera-capture file chooser",
+          "authority_template": "${applicationId}.fileprovider",
+          "exported": false,
+          "grant_uri_permissions": true,
+          "path_element": "external-files-path",
+          "path_name": "tauri_capture_images",
+          "path_value": "Pictures/",
+          "broad_external_cache_files_or_root_paths_allowed": false,
+          "source_status": "CONFIGURED",
+          "normalization_helper": "scripts/normalize-tauri-android-generated.mjs",
+          "normalization_check_status": "PASSED_LOCAL",
+          "packaged_check_status": "CONFIGURED_NOT_EXECUTED"
+        },
+        "source_evidence": [
+          {
+            "path": "plugins/lorepia-platform/android/src/main/java/dev/lorepia/tauri/platform/LorepiaPlatformPlugin.kt",
+            "lines": "113-166"
+          },
+          {
+            "path": "plugins/lorepia-platform/android/src/main/java/dev/lorepia/tauri/platform/AndroidImportStager.kt",
+            "lines": "46-101"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/gen/android/app/src/main/AndroidManifest.xml",
+            "lines": "27-39"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/gen/android/app/src/main/res/xml/file_paths.xml",
+            "lines": "1-6"
+          },
+          {
+            "path": "scripts/normalize-tauri-android-generated.mjs",
+            "lines": "1-287"
+          }
+        ]
+      },
+      "credentials": {
+        "store": "AndroidKeyStore",
+        "ciphertext_store": "app no-backup directory",
+        "key_alias": "dev.lorepia.provider-credentials.v1",
+        "cipher": "AES/GCM/NoPadding",
+        "gcm_tag_bits": 128,
+        "key_purposes": [
+          "encrypt",
+          "decrypt"
+        ],
+        "randomized_encryption_required": true,
+        "record_version": 1,
+        "record_byte_order": "big_endian",
+        "record_fields_in_order": [
+          "i32 version",
+          "i32 iv_length",
+          "iv bytes",
+          "i32 ciphertext_length",
+          "ciphertext and GCM tag bytes"
+        ],
+        "iv_length_allowed_bytes": {
+          "minimum": 12,
+          "maximum": 32
+        },
+        "maximum_plaintext_read_bytes_for_existing_records": 32768,
+        "maximum_plaintext_write_bytes_for_new_or_replacement_records": 16384,
+        "maximum_ciphertext_bytes": 65536,
+        "credential_reference": {
+          "encoding": "UTF-8",
+          "current_semantics": "immutable ProviderConnection.id",
+          "legacy_compatibility": "existing ID-shaped credential slots remain valid"
+        },
+        "aad": "credential_reference UTF-8 bytes",
+        "record_filename": "lowercase_hex(SHA-256(credential_reference UTF-8 bytes)) + \".credential\"",
+        "record_write_primitive": "android.util.AtomicFile",
+        "source_evidence": [
+          {
+            "path": "apps/android/app/src/main/kotlin/dev/lorepia/app/platform/credentials/CredentialStore.kt",
+            "lines": "7-30"
+          },
+          {
+            "path": "apps/android/app/src/main/kotlin/dev/lorepia/app/platform/credentials/AndroidKeystoreCredentialStore.kt",
+            "lines": "152-223"
+          },
+          {
+            "path": "apps/android/app/src/main/kotlin/dev/lorepia/app/platform/credentials/AndroidKeystoreCredentialStore.kt",
+            "lines": "260-268"
+          }
+        ]
+      },
+      "backup": {
+        "application_allow_backup": false,
+        "full_backup_excluded_domains": [
+          "root",
+          "file",
+          "database",
+          "sharedpref",
+          "external"
+        ],
+        "cloud_backup_excluded_domains": [
+          "root",
+          "file",
+          "database",
+          "sharedpref",
+          "external",
+          "device_root",
+          "device_file",
+          "device_database",
+          "device_sharedpref"
+        ],
+        "device_transfer_excluded_domains": [
+          "root",
+          "file",
+          "database",
+          "sharedpref",
+          "external",
+          "device_root",
+          "device_file",
+          "device_database",
+          "device_sharedpref"
+        ],
+        "credential_ciphertext_uses_no_backup_root": true,
+        "source_evidence": [
+          {
+            "path": "apps/android/app/src/main/AndroidManifest.xml",
+            "lines": "6-15"
+          },
+          {
+            "path": "apps/android/app/src/main/res/xml/backup_rules.xml",
+            "lines": "1-18"
+          },
+          {
+            "path": "apps/android/app/src/main/res/xml/data_extraction_rules.xml",
+            "lines": "1-61"
+          }
+        ]
+      },
+      "signing_and_upgrade": {
+        "status": "BLOCKED",
+        "package_identity_to_preserve": "dev.lorepia.app",
+        "tracked_release_signing_configuration_present": false,
+        "required_external_facts": [
+          "production signing certificate lineage",
+          "authorized release keystore access",
+          "signed old-native artifact",
+          "signed Tauri update artifact"
+        ],
+        "continuity_rule": "The update must use the same application ID and an accepted production signing lineage."
+      }
+    },
+    "ios": {
+      "identity": {
+        "production": {
+          "kind": "bundle_id",
+          "value": "dev.lorepia.ios"
+        },
+        "native_baseline_debug": {
+          "kind": "bundle_id",
+          "value": "dev.lorepia.ios",
+          "distinct_from_production": false
+        },
+        "tauri_development": {
+          "value": "dev.lorepia.ios.dev",
+          "status": "SIMULATOR_INSTALLED_AND_LAUNCHED_NOT_CONTINUITY_PROVEN",
+          "must_be_distinct_from_production": true
+        },
+        "source_evidence": [
+          {
+            "path": "apps/apple/project.yml",
+            "lines": "24-42"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/tauri.ios.dev.conf.json",
+            "lines": "1-4"
+          }
+        ]
+      },
+      "versioning": {
+        "native_baseline_build_number": 1,
+        "tauri_production_build_number": 2,
+        "monotonically_greater_than_native_baseline": true,
+        "status": "CONFIGURED_NOT_UPDATE_PROVEN",
+        "source_evidence": [
+          {
+            "path": "apps/apple/project.yml",
+            "lines": "13-18"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/tauri.ios.conf.json",
+            "lines": "3-8"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/gen/apple/project.yml",
+            "lines": "54-55"
+          }
+        ]
+      },
+      "data": {
+        "core_root_resolver": "FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first + \"/LorePia\"",
+        "core_root_template": "<iOS app container>/Library/Application Support/LorePia",
+        "native_transport_staging_template": "<core_root>/native-staging",
+        "core_staging_template": "<core_root>/staging",
+        "explicit_backup_exclusion_configured": false,
+        "source_evidence": [
+          {
+            "path": "apps/apple/Apps/iOS/IOSAppDirectories.swift",
+            "lines": "3-18"
+          },
+          {
+            "path": "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/App/AppEnvironment.swift",
+            "lines": "59-71"
+          }
+        ]
+      },
+      "credentials": {
+        "store": "Apple Keychain",
+        "item_class": "kSecClassGenericPassword",
+        "service": "dev.lorepia.provider-credentials",
+        "account_parameter": "profileID",
+        "account_semantics": "opaque provider credential slot ID; current connection flows use ProviderConnection.id while legacy profile IDs remain migration-compatible",
+        "accessibility": "kSecAttrAccessibleWhenUnlockedThisDeviceOnly",
+        "use_data_protection_keychain": true,
+        "explicit_access_group": null,
+        "effective_access_group": "default access group derived from the signing identity",
+        "synchronizable_attribute_set": false,
+        "source_evidence": [
+          {
+            "path": "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/App/AppEnvironment.swift",
+            "lines": "59-63"
+          },
+          {
+            "path": "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/CredentialStore.swift",
+            "lines": "8-18"
+          },
+          {
+            "path": "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/CredentialStore.swift",
+            "lines": "32-59"
+          }
+        ]
+      },
+      "backup": {
+        "data_root_explicit_backup_exclusion_configured": false,
+        "credential_new_device_restore_expected": false,
+        "credential_reason": "kSecAttrAccessibleWhenUnlockedThisDeviceOnly"
+      },
+      "signing_and_upgrade": {
+        "status": "BLOCKED",
+        "bundle_id_to_preserve": "dev.lorepia.ios",
+        "tracked_development_team_present": false,
+        "tracked_provisioning_profile_present": false,
+        "explicit_keychain_access_group_present": false,
+        "required_external_facts": [
+          "Apple Team ID used by the prior signed release",
+          "distribution signing identity",
+          "provisioning profile or managed signing configuration",
+          "effective default Keychain access group",
+          "signed old-native artifact",
+          "signed Tauri update artifact"
+        ],
+        "continuity_rule": "The update must preserve the bundle ID, Apple Team signing lineage, and effective default Keychain access group on the same device."
+      }
+    },
+    "macos": {
+      "identity": {
+        "production": {
+          "kind": "bundle_id",
+          "value": "dev.lorepia.mac"
+        },
+        "native_baseline_debug": {
+          "kind": "bundle_id",
+          "value": "dev.lorepia.mac",
+          "distinct_from_production": false
+        },
+        "tauri_development": {
+          "value": "dev.lorepia.mac.dev",
+          "status": "CONFIGURED_NOT_INSTALLED",
+          "must_be_distinct_from_production": true
+        },
+        "source_evidence": [
+          {
+            "path": "apps/apple/project.yml",
+            "lines": "43-58"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/tauri.macos.dev.conf.json",
+            "lines": "1-4"
+          }
+        ]
+      },
+      "versioning": {
+        "native_baseline_build_number": 1,
+        "tauri_production_build_number": 2,
+        "monotonically_greater_than_native_baseline": true,
+        "status": "CONFIGURED_NOT_UPDATE_PROVEN",
+        "source_evidence": [
+          {
+            "path": "apps/apple/project.yml",
+            "lines": "13-18"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/tauri.macos.conf.json",
+            "lines": "3-9"
+          }
+        ]
+      },
+      "data": {
+        "core_root_resolver": "FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first + \"/LorePia\"",
+        "sandboxed_core_root_template": "~/Library/Containers/dev.lorepia.mac/Data/Library/Application Support/LorePia",
+        "native_transport_staging_template": "<core_root>/native-staging",
+        "core_staging_template": "<core_root>/staging",
+        "explicit_backup_exclusion_configured": false,
+        "source_evidence": [
+          {
+            "path": "apps/apple/Apps/macOS/MacAppDirectories.swift",
+            "lines": "3-18"
+          },
+          {
+            "path": "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/App/AppEnvironment.swift",
+            "lines": "59-71"
+          }
+        ]
+      },
+      "credentials": {
+        "store": "Apple Keychain",
+        "item_class": "kSecClassGenericPassword",
+        "service": "dev.lorepia.provider-credentials",
+        "account_parameter": "profileID",
+        "account_semantics": "opaque provider credential slot ID; current connection flows use ProviderConnection.id while legacy profile IDs remain migration-compatible",
+        "accessibility": "kSecAttrAccessibleWhenUnlockedThisDeviceOnly",
+        "use_data_protection_keychain": true,
+        "explicit_access_group": null,
+        "effective_access_group": "default access group derived from the signing identity",
+        "synchronizable_attribute_set": false,
+        "legacy_read": {
+          "use_data_protection_keychain": false,
+          "migration": "read valid legacy item, write and verify protected item, then delete legacy item"
+        },
+        "source_evidence": [
+          {
+            "path": "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/App/AppEnvironment.swift",
+            "lines": "59-63"
+          },
+          {
+            "path": "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/CredentialStore.swift",
+            "lines": "8-29"
+          },
+          {
+            "path": "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/CredentialStore.swift",
+            "lines": "32-59"
+          },
+          {
+            "path": "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/CredentialStore.swift",
+            "lines": "208-235"
+          }
+        ]
+      },
+      "backup": {
+        "data_root_explicit_backup_exclusion_configured": false,
+        "credential_new_device_restore_expected": false,
+        "credential_reason": "kSecAttrAccessibleWhenUnlockedThisDeviceOnly"
+      },
+      "sandbox": {
+        "app_sandbox": true,
+        "user_selected_files": "read-only",
+        "network_client": true,
+        "source_evidence": [
+          {
+            "path": "apps/apple/Apps/macOS/LorepiaMac.entitlements",
+            "lines": "5-10"
+          }
+        ]
+      },
+      "signing_and_upgrade": {
+        "status": "BLOCKED",
+        "bundle_id_to_preserve": "dev.lorepia.mac",
+        "tracked_development_team_present": false,
+        "tracked_distribution_identity_present": false,
+        "explicit_keychain_access_group_present": false,
+        "required_external_facts": [
+          "Apple Team ID used by the prior signed release",
+          "Developer ID or App Store distribution signing identity",
+          "notarization or store delivery configuration",
+          "effective default Keychain access group",
+          "signed old-native artifact",
+          "signed Tauri update or replacement artifact"
+        ],
+        "continuity_rule": "The replacement must preserve the bundle ID, sandbox container identity, Apple Team signing lineage, and effective default Keychain access group."
+      }
+    },
+    "windows": {
+      "identity": {
+        "production": {
+          "kind": "unpackaged_executable",
+          "package_identity": null,
+          "installer_upgrade_identity": null,
+          "assembly_name": "Lorepia.App",
+          "assembly_version": "1.0.0.0",
+          "windows_package_type": "None"
+        },
+        "native_baseline_debug": {
+          "kind": "unpackaged_executable",
+          "package_identity": null,
+          "distinct_from_production": false
+        },
+        "tauri_production": {
+          "value": "dev.lorepia.windows",
+          "status": "CONFIGURED_SOURCE_IDENTIFIER_NOT_INSTALLER_CONTINUITY_PROVEN",
+          "package_identity": null,
+          "installer_upgrade_identity": null
+        },
+        "tauri_development": {
+          "value": "dev.lorepia.windows.dev",
+          "status": "CONFIGURED_NOT_INSTALLED",
+          "must_be_distinct_from_tauri_production": true
+        },
+        "source_evidence": [
+          {
+            "path": "apps/windows/Lorepia.App/Lorepia.App.csproj",
+            "lines": "1-17"
+          },
+          {
+            "path": "apps/windows/Lorepia.App/app.manifest",
+            "lines": "1-8"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/tauri.windows.conf.json",
+            "lines": "1-4"
+          },
+          {
+            "path": "apps/lorepia/src-tauri/tauri.windows.dev.conf.json",
+            "lines": "1-4"
+          }
+        ]
+      },
+      "versioning": {
+        "status": "NOT_COMPARABLE_UNTIL_INSTALLER_IDENTITY_DEFINED",
+        "reason": "The unpackaged native baseline has no package or installer upgrade sequence to inherit."
+      },
+      "data": {
+        "core_root_resolver": "Path.Combine(Environment.SpecialFolder.LocalApplicationData, \"LorePia\")",
+        "core_root_template": "%LOCALAPPDATA%\\LorePia",
+        "native_transport_staging_template": "%LOCALAPPDATA%\\LorePia\\transport-staging",
+        "core_staging_template": "%LOCALAPPDATA%\\LorePia\\staging",
+        "explicit_backup_exclusion_configured": false,
+        "source_evidence": [
+          {
+            "path": "apps/windows/Lorepia.App/Platform/WindowsDataRoot.cs",
+            "lines": "5-42"
+          },
+          {
+            "path": "apps/windows/Lorepia.App/AppServices.cs",
+            "lines": "22-26"
+          }
+        ]
+      },
+      "credentials": {
+        "store": "Windows.Security.Credentials.PasswordVault",
+        "resource": "LorePia.ProviderCredential",
+        "user_name": "connectionId",
+        "password": "raw provider credential",
+        "missing_entry_hresult": "0x80070490",
+        "source_evidence": [
+          {
+            "path": "apps/windows/Lorepia.App/Platform/PasswordVaultCredentialStore.cs",
+            "lines": "5-17"
+          },
+          {
+            "path": "apps/windows/Lorepia.App/Platform/PasswordVaultCredentialStore.cs",
+            "lines": "26-38"
+          },
+          {
+            "path": "apps/windows/Lorepia.App/Platform/PasswordVaultCredentialStore.cs",
+            "lines": "63-81"
+          },
+          {
+            "path": "apps/windows/Lorepia.App/Platform/PasswordVaultError.cs",
+            "lines": "3-13"
+          }
+        ]
+      },
+      "backup": {
+        "no_backup_directory_concept_applicable": false,
+        "data_root_explicit_backup_exclusion_configured": false,
+        "uses_roaming_application_data": false
+      },
+      "signing_and_upgrade": {
+        "status": "BLOCKED",
+        "baseline_package_identity_exists": false,
+        "baseline_installer_upgrade_identity_exists": false,
+        "baseline_tracked_signing_identity_exists": false,
+        "required_design_and_external_facts": [
+          "approval of the configured dev.lorepia.windows source identifier and the chosen production package or installer identity",
+          "installed/coinstallation proof for the configured Tauri development identity",
+          "stable installer upgrade key where the chosen installer requires one",
+          "code-signing identity and certificate lifecycle",
+          "an installed old-native unpackaged seed artifact",
+          "a signed Tauri installer artifact",
+          "PasswordVault continuity proof across the unpackaged-to-packaged boundary"
+        ],
+        "continuity_rule": "Do not claim an inherited Windows package upgrade identity. The first Tauri installer identity is new, while data and PasswordVault continuity must be proven against the unpackaged baseline."
+      }
+    }
+  }
+}

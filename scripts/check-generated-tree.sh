@@ -34,6 +34,7 @@ case "$scope" in
       "testdata/cards/minimal-v3.json"
       "testdata/packages/minimal.charx"
       "testdata/packages/with-avatar.charx"
+      "testdata/tauri-upgrade/platform-contract.json"
     )
     ;;
   apple-project)

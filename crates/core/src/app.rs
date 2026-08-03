@@ -58,6 +58,7 @@ use tokio::{
     time::{self, MissedTickBehavior},
 };
 use uuid::Uuid;
+use zeroize::Zeroize;
 
 use crate::{
     CoreConfig,
@@ -93,6 +94,42 @@ const GENERATION_PERSISTENCE_FAILURE_MESSAGE: &str =
 #[derive(Clone)]
 pub struct Core {
     inner: Arc<CoreInner>,
+}
+
+/// Request-scoped credential material bound to one provider connection.
+///
+/// This type intentionally implements neither `Clone`, `Serialize`, nor
+/// `Display`. The credential allocation is zeroized on drop.
+pub struct ConnectionBoundCredential {
+    connection_id: ProviderConnectionId,
+    value: Option<String>,
+}
+
+impl ConnectionBoundCredential {
+    pub fn new(connection_id: ProviderConnectionId, value: Option<String>) -> Self {
+        Self {
+            connection_id,
+            value,
+        }
+    }
+
+    fn into_value(mut self) -> Option<String> {
+        self.value.take()
+    }
+}
+
+impl std::fmt::Debug for ConnectionBoundCredential {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("ConnectionBoundCredential([REDACTED])")
+    }
+}
+
+impl Drop for ConnectionBoundCredential {
+    fn drop(&mut self) {
+        if let Some(value) = &mut self.value {
+            value.zeroize();
+        }
+    }
 }
 
 struct CoreInner {
@@ -857,6 +894,36 @@ impl Core {
     }
 
     #[allow(clippy::too_many_arguments)]
+    pub fn send_message_to_branch_with_connection_credential(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        mode: ConversationMode,
+        text: &str,
+        target: &GenerationTarget,
+        credential: ConnectionBoundCredential,
+    ) -> CoreResult<GenerationId> {
+        let (resolved, credential) =
+            resolve_generation_target_with_connection_credential(self, target, credential)?;
+        self.send_message_to_branch_with_provider_options(
+            conversation_id,
+            branch_id,
+            expected_head,
+            mode,
+            text,
+            resolved.model,
+            Some(target),
+            Some(resolved.api_family),
+            resolved.preserve_opaque_reasoning_state,
+            None,
+            None,
+            credential,
+            resolved.provider,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn edit_user_message(
         &self,
         conversation_id: &ConversationId,
@@ -919,6 +986,37 @@ impl Core {
     }
 
     #[allow(clippy::too_many_arguments)]
+    pub fn edit_user_message_with_connection_credential(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        message_id: &MessageId,
+        replacement_text: &str,
+        target: &GenerationTarget,
+        credential: ConnectionBoundCredential,
+    ) -> CoreResult<MessageActionGeneration> {
+        let (resolved, credential) =
+            resolve_generation_target_with_connection_credential(self, target, credential)?;
+        self.start_message_generation_action_with_provider_options(
+            conversation_id,
+            branch_id,
+            expected_head,
+            message_id,
+            MessageGenerationAction::EditUser,
+            Some(replacement_text),
+            resolved.model,
+            Some(target),
+            Some(resolved.api_family),
+            resolved.preserve_opaque_reasoning_state,
+            None,
+            None,
+            credential,
+            resolved.provider,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
     pub fn regenerate_assistant_message(
         &self,
         conversation_id: &ConversationId,
@@ -960,6 +1058,36 @@ impl Core {
         credential: Option<String>,
     ) -> CoreResult<MessageActionGeneration> {
         let resolved = resolve_generation_target(self, target)?;
+        self.start_message_generation_action_with_provider_options(
+            conversation_id,
+            branch_id,
+            expected_head,
+            message_id,
+            MessageGenerationAction::RegenerateAssistant,
+            None,
+            resolved.model,
+            Some(target),
+            Some(resolved.api_family),
+            resolved.preserve_opaque_reasoning_state,
+            None,
+            None,
+            credential,
+            resolved.provider,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn regenerate_assistant_message_with_connection_credential(
+        &self,
+        conversation_id: &ConversationId,
+        branch_id: &ConversationBranchId,
+        expected_head: Option<&MessageId>,
+        message_id: &MessageId,
+        target: &GenerationTarget,
+        credential: ConnectionBoundCredential,
+    ) -> CoreResult<MessageActionGeneration> {
+        let (resolved, credential) =
+            resolve_generation_target_with_connection_credential(self, target, credential)?;
         self.start_message_generation_action_with_provider_options(
             conversation_id,
             branch_id,
@@ -3937,6 +4065,58 @@ pub(crate) fn resolve_generation_target(
     target: &GenerationTarget,
 ) -> CoreResult<ResolvedGenerationTarget> {
     let validated = validate_generation_target_plan(core, target)?;
+    build_resolved_generation_target(validated)
+}
+
+fn resolve_generation_target_with_connection_credential(
+    core: &Core,
+    target: &GenerationTarget,
+    credential: ConnectionBoundCredential,
+) -> CoreResult<(ResolvedGenerationTarget, Option<String>)> {
+    let validated = validate_generation_target_plan(core, target)?;
+    validate_connection_credential_binding(&validated.connection, &credential)?;
+    let resolved = build_resolved_generation_target(validated)?;
+    Ok((resolved, credential.into_value()))
+}
+
+fn validate_connection_credential_binding(
+    connection: &ProviderConnection,
+    credential: &ConnectionBoundCredential,
+) -> CoreResult<()> {
+    let credential_reference = connection.credential_ref.as_ref();
+    if credential.connection_id != connection.id
+        || credential_reference
+            .is_some_and(|reference| reference.as_str() != credential.connection_id.as_str())
+    {
+        return Err(CoreError::invalid(
+            "credential does not belong to the selected provider connection",
+        ));
+    }
+    let has_credential = credential
+        .value
+        .as_deref()
+        .is_some_and(|value| !value.is_empty());
+    match (credential_reference.is_some(), has_credential) {
+        (true, false) => {
+            return Err(CoreError::new(
+                CoreErrorCode::ProviderAuthFailed,
+                "provider credential is required",
+                false,
+            ));
+        }
+        (false, true) => {
+            return Err(CoreError::invalid(
+                "this provider connection does not permit a credential",
+            ));
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
+fn build_resolved_generation_target(
+    validated: ValidatedGenerationTarget,
+) -> CoreResult<ResolvedGenerationTarget> {
     let preserve_opaque_reasoning_state = validated.connection.credential_ref.is_none()
         && validated.request_plan.preserves_opaque_reasoning_state();
     let provider = AdapterRegistry::new().build_provider_for_route_with_plan(
@@ -4592,6 +4772,195 @@ mod tests {
             },
             route,
         )
+    }
+
+    #[test]
+    fn connection_bound_credential_rejects_rebound_target_before_chat_mutation() {
+        let (_root, core, character) = imported_core();
+        let conversation = core
+            .create_conversation(&character.id, "Bound credential", ConversationMode::Chat)
+            .expect("conversation");
+        let branch = core
+            .get_conversation_state(&conversation.id)
+            .expect("conversation state")
+            .active_branch_id;
+        let (template, route) =
+            create_built_in_public_route(&core, "openai-responses-v1", "/v1", "gpt-bound-fixture");
+        let preset = core
+            .upsert_generation_preset(initial_generation_preset(&route.id, &template, Utc::now()))
+            .expect("generation preset");
+        let expected_connection_id = route.connection_id.clone();
+        let target = GenerationTarget {
+            model_route_id: route.id,
+            generation_preset_id: preset.id,
+        };
+        let credential_canary = "synthetic-bound-credential";
+        let wrong_connection_id = ProviderConnectionId::from("different-connection");
+
+        let send_error = core
+            .send_message_to_branch_with_connection_credential(
+                &conversation.id,
+                &branch,
+                None,
+                ConversationMode::Chat,
+                "must not be stored",
+                &target,
+                ConnectionBoundCredential::new(
+                    wrong_connection_id.clone(),
+                    Some(credential_canary.to_owned()),
+                ),
+            )
+            .expect_err("send must reject a credential bound to another connection");
+        let edit_error = core
+            .edit_user_message_with_connection_credential(
+                &conversation.id,
+                &branch,
+                None,
+                &MessageId("missing-user-message".to_owned()),
+                "must not be stored",
+                &target,
+                ConnectionBoundCredential::new(
+                    wrong_connection_id.clone(),
+                    Some(credential_canary.to_owned()),
+                ),
+            )
+            .expect_err("edit must reject a credential bound to another connection");
+        let regenerate_error = core
+            .regenerate_assistant_message_with_connection_credential(
+                &conversation.id,
+                &branch,
+                None,
+                &MessageId("missing-assistant-message".to_owned()),
+                &target,
+                ConnectionBoundCredential::new(
+                    wrong_connection_id,
+                    Some(credential_canary.to_owned()),
+                ),
+            )
+            .expect_err("regenerate must reject a credential bound to another connection");
+
+        for error in [send_error, edit_error, regenerate_error] {
+            assert_eq!(error.code, CoreErrorCode::InvalidInput);
+            assert_eq!(
+                error.message,
+                "credential does not belong to the selected provider connection"
+            );
+        }
+        assert!(
+            core.list_branch_messages(&branch)
+                .expect("messages after rejected operations")
+                .is_empty()
+        );
+        assert!(
+            core.inner
+                .active_generations
+                .active
+                .lock()
+                .expect("generation registry")
+                .is_empty()
+        );
+
+        let (resolved, credential) = resolve_generation_target_with_connection_credential(
+            &core,
+            &target,
+            ConnectionBoundCredential::new(
+                expected_connection_id,
+                Some(credential_canary.to_owned()),
+            ),
+        )
+        .expect("matching connection binding resolves");
+        assert_eq!(resolved.model, "gpt-bound-fixture");
+        assert_eq!(credential.as_deref(), Some(credential_canary));
+    }
+
+    #[test]
+    fn connection_credential_presence_and_reference_match_connection_policy() {
+        let root = tempdir().expect("temporary core root");
+        let core = Core::open(CoreConfig::new(root.path())).expect("open core");
+        let api_origin = CanonicalOrigin::parse("http://127.0.0.1:39491").expect("loopback origin");
+        let (_template, credential_connection) = create_openai_chat_connection(&core, &api_origin);
+        let credential_canary = "synthetic-bound-credential";
+        assert!(
+            !format!(
+                "{:?}",
+                ConnectionBoundCredential::new(
+                    credential_connection.id.clone(),
+                    Some(credential_canary.to_owned()),
+                )
+            )
+            .contains(credential_canary)
+        );
+        let credential_reference = credential_connection
+            .credential_ref
+            .as_ref()
+            .expect("credential-requiring connection reference");
+        assert_eq!(
+            credential_reference.as_str(),
+            credential_connection.id.as_str()
+        );
+
+        let missing = validate_connection_credential_binding(
+            &credential_connection,
+            &ConnectionBoundCredential::new(credential_connection.id.clone(), None),
+        )
+        .expect_err("credential-requiring connection rejects missing material");
+        assert_eq!(missing.code, CoreErrorCode::ProviderAuthFailed);
+        assert_eq!(missing.message, "provider credential is required");
+
+        let mut mismatched_reference = credential_connection.clone();
+        mismatched_reference.credential_ref =
+            Some(CredentialRef("different-vault-reference".to_owned()));
+        let mismatch = validate_connection_credential_binding(
+            &mismatched_reference,
+            &ConnectionBoundCredential::new(
+                credential_connection.id,
+                Some("synthetic-credential".to_owned()),
+            ),
+        )
+        .expect_err("stored credential reference must match the bound connection");
+        assert_eq!(mismatch.code, CoreErrorCode::InvalidInput);
+
+        let no_auth_template = core
+            .list_provider_templates()
+            .expect("provider templates")
+            .into_iter()
+            .find(|template| template.id.as_str() == "ollama-native-v1")
+            .expect("Ollama template");
+        let no_auth_origin =
+            CanonicalOrigin::parse("http://127.0.0.1:11434").expect("Ollama origin");
+        let no_auth_connection = core
+            .create_provider_connection(ProviderConnectionDraft {
+                id: ProviderConnectionId::from("no-auth-bound-credential"),
+                template_id: no_auth_template.id,
+                template_version: no_auth_template.manifest_version,
+                display_name: "No-auth bound credential".to_owned(),
+                api_origin: no_auth_origin,
+                api_base_path: Some(EndpointPath::parse("/api").expect("Ollama API base path")),
+                network_mode: ProviderNetworkMode::LocalLoopback,
+                values: Vec::new(),
+                approved_credential_origin: None,
+                local_network_approval: None,
+                timeout_seconds: 5,
+            })
+            .expect("create no-auth connection");
+        let unexpected = validate_connection_credential_binding(
+            &no_auth_connection,
+            &ConnectionBoundCredential::new(
+                no_auth_connection.id.clone(),
+                Some("synthetic-unexpected-credential".to_owned()),
+            ),
+        )
+        .expect_err("credentialless connection rejects unexpected material");
+        assert_eq!(unexpected.code, CoreErrorCode::InvalidInput);
+        assert_eq!(
+            unexpected.message,
+            "this provider connection does not permit a credential"
+        );
+        validate_connection_credential_binding(
+            &no_auth_connection,
+            &ConnectionBoundCredential::new(no_auth_connection.id.clone(), None),
+        )
+        .expect("credentialless connection accepts absent material");
     }
 
     #[test]
