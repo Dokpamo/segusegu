@@ -1,5 +1,13 @@
 # 저장소 코드 리뷰 — 2026-07-28
 
+> **Historical snapshot:** This review is evidence for the fixed native
+> revisions recorded below; its Native UI, UniFFI, C ABI, and CI findings must
+> not be read as the current primary-client decision. The primary client is now
+> Tauri under the
+> [Accepted Tauri ADR](../architecture/decisions/ADR-0006-adopt-tauri-primary-client.md).
+> Preserve the original findings and revision-specific evidence as historical
+> baseline material.
+
 ## 결론
 
 검토 snapshot은 핵심 Rust 검사와 대부분의 호스트 빌드는 통과했지만,

@@ -36,10 +36,28 @@ Rust에는 현재 [`cargo-deny`](../../deny.toml) gate가 있다. 허용 목록�
 - Unicode-3.0
 - Zlib
 
-2026-07-28에 `cargo deny check licenses`를 실행했고 통과했다. 현재 resolved
-graph의 MPL-2.0 사용은 UniFFI package family다. 이는 MPL을 모든 신규
-dependency에 자동 허용하자는 제품 결정이 아니라, 이미 사용하는 핵심
-binding dependency의 현 상태다.
+`cargo deny check`의 graph는 실제 제품 대상인 macOS, iOS, Android,
+Windows의 현재 Apple Silicon/Intel, simulator/emulator, x64/ARM64 조합으로
+제한한다. Linux Tauri shell은 제품 대상이 아니므로 Linux 전용 GTK graph는
+이 gate의 배포 graph에 포함하지 않는다. CI가 Linux host에서 공통 Rust
+source를 컴파일한다는 사실은 Linux application 지원을 뜻하지 않는다.
+
+2026-07-28에 기존 `cargo deny check licenses`가 통과했고, 2026-08-02
+Tauri 전환 graph에서 전체 `cargo deny check`의 advisories, bans, licenses,
+sources 검사가 통과했다. 현재 resolved graph의 MPL-2.0 사용은 UniFFI
+package family와 Tauri frontend build tooling에 한정해 검토한다. 이는
+MPL을 모든 신규 dependency에 자동 허용하자는 제품 결정이 아니라, 이미
+사용하는 핵심 dependency의 현 상태다.
+
+정확히 다섯 개의 RustSec `unmaintained` notice는 예외다:
+`RUSTSEC-2025-0075`, `RUSTSEC-2025-0080`, `RUSTSEC-2025-0081`,
+`RUSTSEC-2025-0098`, `RUSTSEC-2025-0100`. 모두 pinned Tauri
+`2.11.x`의 `tauri-utils -> urlpattern`을 통해 들어오는 `rust-unic`
+transitive crate이며, 현재 호환 가능한 안전한 교체 버전이 없다. 이들은
+취약점 또는 unsoundness 판정이 아니라 유지보수 중단 알림이므로 exact ID와
+사유로만 임시 승인한다. Tauri가 `urlpattern` dependency를 교체하면 즉시
+예외를 제거하며, 그 밖의 advisory나 신규 unmaintained crate에는 이 승인을
+확장하지 않는다.
 
 `cargo-deny` output에 LGPL이나 GPL 문자열이 보인다는 이유만으로 그
 license가 선택됐다고 단정하면 안 된다. SPDX `OR`는 조건 중 하나를 선택할

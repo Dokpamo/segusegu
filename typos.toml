@@ -5,6 +5,7 @@ extend-exclude = [
   "apps/android/app/src/main/generated/**",
   "apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/Generated/**",
   "apps/apple/**/*.pbxproj",
+  "apps/lorepia/src-tauri/gen/apple/**",
 ]
 
 [default.extend-words]

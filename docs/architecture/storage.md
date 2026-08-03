@@ -1,7 +1,15 @@
 # Local storage
 
-Every native app supplies an app-owned root. Rust creates the same relative
-layout on every platform:
+The trusted Tauri host supplies an app-owned root and Rust creates the same
+relative layout on every platform. Production configurations must resolve the
+exact root used by the corresponding native baseline; they do not silently
+adopt a framework-default Tauri data path. Development builds use a separate
+identity and root so they can coexist with the baseline.
+
+The Svelte frontend never receives the root, a SQLite path, or an unrestricted
+asset path and never opens SQLite. `shell-api` may expose only opaque identifiers
+and bounded asset metadata. The frozen native clients continue to supply their
+existing roots for compatibility and old-to-new upgrade fixtures.
 
 ```text
 .lorepia-owner.lock

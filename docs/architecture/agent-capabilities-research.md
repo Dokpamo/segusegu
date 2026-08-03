@@ -1,5 +1,15 @@
 # Agent 기능 조사와 LorePia 도입안
 
+> **Architecture status (2026-08-02):** References to `native UI`, bindings, and
+> native implementation stages describe the frozen baseline that existed when
+> this research was written. The primary client boundary is now
+> Svelte/TypeScript through typed Tauri commands and Channels, `shell-api`, and
+> first-party platform plugins, as established by the
+> [Accepted Tauri ADR](decisions/ADR-0006-adopt-tauri-primary-client.md).
+> The prohibitions on arbitrary code, downloaded scripts, unrestricted
+> filesystem access, third-party plugin runtimes, and unreviewed side effects
+> remain in force.
+
 ## 결정 요약
 
 Hermes와 OpenClaw는 LorePia에 넣을 library가 아니라, 별도의 Python/Node

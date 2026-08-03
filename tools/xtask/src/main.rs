@@ -348,29 +348,48 @@ fn is_source_file(path: &Path) -> bool {
     path.extension()
         .and_then(|value| value.to_str())
         .is_some_and(|extension| {
+            let normalized = extension.to_ascii_lowercase();
             [
-                "rs",
+                "c",
+                "cjs",
+                "cpp",
+                "cs",
+                "css",
+                "cts",
+                "entitlements",
+                "h",
+                "html",
+                "hpp",
+                "js",
+                "jsx",
+                "json",
                 "kt",
                 "kts",
-                "swift",
-                "cs",
-                "xaml",
-                "c",
-                "h",
-                "cpp",
-                "hpp",
-                "sh",
-                "ps1",
-                "sql",
-                "xml",
+                "less",
+                "md",
+                "mjs",
+                "mts",
+                "pbxproj",
+                "plist",
                 "properties",
-                "json",
+                "ps1",
+                "rs",
+                "sass",
+                "scss",
+                "sh",
+                "sql",
+                "svelte",
+                "swift",
                 "toml",
+                "ts",
+                "tsx",
+                "xaml",
+                "xcconfig",
+                "xml",
                 "yml",
                 "yaml",
-                "md",
             ]
-            .contains(&extension)
+            .contains(&normalized.as_str())
         })
 }
 
@@ -572,5 +591,23 @@ mod tests {
         ] {
             assert!(is_source_file(Path::new(path)), "missed {path}");
         }
+    }
+
+    #[test]
+    fn source_file_guard_covers_tauri_frontend_sources() {
+        for path in [
+            "apps/lorepia/src/App.svelte",
+            "apps/lorepia/src/main.ts",
+            "apps/lorepia/src/styles.css",
+            "apps/lorepia/index.html",
+            "apps/lorepia/vite.config.mjs",
+            "apps/lorepia/src-tauri/Info.plist",
+        ] {
+            assert!(is_source_file(Path::new(path)), "missed {path}");
+        }
+        assert!(is_source_file(Path::new(
+            "apps/lorepia/src/components/Library.TSX"
+        )));
+        assert!(!is_source_file(Path::new("apps/lorepia/public/avatar.png")));
     }
 }

@@ -8,3 +8,5 @@
 *.charx binary
 apps/android/app/src/main/generated/** -whitespace
 apps/apple/Packages/LorepiaKit/Sources/LorepiaKit/Bridge/Generated/** -whitespace
+apps/lorepia/src-tauri/gen/android/** -whitespace
+apps/lorepia/src-tauri/gen/apple/** -whitespace

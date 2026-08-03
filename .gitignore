@@ -5,6 +5,15 @@
 /target/
 **/*.rs.bk
 
+# Tauri / Svelte
+/apps/lorepia/node_modules/
+/apps/lorepia/dist/
+/apps/lorepia/coverage/
+/apps/lorepia/.svelte-kit/
+/apps/lorepia/src-tauri/gen/schemas/
+/apps/lorepia/src-tauri/gen/android/local.properties
+/apps/lorepia/src-tauri/gen/android/keystore.properties
+
 # Android / Gradle
 **/.gradle/
 **/.kotlin/

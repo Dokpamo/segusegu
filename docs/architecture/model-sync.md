@@ -1,7 +1,9 @@
 # Durable provider model synchronization
 
-Provider model listing is a review-gated durable job. Native applications call
-the high-level Core API and never write provider catalog rows directly.
+Provider model listing is a review-gated durable job. The Tauri frontend calls
+typed commands through `shell-api` and never writes provider catalog rows
+directly. Frozen native clients retain their high-level Core adapters only for
+compatibility and upgrade evidence.
 
 The public flow is:
 
@@ -10,8 +12,9 @@ The public flow is:
    request task.
 2. Core advances the job to `fetching`, lists models, rejects any normalized
    field which reflects the credential, and stores a canonical diff.
-3. The job becomes `diff-ready-awaiting-review`. Native UI presents the diff
-   and passes its SHA-256 digest to `approve_provider_model_sync`.
+3. The job becomes `diff-ready-awaiting-review`. The shared Svelte UI presents
+   the safe diff and passes its SHA-256 digest through the typed approval
+   command to `approve_provider_model_sync`.
 4. Core recomputes the digest, performs revision and provider-graph compare-and-
    swap checks, and atomically applies routes, presets, capability observations,
    connection status, terminal job state, and the terminal outbox event.
@@ -34,7 +37,7 @@ credential-bearing network request. A stored review remains reviewable after
 restart.
 
 Provider connection archive is rejected while any job for that connection is
-nonterminal, including `interrupted` and review-ready work. Native UI can
+nonterminal, including `interrupted` and review-ready work. The client can
 therefore rediscover the job through the still-visible connection, then finish
 or cancel it before retrying removal. Completed, failed, and cancelled history
 is retained but does not block archive.

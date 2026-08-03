@@ -2,7 +2,13 @@
 
 ## Overview
 
-This directory contains two native SwiftUI applications in one Xcode
+> **Migration status:** This directory is the frozen native Apple
+> compatibility, behavioral-reference, and upgrade-test harness. New product
+> features belong to the Tauri mainline under `apps/lorepia`. This implementation
+> remains only until the documented parity, data, credential, accessibility,
+> IME, build, and upgrade gates pass.
+
+This directory retains two native SwiftUI baseline applications in one Xcode
 workspace:
 
 - `LorepiaIOS` owns the iPhone and iPad app lifecycle, tab navigation, and
@@ -18,6 +24,10 @@ persistence, chat orchestration, and provider networking. When a platform
 host exposes import, Swift copies a security-scoped document into a bounded
 app-owned staging directory, then passes only that staged path to Rust.
 Neither Apple app parses a content package or accesses SQLite.
+
+The behavior below documents the retained native baseline. A successful build
+or test in this directory is baseline evidence and does not by itself establish
+Tauri parity or production release readiness.
 
 The implemented native vertical slices are:
 
