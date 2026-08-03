@@ -19,7 +19,7 @@ pub(crate) struct DesktopPlatform<R: Runtime> {
     #[cfg(any(target_os = "macos", windows))]
     app: AppHandle<R>,
     #[cfg(not(any(target_os = "macos", windows)))]
-    _runtime: std::marker::PhantomData<R>,
+    _runtime: std::marker::PhantomData<fn() -> R>,
     data_root: PathBuf,
     staging_root: PathBuf,
     #[cfg(any(target_os = "macos", windows))]
