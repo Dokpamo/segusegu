@@ -433,11 +433,11 @@ jobs:
           )" -eq 1
           test "$(
             printf '%s\n' "$capture_paths_tree" |
-              grep -Ec 'A: name\([^)]*\)="tauri_capture_images"'
+              grep -Ec 'A: name(\([^)]*\))?="tauri_capture_images"'
           )" -eq 1
           test "$(
             printf '%s\n' "$capture_paths_tree" |
-              grep -Ec 'A: path\([^)]*\)="Pictures/"'
+              grep -Ec 'A: path(\([^)]*\))?="Pictures/"'
           )" -eq 1
           test "$(
             printf '%s\n' "$capture_paths_tree" |
