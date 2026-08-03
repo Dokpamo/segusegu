@@ -99,7 +99,7 @@ npm run tauri -- \
 Install and launch it on a disposable available iPhone simulator:
 
 ```bash
-export LOREPIA_SIMULATOR_ID="<simulator-udid>"
+export LOREPIA_SIMULATOR_ID="<simulator-device-id>"
 xcrun simctl boot "$LOREPIA_SIMULATOR_ID" || true
 xcrun simctl bootstatus "$LOREPIA_SIMULATOR_ID" -b
 xcrun simctl install \
