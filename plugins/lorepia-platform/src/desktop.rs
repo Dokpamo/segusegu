@@ -60,23 +60,22 @@ impl<R: Runtime> DesktopPlatform<R> {
         &self.data_root
     }
 
+    #[cfg(any(target_os = "macos", windows))]
     pub(crate) async fn pick_import(&self) -> PlatformResult<Option<StagedImport>> {
-        #[cfg(any(target_os = "macos", windows))]
-        {
-            #[cfg(target_os = "macos")]
-            let selection = macos::pick_file(&self.app).await?;
-            #[cfg(windows)]
-            let selection = windows::pick_file(&self.app).await?;
+        #[cfg(target_os = "macos")]
+        let selection = macos::pick_file(&self.app).await?;
+        #[cfg(windows)]
+        let selection = windows::pick_file(&self.app).await?;
 
-            let Some(selection) = selection else {
-                return Ok(None);
-            };
-            stage_selected_file(selection, self.staging_root.clone()).await
-        }
-        #[cfg(not(any(target_os = "macos", windows)))]
-        {
-            unsupported_platform()
-        }
+        let Some(selection) = selection else {
+            return Ok(None);
+        };
+        stage_selected_file(selection, self.staging_root.clone()).await
+    }
+
+    #[cfg(not(any(target_os = "macos", windows)))]
+    pub(crate) fn pick_import(&self) -> std::future::Ready<PlatformResult<Option<StagedImport>>> {
+        std::future::ready(self.unsupported())
     }
 
     pub(crate) fn discard_staged_import(&self, staged: &StagedImport) -> PlatformResult<()> {
@@ -102,7 +101,7 @@ impl<R: Runtime> DesktopPlatform<R> {
         #[cfg(not(any(target_os = "macos", windows)))]
         {
             let _ = reference;
-            unsupported_platform()
+            self.unsupported()
         }
     }
 
@@ -121,7 +120,7 @@ impl<R: Runtime> DesktopPlatform<R> {
         #[cfg(not(any(target_os = "macos", windows)))]
         {
             let _ = reference;
-            unsupported_platform()
+            self.unsupported()
         }
     }
 
@@ -143,7 +142,7 @@ impl<R: Runtime> DesktopPlatform<R> {
         {
             let _ = reference;
             drop(value);
-            unsupported_platform()
+            self.unsupported()
         }
     }
 
@@ -159,8 +158,14 @@ impl<R: Runtime> DesktopPlatform<R> {
         #[cfg(not(any(target_os = "macos", windows)))]
         {
             let _ = reference;
-            unsupported_platform()
+            self.unsupported()
         }
+    }
+
+    #[cfg(not(any(target_os = "macos", windows)))]
+    fn unsupported<T>(&self) -> PlatformResult<T> {
+        let _ = &self._runtime;
+        unsupported_platform()
     }
 }
 
@@ -360,6 +365,8 @@ mod tests {
             production.credential_namespace,
             development.credential_namespace
         );
+        assert_eq!(production.staging_name, "native-staging");
+        assert_eq!(development.staging_name, "native-staging");
         assert!(production.migrate_legacy_credentials);
         assert!(!development.migrate_legacy_credentials);
     }
@@ -399,6 +406,8 @@ mod tests {
             development.credential_namespace,
             "LorePia.ProviderCredential.Development"
         );
+        assert_eq!(production.staging_name, "transport-staging");
+        assert_eq!(development.staging_name, "transport-staging");
     }
 
     #[test]

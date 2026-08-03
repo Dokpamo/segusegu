@@ -6,6 +6,13 @@
 mod error;
 mod model;
 mod staging;
+#[cfg(any(
+    target_os = "android",
+    target_os = "ios",
+    target_os = "macos",
+    windows,
+    test
+))]
 mod validation;
 
 #[cfg(desktop)]

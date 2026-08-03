@@ -25,7 +25,7 @@ pub(crate) fn validate_credential_write(value: &str) -> PlatformResult<()> {
     Ok(())
 }
 
-#[cfg(any(desktop, test))]
+#[cfg(any(target_os = "macos", windows, test))]
 pub(crate) fn sanitize_display_name(value: &str) -> String {
     let cleaned: String = value
         .chars()

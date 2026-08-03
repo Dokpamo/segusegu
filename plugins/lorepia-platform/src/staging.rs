@@ -2,24 +2,24 @@ use std::{fs::OpenOptions, io::Read};
 
 #[cfg(unix)]
 use std::os::unix::fs::OpenOptionsExt;
-#[cfg(any(desktop, test))]
+#[cfg(any(target_os = "macos", windows, test))]
 use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-#[cfg(any(desktop, test))]
+#[cfg(any(target_os = "macos", windows, test))]
 use uuid::Uuid;
 
-#[cfg(any(desktop, test))]
+#[cfg(any(target_os = "macos", windows, test))]
 use crate::validation::sanitize_display_name;
 use crate::{PlatformError, PlatformErrorCode, PlatformResult, StagedImport};
 
-#[cfg(any(desktop, test))]
+#[cfg(any(target_os = "macos", windows, test))]
 const COPY_BUFFER_BYTES: usize = 64 * 1024;
-#[cfg(any(desktop, test))]
+#[cfg(any(target_os = "macos", windows, test))]
 pub(crate) const OWNED_STAGING_PREFIX: &str = "lorepia-tauri-";
 
-#[cfg(any(desktop, test))]
+#[cfg(any(target_os = "macos", windows, test))]
 pub(crate) fn stage_file(
     source_path: &Path,
     staging_root: &Path,
@@ -93,7 +93,7 @@ pub(crate) fn read_staged_file(
     Ok(bytes)
 }
 
-#[cfg(any(desktop, test))]
+#[cfg(any(target_os = "macos", windows, test))]
 fn copy_bounded(
     source_path: &Path,
     partial_path: &Path,
@@ -146,7 +146,7 @@ fn copy_bounded(
     Ok(copied)
 }
 
-#[cfg(any(desktop, test))]
+#[cfg(any(target_os = "macos", windows, test))]
 fn safe_suffix(display_name: &str) -> &'static str {
     match PathBuf::from(display_name)
         .extension()

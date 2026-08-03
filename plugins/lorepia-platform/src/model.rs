@@ -43,6 +43,13 @@ pub struct StagedImport {
 }
 
 impl StagedImport {
+    #[cfg(any(
+        target_os = "android",
+        target_os = "ios",
+        target_os = "macos",
+        windows,
+        test
+    ))]
     pub(crate) fn new(path: PathBuf, display_name: String, size_bytes: u64) -> Self {
         Self {
             path,
