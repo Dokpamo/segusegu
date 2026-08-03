@@ -1,7 +1,7 @@
-use std::{
-    path::{Path, PathBuf},
-    time::{Duration, SystemTime},
-};
+use std::path::{Path, PathBuf};
+
+#[cfg(any(target_os = "macos", windows, test))]
+use std::time::{Duration, SystemTime};
 
 use tauri::{AppHandle, Runtime};
 
@@ -16,9 +16,13 @@ mod macos;
 mod windows;
 
 pub(crate) struct DesktopPlatform<R: Runtime> {
+    #[cfg(any(target_os = "macos", windows))]
     app: AppHandle<R>,
+    #[cfg(not(any(target_os = "macos", windows)))]
+    _runtime: std::marker::PhantomData<R>,
     data_root: PathBuf,
     staging_root: PathBuf,
+    #[cfg(any(target_os = "macos", windows))]
     credential_namespace: &'static str,
     #[cfg(target_os = "macos")]
     migrate_legacy_credentials: bool,
@@ -26,22 +30,30 @@ pub(crate) struct DesktopPlatform<R: Runtime> {
 
 impl<R: Runtime> DesktopPlatform<R> {
     pub(crate) fn new(app: AppHandle<R>) -> PlatformResult<Self> {
-        let policy = platform_policy(&app.config().identifier)?;
-        #[cfg(windows)]
-        debug_assert!(!policy.migrate_legacy_credentials);
-        let staging_root = policy.data_root.join(policy.staging_name);
-        std::fs::create_dir_all(&policy.data_root)
-            .and_then(|()| std::fs::create_dir_all(&staging_root))
-            .map_err(|_| PlatformError::new(PlatformErrorCode::StorageUnavailable))?;
-        cleanup_abandoned_staging(&staging_root, Duration::from_hours(24));
-        Ok(Self {
-            app,
-            data_root: policy.data_root,
-            staging_root,
-            credential_namespace: policy.credential_namespace,
-            #[cfg(target_os = "macos")]
-            migrate_legacy_credentials: policy.migrate_legacy_credentials,
-        })
+        #[cfg(any(target_os = "macos", windows))]
+        {
+            let policy = platform_policy(&app.config().identifier)?;
+            #[cfg(windows)]
+            debug_assert!(!policy.migrate_legacy_credentials);
+            let staging_root = policy.data_root.join(policy.staging_name);
+            std::fs::create_dir_all(&policy.data_root)
+                .and_then(|()| std::fs::create_dir_all(&staging_root))
+                .map_err(|_| PlatformError::new(PlatformErrorCode::StorageUnavailable))?;
+            cleanup_abandoned_staging(&staging_root, Duration::from_hours(24));
+            Ok(Self {
+                app,
+                data_root: policy.data_root,
+                staging_root,
+                credential_namespace: policy.credential_namespace,
+                #[cfg(target_os = "macos")]
+                migrate_legacy_credentials: policy.migrate_legacy_credentials,
+            })
+        }
+        #[cfg(not(any(target_os = "macos", windows)))]
+        {
+            drop(app);
+            unsupported_platform()
+        }
     }
 
     pub(crate) fn data_root(&self) -> &Path {
@@ -49,17 +61,22 @@ impl<R: Runtime> DesktopPlatform<R> {
     }
 
     pub(crate) async fn pick_import(&self) -> PlatformResult<Option<StagedImport>> {
-        #[cfg(target_os = "macos")]
-        let selection = macos::pick_file(&self.app).await?;
-        #[cfg(windows)]
-        let selection = windows::pick_file(&self.app).await?;
-        #[cfg(not(any(target_os = "macos", windows)))]
-        return Err(PlatformError::new(PlatformErrorCode::UnsupportedPlatform));
+        #[cfg(any(target_os = "macos", windows))]
+        {
+            #[cfg(target_os = "macos")]
+            let selection = macos::pick_file(&self.app).await?;
+            #[cfg(windows)]
+            let selection = windows::pick_file(&self.app).await?;
 
-        let Some(selection) = selection else {
-            return Ok(None);
-        };
-        stage_selected_file(selection, self.staging_root.clone()).await
+            let Some(selection) = selection else {
+                return Ok(None);
+            };
+            stage_selected_file(selection, self.staging_root.clone()).await
+        }
+        #[cfg(not(any(target_os = "macos", windows)))]
+        {
+            unsupported_platform()
+        }
     }
 
     pub(crate) fn discard_staged_import(&self, staged: &StagedImport) -> PlatformResult<()> {
@@ -83,7 +100,10 @@ impl<R: Runtime> DesktopPlatform<R> {
         #[cfg(windows)]
         return windows::credential_status(self.credential_namespace, reference);
         #[cfg(not(any(target_os = "macos", windows)))]
-        Err(PlatformError::new(PlatformErrorCode::UnsupportedPlatform))
+        {
+            let _ = reference;
+            unsupported_platform()
+        }
     }
 
     pub(crate) fn read_credential(
@@ -99,7 +119,10 @@ impl<R: Runtime> DesktopPlatform<R> {
         #[cfg(windows)]
         return windows::read_credential(self.credential_namespace, reference);
         #[cfg(not(any(target_os = "macos", windows)))]
-        Err(PlatformError::new(PlatformErrorCode::UnsupportedPlatform))
+        {
+            let _ = reference;
+            unsupported_platform()
+        }
     }
 
     pub(crate) fn store_credential(
@@ -117,7 +140,11 @@ impl<R: Runtime> DesktopPlatform<R> {
         #[cfg(windows)]
         return windows::store_credential(self.credential_namespace, reference, value);
         #[cfg(not(any(target_os = "macos", windows)))]
-        Err(PlatformError::new(PlatformErrorCode::UnsupportedPlatform))
+        {
+            let _ = reference;
+            drop(value);
+            unsupported_platform()
+        }
     }
 
     pub(crate) fn delete_credential(&self, reference: &str) -> PlatformResult<()> {
@@ -130,13 +157,17 @@ impl<R: Runtime> DesktopPlatform<R> {
         #[cfg(windows)]
         return windows::delete_credential(self.credential_namespace, reference);
         #[cfg(not(any(target_os = "macos", windows)))]
-        Err(PlatformError::new(PlatformErrorCode::UnsupportedPlatform))
+        {
+            let _ = reference;
+            unsupported_platform()
+        }
     }
 }
 
 /// Best-effort cleanup is deliberately restricted to old, regular files with
 /// the random prefix created by this plugin. A fresh file may belong to
 /// another process which has not opened Core yet, so it is never removed.
+#[cfg(any(target_os = "macos", windows, test))]
 fn cleanup_abandoned_staging(staging_root: &Path, minimum_age: Duration) {
     let Ok(entries) = std::fs::read_dir(staging_root) else {
         return;
@@ -167,6 +198,7 @@ fn cleanup_abandoned_staging(staging_root: &Path, minimum_age: Duration) {
     }
 }
 
+#[cfg(any(target_os = "macos", windows, test))]
 struct DesktopPolicy {
     data_root: PathBuf,
     staging_name: &'static str,
@@ -277,10 +309,11 @@ fn windows_policy_from_local_app_data(
 }
 
 #[cfg(not(any(target_os = "macos", windows)))]
-fn platform_policy(_identifier: &str) -> PlatformResult<DesktopPolicy> {
+fn unsupported_platform<T>() -> PlatformResult<T> {
     Err(PlatformError::new(PlatformErrorCode::UnsupportedPlatform))
 }
 
+#[cfg(any(target_os = "macos", windows))]
 async fn stage_selected_file(
     selection: PathBuf,
     staging_root: PathBuf,
@@ -398,5 +431,13 @@ mod tests {
         cleanup_abandoned_staging(&staging, Duration::from_mins(1));
 
         assert!(fresh.exists());
+    }
+
+    #[cfg(not(any(target_os = "macos", windows)))]
+    #[test]
+    fn unsupported_desktop_platform_fails_closed() {
+        let error = super::unsupported_platform::<()>().expect_err("unsupported platform");
+
+        assert_eq!(error.code(), crate::PlatformErrorCode::UnsupportedPlatform);
     }
 }

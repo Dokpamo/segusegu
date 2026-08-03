@@ -270,22 +270,22 @@ jobs:
           cmp -s \
             "$data_extraction_rules" \
             "$GITHUB_WORKSPACE/apps/android/app/src/main/res/xml/data_extraction_rules.xml"
-          test "$(grep -Ec '<include([[:space:]]|>)' "$backup_rules")" -eq 0
-          test "$(grep -Ec '<exclude([[:space:]]|>)' "$backup_rules")" -eq 5
-          test "$(grep -Ec 'path="\\."' "$backup_rules")" -eq 5
+          test "$(grep -Ec '<include([[:space:]]|>|$)' "$backup_rules")" -eq 0
+          test "$(grep -Ec '<exclude([[:space:]]|>|$)' "$backup_rules")" -eq 5
+          test "$(grep -Ec 'path="[.]"' "$backup_rules")" -eq 5
           test "$(grep -Ec 'path="' "$backup_rules")" -eq 5
-          test "$(grep -Ec '<include([[:space:]]|>)' "$data_extraction_rules")" -eq 0
-          test "$(grep -Ec '<exclude([[:space:]]|>)' "$data_extraction_rules")" -eq 18
-          test "$(grep -Ec 'path="\\."' "$data_extraction_rules")" -eq 18
+          test "$(grep -Ec '<include([[:space:]]|>|$)' "$data_extraction_rules")" -eq 0
+          test "$(grep -Ec '<exclude([[:space:]]|>|$)' "$data_extraction_rules")" -eq 18
+          test "$(grep -Ec 'path="[.]"' "$data_extraction_rules")" -eq 18
           test "$(grep -Ec 'path="' "$data_extraction_rules")" -eq 18
           test "$(grep -Ec 'androidx\\.core\\.content\\.FileProvider' "$app_manifest")" -eq 1
           test "$(grep -Ec 'android:exported="false"' "$app_manifest")" -eq 1
           test "$(grep -Ec 'android:grantUriPermissions="true"' "$app_manifest")" -eq 1
           test "$(grep -Ec '@xml/file_paths' "$app_manifest")" -eq 1
-          test "$(grep -Ec '<external-files-path([[:space:]]|>)' "$capture_paths")" -eq 1
+          test "$(grep -Ec '<external-files-path([[:space:]]|>|$)' "$capture_paths")" -eq 1
           test "$(grep -Ec 'name="tauri_capture_images"' "$capture_paths")" -eq 1
           test "$(grep -Ec 'path="Pictures/"' "$capture_paths")" -eq 1
-          test "$(grep -Ec '<(external|cache|files|root)-path([[:space:]]|>)' "$capture_paths")" -eq 0
+          test "$(grep -Ec '<(external|cache|files|root)-path([[:space:]]|>|$)' "$capture_paths")" -eq 0
           for domain in root file database sharedpref external; do
             test "$(
               grep -Ec "domain=\"$domain\"" "$backup_rules"
